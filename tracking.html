@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Delivery Tracking Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+        .card { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        input, select, button { padding: 8px; margin: 5px 0; }
+        .unread { font-weight: bold; color: #d9534f; }
+        .read { color: #5cb85c; }
+    </style>
+</head>
+<body>
+<h2>Delivery Tracking & Notification Test Panel</h2>
+
+<div class="card">
+    <h3>1. Update Order Status (Admin / Pharmacist View)</h3>
+    <p>Change the status of an existing order to trigger a notification.</p>
+    <input type="number" id="orderId" placeholder="Order ID (e.g., 1)">
+    <select id="newStatus">
+        <option value="Dispatched">Dispatched</option>
+        <option value="In Transit">In Transit</option>
+        <option value="Delivered">Delivered</option>
+    </select>
+    <button onclick="updateOrderStatus()">Update Status</button>
+</div>
+
+<div class="card">
+    <h3>2. Customer Notifications (User ID: 1)</h3>
+    <button onclick="loadNotifications()">Refresh Notifications</button>
+    <button onclick="markAsRead()">Mark All as Read</button>
+    <table>
+        <thead>
+        <tr>
+            <th>Date</th>
+            <th>Message</th>
+            <th>Status</th>
+        </tr>
+        </thead>
+        <tbody id="notificationsTable"></tbody>
+    </table>
+</div>
+
+<script>
+    const API_URL = 'http://localhost:3000/api';
+    const TEST_USER_ID = 1;
+
+    async function updateOrderStatus() {
+        const orderId = document.getElementById('orderId').value;
+        const status = document.getElementById('newStatus').value;
+
+        if (!orderId) return alert('Please enter an Order ID');
+
+        const res = await fetch(`${API_URL}/orders/${orderId}/status`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        const result = await res.json();
+
+        if (res.ok) {
+            alert(`Success: ${result.message}`);
+            loadNotifications(); // Auto-refresh the customer view
+        } else {
+            alert('Error: ' + result.error);
+        }
+    }
+
+    async function loadNotifications() {
+        const res = await fetch(`${API_URL}/notifications/${TEST_USER_ID}`);
+        const notifications = await res.json();
+        const tbody = document.getElementById('notificationsTable');
+        tbody.innerHTML = '';
+
+        notifications.forEach(notif => {
+            const date = new Date(notif.created_at).toLocaleString();
+            const readStatus = notif.is_read ? '<span class="read">Read</span>' : '<span class="unread">Unread</span>';
+
+            tbody.innerHTML += `
+                    <tr>
+                        <td>${date}</td>
+                        <td style="${notif.is_read ? '' : 'font-weight:bold;'}">${notif.message}</td>
+                        <td>${readStatus}</td>
+                    </tr>
+                `;
+        });
+    }
+
+    async function markAsRead() {
+        await fetch(`${API_URL}/notifications/${TEST_USER_ID}/read`, {
+            method: 'PUT'
+        });
+        alert('All notifications marked as read!');
+        loadNotifications();
+    }
+
+    // Load initially
+    loadNotifications();
+</script>
+</body>
+</html>

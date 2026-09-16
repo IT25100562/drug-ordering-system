@@ -447,6 +447,80 @@ app.get('/api/orders/:user_id', async (req, res) => {
 });
 
 
+// ==========================================
+// --- DELIVERY TRACKING & NOTIFICATION ---
+// ==========================================
+
+// 1. UPDATE ORDER STATUS (Admin/Pharmacist)
+app.patch('/api/orders/:id/status', async (req, res) => {
+    console.log(`[PATCH] /api/orders/${req.params.id}/status - Updating order status`);
+    try {
+        const { id } = req.params;
+        const { status } = req.body; // e.g., 'Dispatched', 'Delivered'
+
+        const db = await getDbPool();
+
+        // Find the user_id associated with this order
+        const orderResult = await db.request()
+            .input('id', sql.Int, id)
+            .query('SELECT user_id FROM orders WHERE id = @id');
+
+        if (orderResult.recordset.length === 0) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        const userId = orderResult.recordset[0].user_id;
+
+        // Update the order status
+        await db.request()
+            .input('id', sql.Int, id)
+            .input('status', sql.VarChar, status)
+            .query('UPDATE orders SET status = @status WHERE id = @id');
+
+        // Generate a notification for the user
+        const message = `Your order #${id} status has been updated to: ${status}`;
+        await db.request()
+            .input('user_id', sql.Int, userId)
+            .input('message', sql.VarChar, message)
+            .query('INSERT INTO notifications (user_id, message) VALUES (@user_id, @message)');
+
+        res.json({ message: 'Order status updated and user notified' });
+    } catch (err) {
+        console.error('[ERROR] Status update failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. GET USER NOTIFICATIONS
+app.get('/api/notifications/:user_id', async (req, res) => {
+    console.log(`[GET] /api/notifications/${req.params.user_id} - Fetching notifications`);
+    try {
+        const db = await getDbPool();
+        const result = await db.request()
+            .input('user_id', sql.Int, req.params.user_id)
+            .query('SELECT * FROM notifications WHERE user_id = @user_id ORDER BY created_at DESC');
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('[ERROR] Fetch notifications failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. MARK NOTIFICATIONS AS READ
+app.put('/api/notifications/:user_id/read', async (req, res) => {
+    console.log(`[PUT] /api/notifications/${req.params.user_id}/read - Marking as read`);
+    try {
+        const db = await getDbPool();
+        await db.request()
+            .input('user_id', sql.Int, req.params.user_id)
+            .query('UPDATE notifications SET is_read = 1 WHERE user_id = @user_id');
+        res.json({ message: 'Notifications marked as read' });
+    } catch (err) {
+        console.error('[ERROR] Mark read failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
