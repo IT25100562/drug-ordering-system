@@ -55,3 +55,23 @@ CREATE TABLE cart_items (
                             FOREIGN KEY (user_id) REFERENCES users(id),
                             FOREIGN KEY (medicine_id) REFERENCES medicines(id)
 );
+
+CREATE TABLE orders (
+                        id INT IDENTITY(1,1) PRIMARY KEY,
+                        user_id INT NOT NULL,
+                        total_amount DECIMAL(10,2) NOT NULL,
+                        delivery_fee DECIMAL(10,2) DEFAULT 5.00,
+                        status VARCHAR(50) DEFAULT 'Pending', -- Pending, Paid, Dispatched, Delivered
+                        created_at DATETIME DEFAULT GETDATE(),
+                        FOREIGN KEY (user_id) REFERENCES users(id)
+);
+
+CREATE TABLE order_items (
+                             id INT IDENTITY(1,1) PRIMARY KEY,
+                             order_id INT NOT NULL,
+                             medicine_id INT NOT NULL,
+                             quantity INT NOT NULL,
+                             price_at_purchase DECIMAL(10,2) NOT NULL,
+                             FOREIGN KEY (order_id) REFERENCES orders(id),
+                             FOREIGN KEY (medicine_id) REFERENCES medicines(id)
+);

@@ -368,6 +368,84 @@ app.delete('/api/cart/:id', async (req, res) => {
     }
 });
 
+// ==========================================
+// --- ORDER CHECKOUT & PAYMENT ENDPOINTS ---
+// ==========================================
+
+// 1. PLACE ORDER (CHECKOUT)
+app.post('/api/orders/checkout', async (req, res) => {
+    console.log('[POST] /api/orders/checkout - Processing checkout');
+    try {
+        const { user_id } = req.body;
+        if (!user_id) return res.status(400).json({ error: 'User ID is required' });
+
+        const db = await getDbPool();
+
+        // Step A: Calculate total from cart
+        const cartResult = await db.request()
+            .input('user_id', sql.Int, user_id)
+            .query(`SELECT c.medicine_id, c.quantity, m.price 
+                    FROM cart_items c
+                    JOIN medicines m ON c.medicine_id = m.id
+                    WHERE c.user_id = @user_id`);
+
+        const cartItems = cartResult.recordset;
+        if (cartItems.length === 0) return res.status(400).json({ error: 'Cart is empty' });
+
+        let subtotal = 0;
+        cartItems.forEach(item => subtotal += (item.price * item.quantity));
+        const delivery_fee = 5.00; // Standard fixed delivery fee
+        const total_amount = subtotal + delivery_fee;
+
+        // Step B: Insert into orders table
+        const orderResult = await db.request()
+            .input('user_id', sql.Int, user_id)
+            .input('total_amount', sql.Decimal(10, 2), total_amount)
+            .input('delivery_fee', sql.Decimal(10, 2), delivery_fee)
+            .query(`INSERT INTO orders (user_id, total_amount, delivery_fee) 
+                    OUTPUT INSERTED.id 
+                    VALUES (@user_id, @total_amount, @delivery_fee)`);
+
+        const orderId = orderResult.recordset[0].id;
+
+        // Step C: Move items to order_items table
+        for (let item of cartItems) {
+            await db.request()
+                .input('order_id', sql.Int, orderId)
+                .input('medicine_id', sql.Int, item.medicine_id)
+                .input('quantity', sql.Int, item.quantity)
+                .input('price', sql.Decimal(10, 2), item.price)
+                .query(`INSERT INTO order_items (order_id, medicine_id, quantity, price_at_purchase) 
+                        VALUES (@order_id, @medicine_id, @quantity, @price)`);
+        }
+
+        // Step D: Clear the user's cart
+        await db.request()
+            .input('user_id', sql.Int, user_id)
+            .query('DELETE FROM cart_items WHERE user_id = @user_id');
+
+        res.status(201).json({ message: 'Order placed successfully', order_id: orderId, total_amount });
+    } catch (err) {
+        console.error('[ERROR] Checkout failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. GET USER ORDER HISTORY
+app.get('/api/orders/:user_id', async (req, res) => {
+    console.log(`[GET] /api/orders/${req.params.user_id} - Fetching order history`);
+    try {
+        const db = await getDbPool();
+        const result = await db.request()
+            .input('user_id', sql.Int, req.params.user_id)
+            .query('SELECT * FROM orders WHERE user_id = @user_id ORDER BY created_at DESC');
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('[ERROR] Fetch orders failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // START SERVER
 const PORT = process.env.PORT || 3000;
