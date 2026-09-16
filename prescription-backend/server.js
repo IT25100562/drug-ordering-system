@@ -276,6 +276,99 @@ app.delete('/api/medicines/:id', async (req, res) => {
     }
 });
 
+// ==========================================
+// --- BROWSING & CART ENDPOINTS ---
+// ==========================================
+
+// 1. SEARCH & FILTER MEDICINES
+app.get('/api/catalog/search', async (req, res) => {
+    console.log(`[GET] /api/catalog/search - Query: ${req.query.q}`);
+    try {
+        const searchQuery = req.query.q || '';
+        const db = await getDbPool();
+        const result = await db.request()
+            .input('search', sql.VarChar, `%${searchQuery}%`)
+            .query(`SELECT id, name, category, price, stock_quantity, description 
+                    FROM medicines 
+                    WHERE is_discontinued = 0 AND (name LIKE @search OR category LIKE @search)
+                    ORDER BY name ASC`);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('[ERROR] Search failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. ADD ITEM TO CART
+app.post('/api/cart', async (req, res) => {
+    console.log('[POST] /api/cart - Adding item to cart');
+    try {
+        const { user_id, medicine_id, quantity } = req.body;
+        if (!user_id || !medicine_id) return res.status(400).json({ error: 'User ID and Medicine ID required' });
+
+        const db = await getDbPool();
+
+        // Check if item already exists in cart for this user
+        const checkCart = await db.request()
+            .input('user_id', sql.Int, user_id)
+            .input('medicine_id', sql.Int, medicine_id)
+            .query('SELECT * FROM cart_items WHERE user_id = @user_id AND medicine_id = @medicine_id');
+
+        if (checkCart.recordset.length > 0) {
+            // Update quantity
+            await db.request()
+                .input('id', sql.Int, checkCart.recordset[0].id)
+                .input('qty', sql.Int, (quantity || 1) + checkCart.recordset[0].quantity)
+                .query('UPDATE cart_items SET quantity = @qty WHERE id = @id');
+        } else {
+            // Insert new cart item
+            await db.request()
+                .input('user_id', sql.Int, user_id)
+                .input('medicine_id', sql.Int, medicine_id)
+                .input('qty', sql.Int, quantity || 1)
+                .query('INSERT INTO cart_items (user_id, medicine_id, quantity) VALUES (@user_id, @medicine_id, @qty)');
+        }
+        res.status(201).json({ message: 'Item added to cart successfully' });
+    } catch (err) {
+        console.error('[ERROR] Add to cart failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. VIEW USER CART
+app.get('/api/cart/:user_id', async (req, res) => {
+    console.log(`[GET] /api/cart/${req.params.user_id} - Fetching cart`);
+    try {
+        const db = await getDbPool();
+        const result = await db.request()
+            .input('user_id', sql.Int, req.params.user_id)
+            .query(`SELECT c.id as cart_item_id, m.id as medicine_id, m.name, m.price, c.quantity, (m.price * c.quantity) as total_price
+                    FROM cart_items c
+                    JOIN medicines m ON c.medicine_id = m.id
+                    WHERE c.user_id = @user_id`);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('[ERROR] Fetch cart failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. REMOVE ITEM FROM CART
+app.delete('/api/cart/:id', async (req, res) => {
+    console.log(`[DELETE] /api/cart/${req.params.id} - Removing item`);
+    try {
+        const db = await getDbPool();
+        await db.request()
+            .input('id', sql.Int, req.params.id)
+            .query('DELETE FROM cart_items WHERE id = @id');
+        res.json({ message: 'Item removed from cart' });
+    } catch (err) {
+        console.error('[ERROR] Remove from cart failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 // START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
