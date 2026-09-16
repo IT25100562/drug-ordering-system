@@ -78,18 +78,26 @@ Database tables: medicines, categories
 Files:
   JAVA  model/Medicine.java
   JAVA  model/Category.java
+  JAVA  model/InventorySummary.java
   JAVA  dao/MedicineDAO.java
+  JAVA  dao/CategoryDAO.java
   JAVA  dao/impl/MedicineDAOImpl.java
+  JAVA  dao/impl/CategoryDAOImpl.java
   JAVA  service/MedicineService.java
   JAVA  servlet/medicine/CatalogServlet.java             /medicines
   JAVA  servlet/medicine/MedicineDetailsServlet.java     /medicines/view
   JAVA  servlet/medicine/InventoryServlet.java           /admin/medicines
   JAVA  servlet/medicine/MedicineFormServlet.java        /admin/medicines/edit
+  JAVA  servlet/medicine/RestockMedicineServlet.java     /admin/medicines/restock
   JAVA  servlet/medicine/DiscontinueMedicineServlet.java /admin/medicines/discontinue
+  JAVA  servlet/medicine/CategoryServlet.java            /admin/categories
   VIEWS medicine/catalog.jsp
   VIEWS medicine/medicine-details.jsp
   VIEWS medicine/inventory.jsp
   VIEWS medicine/medicine-form.jsp
+  VIEWS medicine/categories.jsp
+  src/main/webapp/js/medicine.js
+  (+ the "Module 03" sections of database/schema.sql and sample-data.sql)
 
 
 
@@ -181,9 +189,10 @@ Files:
   pom.xml                                   Maven build and libraries
   .gitignore
   README.md                                 project guide
+  database/create-database.sql              creates MediSysDB + app login
   database/schema.sql                       all database tables
-  src/main/resources/db.properties.example  copy to db.properties with
-                                            your own SQL Server login
+  database/sample-data.sql                  demo data
+  src/main/resources/db.properties.example  copy to db.properties
   JAVA  config/DBConnection.java            opens database connections
   JAVA  filter/AuthFilter.java              login and role checks
   JAVA  service/ValidationException.java    error used by all services
@@ -193,6 +202,7 @@ Files:
   src/main/webapp/WEB-INF/web.xml           app settings
   src/main/webapp/index.jsp                 home page
   src/main/webapp/css/style.css             one stylesheet for all pages
+  src/main/webapp/js/app.js                 shared JavaScript helpers
   VIEWS common/header.jspf                  top of every page + menu
   VIEWS common/footer.jspf                  bottom of every page
   VIEWS common/error.jsp                    404 / 500 page

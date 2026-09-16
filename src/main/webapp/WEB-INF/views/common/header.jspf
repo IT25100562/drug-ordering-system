@@ -1,5 +1,5 @@
 <%--
-    Shared page top: <head>, the menu bar, and the start of the page body.
+    Shared page top: <head>, the menu bar, and success / error messages.
     Shared file - agree with the team before changing it.
 
     Every page declares a String called pageTitle first, then includes this:
@@ -7,17 +7,26 @@
         <% String pageTitle = "My Prescriptions"; %>
         <%@ include file="../common/header.jspf" %>
 
-    TODO: show the menu for the logged in user's role once module 04
-          (SessionUtil + User) is built, and show flash messages.
+    TODO (module 04): show the menu for the logged in user's role, and hide the
+          admin links from customers.
 --%>
-<% String ctx = request.getContextPath(); %>
+<%@ page import="com.medisys.util.SessionUtil" %>
+<%@ page import="com.medisys.util.TextUtil" %>
+<%
+    String ctx = request.getContextPath();
+
+    // Messages stored just before a redirect (see SessionUtil.flash).
+    String successMessage = SessionUtil.takeFlash(request, "success");
+    String errorMessage = SessionUtil.takeFlash(request, "error");
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><%= pageTitle %> | MediSys</title>
+    <title><%= TextUtil.html(pageTitle) %> | MediSys</title>
     <link rel="stylesheet" href="<%= ctx %>/css/style.css">
+    <script src="<%= ctx %>/js/app.js" defer></script>
 </head>
 <body>
 
@@ -27,8 +36,17 @@
     </a>
     <nav>
         <a href="<%= ctx %>/medicines">Medicines</a>
+        <%-- Admin links: visible to everyone until login (module 04) exists. --%>
+        <a href="<%= ctx %>/admin/medicines">Inventory</a>
         <a href="<%= ctx %>/login">Log in</a>
     </nav>
 </div>
 
 <div class="page">
+
+<% if (successMessage != null) { %>
+    <div class="message success" data-autohide><%= TextUtil.html(successMessage) %></div>
+<% } %>
+<% if (errorMessage != null) { %>
+    <div class="message error"><%= TextUtil.html(errorMessage) %></div>
+<% } %>

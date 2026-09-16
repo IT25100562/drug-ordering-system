@@ -12,5 +12,6 @@
 <h1>Welcome to MediSys</h1>
 <p>Order your medicines online. Prescription-only medicines are checked by a
    senior pharmacist before the order is released.</p>
+<p><a class="btn" href="<%= ctx %>/medicines">Browse medicines</a></p>
 
 <%@ include file="WEB-INF/views/common/footer.jspf" %>

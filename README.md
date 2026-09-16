@@ -25,10 +25,21 @@ a `dao/impl` JDBC class for every table group).
 
 1. Clone the repo and open the folder in IntelliJ IDEA. When IntelliJ asks, load it as a
    Maven project. It downloads the dependencies itself.
-2. Database: create the database with the scripts in [database/](database/) (being
-   written in the next step).
-3. Copy `src/main/resources/db.properties.example` to `db.properties` in the same folder
-   and put in your own SQL Server login. `db.properties` is git-ignored.
+2. **Database** (SQL Server must be running, with TCP port 1433 enabled). From the project
+   folder, run the three scripts in order:
+
+   ```
+   sqlcmd -S localhost -E -C -i database\create-database.sql
+   sqlcmd -S localhost -E -C -d MediSysDB -i database\schema.sql
+   sqlcmd -S localhost -E -C -d MediSysDB -i database\sample-data.sql
+   ```
+
+   The first script creates the `MediSysDB` database and a `medisys_app` login.
+   `schema.sql` **drops and recreates** every table, so run it again (followed by
+   `sample-data.sql`) whenever the tables change or you want fresh demo data.
+   You can also open the scripts in IntelliJ's Database tool and run them there.
+3. Copy `src/main/resources/db.properties.example` to `db.properties` in the same folder.
+   It already has the `medisys_app` login. `db.properties` is git-ignored.
 4. Add a **Tomcat Server → Local** run configuration (Tomcat 11). On the Deployment tab,
    add the artifact `medisys:war exploded` and set the context path to `/medisys`.
 5. Run it and open <http://localhost:8080/medisys/>.
@@ -61,6 +72,7 @@ drug-ordering-system/
     └── webapp/
         ├── index.jsp
         ├── css/style.css          one stylesheet for every page (shared)
+        ├── js/                    app.js (shared) + one script per module
         └── WEB-INF/
             ├── web.xml
             └── views/             JSP pages, one folder per module
@@ -87,7 +99,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 |--------|-------|--------------|---------|--------------------------|
 | 01 | `CartItem`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartService`, `WishlistService` | `cart/` |
 | 02 | `Order`, `OrderItem`, `OrderStatus`, `Payment` | `OrderDAO`, `PaymentDAO` | `OrderService`, `PaymentService` | `order/` |
-| 03 | `Medicine`, `Category` | `MedicineDAO` | `MedicineService` | `medicine/` |
+| 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
 | 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` |
 | 05 | `Prescription`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` | `prescription/` |
 | 06 | `Delivery`, `DeliveryStatus`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
@@ -104,7 +116,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 04 | `/account/profile` | logged in |
 | 04 | `/admin/users` | admin |
 | 03 | `/medicines`, `/medicines/view?id=` | everyone |
-| 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/discontinue` | admin |
+| 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/restock`, `/admin/medicines/discontinue`, `/admin/categories` | admin |
 | 01 | `/cart`, `/cart/add`, `/cart/update`, `/cart/remove` | customer |
 | 01 | `/wishlist`, `/wishlist/action` | customer |
 | 02 | `/checkout`, `/checkout/payment` | customer |
@@ -128,6 +140,54 @@ for DELIVERY_STAFF.
 - **02 → 06:** a successful payment creates a delivery through `DeliveryService`.
 - **05, 02, 06 → 06:** anything that needs to tell a user something calls
   `NotificationService.notify(...)`.
+
+## Module status
+
+| # | Module | Status |
+|---|--------|--------|
+| 01 | Shopping Cart and Wishlist | not started |
+| 02 | Order Placement and Checkout | not started |
+| 03 | Medicine Catalog and Inventory | **done** (see below) |
+| 04 | User and Role Management | not started |
+| 05 | Prescription Upload and Verification | not started |
+| 06 | Delivery Tracking and Notification | not started |
+
+### Module 03: Medicine Catalog and Inventory
+
+**Customer pages**
+- `/medicines`: catalog cards with search (name or manufacturer), category filter, price,
+  stock badge and a "Prescription" badge. Discontinued and expired medicines are hidden.
+- `/medicines/view?id=`: full details. Unknown, discontinued or expired medicines give a 404.
+  The Add to Cart and Add to Wishlist buttons post to module 01.
+
+**Admin pages**
+- `/admin/medicines`: inventory table with totals (active, low stock, out of stock,
+  expired), filter tabs, search and category filter. Per row: add stock, Edit,
+  Discontinue (with a confirm box), or Restore on the Discontinued tab.
+- `/admin/medicines/edit`: add / edit form. All errors are shown together, and the
+  typed values are kept.
+- `/admin/categories`: list, add, and delete categories. A category can only be deleted
+  when no medicine uses it.
+
+**Rules (all in `MedicineService`, repeated in `js/medicine.js` for quick feedback)**
+- name 2-150 characters; category and dosage form must be from the lists
+- price more than 0, at most Rs. 1,000,000, at most 2 decimals
+- stock 0-100000, reorder level 0-10000, restock quantity 1-10000
+- expiry date cannot be in the past (an already saved past date may stay)
+- no two medicines with the same name and strength
+- "Delete" is a soft delete (`is_discontinued`), so old orders keep their medicine
+- a discontinued medicine must be restored before stock can be added
+
+**For other modules**
+- 01 (cart): `medicineService.getAvailableMedicine(id)` returns the medicine or throws a
+  `ValidationException` with a message (not available / out of stock).
+  `medicine.isRequiresPrescription()` tells you to send the customer to module 05.
+- 02 (orders): `medicineService.reduceStock(id, qty)` takes stock out safely. If two
+  orders arrive at the same time, the stock still can't go below 0. It throws a
+  `ValidationException` when there is not enough stock.
+
+**Not yet:** the admin pages are open to everyone until module 04 adds login. After that,
+`AuthFilter` must allow `/admin/*` only for ADMIN.
 
 ## Coding rules
 

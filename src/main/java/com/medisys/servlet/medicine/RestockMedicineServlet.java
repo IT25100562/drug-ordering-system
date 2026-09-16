@@ -16,19 +16,15 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * Discontinues a medicine (soft delete) or restores it.
+ * Adds delivered stock to a medicine (the "+ Add" box on the inventory page).
  *
- *   POST /admin/medicines/discontinue   id=5&action=discontinue
- *   POST /admin/medicines/discontinue   id=5&action=restore
- *
- * A discontinued medicine is hidden from the catalog but stays in the
- * database, so old orders that point to it keep working.
+ *   POST /admin/medicines/restock   id=5&quantity=100
  *
  * Module : 03 - Medicine Catalog and Inventory
  * Owner  : Divisekara A. W. D. M. D. M. B.
  */
-@WebServlet("/admin/medicines/discontinue")
-public class DiscontinueMedicineServlet extends HttpServlet {
+@WebServlet("/admin/medicines/restock")
+public class RestockMedicineServlet extends HttpServlet {
 
     private final MedicineService medicineService = new MedicineService();
 
@@ -36,25 +32,19 @@ public class DiscontinueMedicineServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Integer id = TextUtil.parseInt(request.getParameter("id"));
-        boolean restore = "restore".equals(request.getParameter("action"));
+        String quantity = request.getParameter("quantity");
 
         try {
             if (id == null) {
                 throw new ValidationException("No medicine was selected.");
             }
-            if (restore) {
-                Medicine medicine = medicineService.restore(id);
-                SessionUtil.flash(request, "success",
-                        medicine.getDisplayName() + " is back in the catalog.");
-            } else {
-                Medicine medicine = medicineService.discontinue(id);
-                SessionUtil.flash(request, "success",
-                        medicine.getDisplayName() + " was discontinued and hidden from the catalog.");
-            }
+            Medicine medicine = medicineService.restock(id, quantity);
+            SessionUtil.flash(request, "success", "Added " + TextUtil.clean(quantity)
+                    + " to the stock of " + medicine.getDisplayName() + ".");
         } catch (ValidationException e) {
             SessionUtil.flash(request, "error", e.getMessage());
         } catch (SQLException e) {
-            throw new ServletException("Could not update the medicine", e);
+            throw new ServletException("Could not update the stock", e);
         }
         InventoryServlet.redirectToInventory(request, response);
     }

@@ -14,6 +14,10 @@
 
     <display-name>MediSys</display-name>
 
+    <!-- Read form data and write pages as UTF-8 -->
+    <request-character-encoding>UTF-8</request-character-encoding>
+    <response-character-encoding>UTF-8</response-character-encoding>
+
     <!--
         Folder where uploaded prescription files are kept. It is outside the web
         folder on purpose, so files can only be opened through a servlet that

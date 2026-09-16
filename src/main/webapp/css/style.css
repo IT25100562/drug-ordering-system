@@ -480,3 +480,228 @@ footer.site {
     color: #777;
     font-style: italic;
 }
+
+/* ------------------- shared small helpers ----------------------- */
+
+input[type="date"],
+input[type="email"] {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #c8d2da;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #ffffff;
+}
+
+.meta {
+    color: #6b7b8a;
+    font-size: 13px;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.message ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.title-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.title-row .actions {
+    margin-top: 0;
+}
+
+.search-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.search-bar input[type="text"] {
+    flex: 2 1 220px;
+    width: auto;
+}
+
+.search-bar select {
+    flex: 1 1 160px;
+    width: auto;
+}
+
+.checkbox-field label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 26px;
+}
+
+.checkbox-field input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+}
+
+/* --------------- module 03: catalog and inventory --------------- */
+
+.badge-rx {
+    background: #fde8d4;
+    color: #9a4a00;
+}
+
+.result-count {
+    color: #5d6d7b;
+    font-size: 13px;
+    margin: 0 0 10px 2px;
+}
+
+.catalog-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+.medicine-card {
+    background: #ffffff;
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.medicine-card h2 {
+    margin: 2px 0 0 0;
+    font-size: 16px;
+}
+
+.medicine-card h2 a {
+    color: #22303c;
+    text-decoration: none;
+}
+
+.medicine-card h2 a:hover {
+    color: #0b6b5e;
+}
+
+.medicine-card .meta {
+    margin: 0;
+}
+
+.medicine-card .badge {
+    align-self: flex-start;
+}
+
+.medicine-card .actions {
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+.medicine-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+}
+
+.category-name {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #0b6b5e;
+    font-weight: 600;
+}
+
+.price {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.price.big {
+    font-size: 26px;
+    margin: 6px 0 10px 0;
+}
+
+.description {
+    white-space: pre-line;
+}
+
+.add-to-cart {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-to-cart label {
+    margin: 0;
+}
+
+.add-to-cart input[type="number"] {
+    width: 80px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 6px 0 18px 0;
+}
+
+.stat {
+    border: 1px solid #dfe6ec;
+    border-left: 4px solid #0b6b5e;
+    border-radius: 5px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: #5d6d7b;
+}
+
+.stat span {
+    display: block;
+    font-size: 24px;
+    font-weight: 700;
+    color: #22303c;
+}
+
+.stat.warn {
+    border-left-color: #b57600;
+}
+
+.stat.danger {
+    border-left-color: #b3261e;
+}
+
+.stat.muted {
+    border-left-color: #8a99a6;
+}
+
+.row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    min-width: 230px;
+}
+
+.row-actions form {
+    margin: 0;
+}
+
+.restock {
+    display: flex;
+    gap: 4px;
+}
+
+.restock input[type="number"] {
+    width: 70px;
+    padding: 5px 6px;
+    font-size: 13px;
+}

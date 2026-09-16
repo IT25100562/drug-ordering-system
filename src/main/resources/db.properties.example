@@ -1,9 +1,10 @@
 # MediSys database settings (SQL Server)
 #
-# Copy this file to db.properties in the same folder and put in YOUR own
-# SQL Server login. db.properties is in .gitignore, so your password is never
-# pushed to GitHub.
+# Copy this file to db.properties in the same folder.
+# The login below is created by database/create-database.sql, so it works as
+# is on every team member's machine. Change it only if you use your own login.
+# db.properties is in .gitignore, so it is never pushed to GitHub.
 
 db.url=jdbc:sqlserver://localhost:1433;databaseName=MediSysDB;encrypt=false;trustServerCertificate=true
-db.user=sa
-db.password=change-me
+db.user=medisys_app
+db.password=MediSys@2026
