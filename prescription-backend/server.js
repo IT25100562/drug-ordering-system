@@ -138,3 +138,90 @@ app.listen(PORT, async () => {
     console.log(`[SERVER] Running on http://localhost:${PORT}`);
     try { await getDbPool(); } catch (e) {}
 });
+
+// ==========================================
+// --- MEDICINE INVENTORY ENDPOINTS ---
+// ==========================================
+
+// 1. ADD NEW MEDICINE
+app.post('/api/medicines', async (req, res) => {
+    console.log('[POST] /api/medicines - Adding item');
+    try {
+        const { name, category, price, stock_quantity, description } = req.body;
+        if (!name || !price) return res.status(400).json({ error: 'Name and price are required' });
+
+        const db = await getDbPool();
+        await db.request()
+            .input('name', sql.VarChar, name)
+            .input('category', sql.VarChar, category || 'General')
+            .input('price', sql.Decimal(10, 2), price)
+            .input('stock_quantity', sql.Int, stock_quantity || 0)
+            .input('description', sql.VarChar, description || '')
+            .query(`INSERT INTO medicines (name, category, price, stock_quantity, description) 
+                    VALUES (@name, @category, @price, @stock_quantity, @description)`);
+
+        res.status(201).json({ message: 'Medicine added successfully' });
+    } catch (err) {
+        console.error('[ERROR] Add medicine failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 2. GET ALL ACTIVE MEDICINES
+app.get('/api/medicines', async (req, res) => {
+    console.log('[GET] /api/medicines - Fetching inventory');
+    try {
+        const db = await getDbPool();
+        const result = await db.request()
+            .query('SELECT * FROM medicines WHERE is_discontinued = 0 ORDER BY name ASC');
+        console.log(`[INFO] Retrieved ${result.recordset.length} medicine(s)`);
+        res.json(result.recordset);
+    } catch (err) {
+        console.error('[ERROR] Fetch inventory failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 3. EDIT MEDICINE (Details, Price, & Stock)
+app.put('/api/medicines/:id', async (req, res) => {
+    console.log(`[PUT] /api/medicines/${req.params.id} - Updating item`);
+    try {
+        const { id } = req.params;
+        const { name, category, price, stock_quantity, description } = req.body;
+
+        const db = await getDbPool();
+        await db.request()
+            .input('id', sql.Int, id)
+            .input('name', sql.VarChar, name)
+            .input('category', sql.VarChar, category)
+            .input('price', sql.Decimal(10, 2), price)
+            .input('stock_quantity', sql.Int, stock_quantity)
+            .input('description', sql.VarChar, description)
+            .query(`UPDATE medicines 
+                    SET name = @name, category = @category, price = @price, 
+                        stock_quantity = @stock_quantity, description = @description 
+                    WHERE id = @id`);
+
+        res.json({ message: 'Medicine updated successfully' });
+    } catch (err) {
+        console.error('[ERROR] Update medicine failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// 4. DISCONTINUE MEDICINE
+app.delete('/api/medicines/:id', async (req, res) => {
+    console.log(`[DELETE] /api/medicines/${req.params.id} - Discontinuing item`);
+    try {
+        const { id } = req.params;
+        const db = await getDbPool();
+        await db.request()
+            .input('id', sql.Int, id)
+            .query('UPDATE medicines SET is_discontinued = 1 WHERE id = @id');
+
+        res.json({ message: 'Medicine marked as discontinued' });
+    } catch (err) {
+        console.error('[ERROR] Discontinue medicine failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
