@@ -96,11 +96,17 @@ app.get('/api/prescriptions', async (req, res) => {
     }
 });
 
-// 3. UPDATE STATUS
+// 3. UPDATE STATUS (Approve / Reject / Request Fix)
 app.patch('/api/prescriptions/:id/status', async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
+
+        // Validates required design specification statuses
+        if (!['approved', 'rejected', 'request_fix', 'pending'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status update. Allowed: approved, rejected, request_fix, pending' });
+        }
+
         const db = await getDbPool();
         await db.request()
             .input('id', sql.Int, id)
@@ -112,7 +118,7 @@ app.patch('/api/prescriptions/:id/status', async (req, res) => {
     }
 });
 
-// 4. DELETE EXPIRED
+// 4. DELETE EXPIRED PRESCRIPTIONS
 app.delete('/api/prescriptions/expired', async (req, res) => {
     try {
         const db = await getDbPool();
