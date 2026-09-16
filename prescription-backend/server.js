@@ -39,11 +39,11 @@ async function getDbPool() {
     if (pool && pool.connected) return pool;
     try {
         pool = await new sql.ConnectionPool(dbConfig).connect();
-        console.log('Connected to MSSQL database ✅');
+        console.log('[DB] Connected to MSSQL database successfully.');
         return pool;
     } catch (err) {
         pool = null;
-        console.error('Database connection failed ❌:', err.message);
+        console.error('[DB ERROR] Database connection failed:', err.message);
         throw err;
     }
 }
@@ -62,7 +62,7 @@ const upload = multer({ storage });
 
 // 1. UPLOAD PRESCRIPTION
 app.post('/api/prescriptions/upload', upload.single('prescription'), async (req, res) => {
-    console.log('📥 Upload request received');
+    console.log('[POST] /api/prescriptions/upload - Request received');
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
@@ -74,35 +74,35 @@ app.post('/api/prescriptions/upload', upload.single('prescription'), async (req,
             .input('file_path', sql.VarChar, req.file.filename)
             .query('INSERT INTO prescriptions (user_id, file_path) VALUES (@user_id, @file_path)');
 
-        console.log('✅ File saved to DB:', req.file.filename);
+        console.log('[INFO] File saved to database:', req.file.filename);
         res.status(201).json({ message: 'Prescription uploaded successfully', filePath: req.file.filename });
     } catch (err) {
-        console.error('❌ Upload Error:', err.message);
+        console.error('[ERROR] Prescription upload failed:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
 // 2. VIEW SUBMITTED PRESCRIPTIONS
 app.get('/api/prescriptions', async (req, res) => {
-    console.log('📥 Fetch prescriptions list request');
+    console.log('[GET] /api/prescriptions - Fetching records');
     try {
         const db = await getDbPool();
         const result = await db.request().query('SELECT * FROM prescriptions ORDER BY uploaded_at DESC');
-        console.log(`✅ Returned ${result.recordset.length} record(s)`);
+        console.log(`[INFO] Retrieved ${result.recordset.length} record(s)`);
         res.json(result.recordset);
     } catch (err) {
-        console.error('❌ Fetch Error:', err.message);
+        console.error('[ERROR] Failed to fetch prescriptions:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
 // 3. UPDATE STATUS (Approve / Reject / Request Fix)
 app.patch('/api/prescriptions/:id/status', async (req, res) => {
+    console.log(`[PATCH] /api/prescriptions/${req.params.id}/status - Updating status`);
     try {
         const { id } = req.params;
         const { status } = req.body;
 
-        // Validates required design specification statuses
         if (!['approved', 'rejected', 'request_fix', 'pending'].includes(status)) {
             return res.status(400).json({ error: 'Invalid status update. Allowed: approved, rejected, request_fix, pending' });
         }
@@ -114,24 +114,27 @@ app.patch('/api/prescriptions/:id/status', async (req, res) => {
             .query('UPDATE prescriptions SET status = @status WHERE id = @id');
         res.json({ message: `Prescription status updated to ${status}` });
     } catch (err) {
+        console.error('[ERROR] Status update failed:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
 // 4. DELETE EXPIRED PRESCRIPTIONS
 app.delete('/api/prescriptions/expired', async (req, res) => {
+    console.log('[DELETE] /api/prescriptions/expired - Cleaning up old records');
     try {
         const db = await getDbPool();
         const result = await db.request()
             .query("DELETE FROM prescriptions WHERE status = 'expired' OR uploaded_at < DATEADD(day, -30, GETDATE())");
         res.json({ message: 'Expired prescriptions deleted', rowsAffected: result.rowsAffected[0] });
     } catch (err) {
+        console.error('[ERROR] Cleanup failed:', err.message);
         res.status(500).json({ error: err.message });
     }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-    console.log(`Server running on http://localhost:${PORT} 🚀`);
+    console.log(`[SERVER] Running on http://localhost:${PORT}`);
     try { await getDbPool(); } catch (e) {}
 });
