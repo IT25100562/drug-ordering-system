@@ -75,3 +75,12 @@ CREATE TABLE order_items (
                              FOREIGN KEY (order_id) REFERENCES orders(id),
                              FOREIGN KEY (medicine_id) REFERENCES medicines(id)
 );
+
+CREATE TABLE notifications (
+                               id INT IDENTITY(1,1) PRIMARY KEY,
+                               user_id INT NOT NULL,
+                               message VARCHAR(255) NOT NULL,
+                               is_read BIT DEFAULT 0,
+                               created_at DATETIME DEFAULT GETDATE(),
+                               FOREIGN KEY (user_id) REFERENCES users(id)
+);
