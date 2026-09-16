@@ -1,0 +1,9 @@
+<%-- Shared page bottom. Shared file - agree with the team before changing it. --%>
+</div><!-- /page -->
+
+<footer class="site">
+    MediSys &middot; SE2030 Group Project
+</footer>
+
+</body>
+</html>

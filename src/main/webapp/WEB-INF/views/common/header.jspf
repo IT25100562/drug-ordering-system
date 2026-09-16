@@ -1,0 +1,34 @@
+<%--
+    Shared page top: <head>, the menu bar, and the start of the page body.
+    Shared file - agree with the team before changing it.
+
+    Every page declares a String called pageTitle first, then includes this:
+
+        <% String pageTitle = "My Prescriptions"; %>
+        <%@ include file="../common/header.jspf" %>
+
+    TODO: show the menu for the logged in user's role once module 04
+          (SessionUtil + User) is built, and show flash messages.
+--%>
+<% String ctx = request.getContextPath(); %>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= pageTitle %> | MediSys</title>
+    <link rel="stylesheet" href="<%= ctx %>/css/style.css">
+</head>
+<body>
+
+<div class="topbar">
+    <a class="brand" href="<%= ctx %>/">MediSys
+        <span>Online Medicine Ordering System</span>
+    </a>
+    <nav>
+        <a href="<%= ctx %>/medicines">Medicines</a>
+        <a href="<%= ctx %>/login">Log in</a>
+    </nav>
+</div>
+
+<div class="page">

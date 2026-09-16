@@ -1,0 +1,482 @@
+/* ------------------------------------------------------------------
+   MediSys - shared stylesheet
+   Kept simple on purpose: plain CSS, no framework, so every team member
+   can read it and add their own pages using the same classes.
+   Shared file - agree with the team before changing it.
+   ------------------------------------------------------------------ */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 15px;
+    color: #22303c;
+    background: #f2f5f8;
+}
+
+a {
+    color: #0b6b5e;
+}
+
+/* ---------------------------- header ---------------------------- */
+
+.topbar {
+    background: #0b6b5e;
+    color: #ffffff;
+    padding: 12px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+}
+
+.topbar .brand {
+    font-size: 19px;
+    font-weight: bold;
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.topbar .brand span {
+    font-weight: normal;
+    opacity: 0.8;
+    font-size: 13px;
+    display: block;
+}
+
+.topbar nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-left: auto;
+    align-items: center;
+}
+
+.topbar nav a {
+    color: #ffffff;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+}
+
+.topbar nav a:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.topbar .who {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.count {
+    background: #ffb703;
+    color: #22303c;
+    border-radius: 10px;
+    padding: 1px 7px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+/* ---------------------------- layout ---------------------------- */
+
+.page {
+    max-width: 960px;
+    margin: 24px auto 60px auto;
+    padding: 0 16px;
+}
+
+.card {
+    background: #ffffff;
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+}
+
+h1 {
+    font-size: 22px;
+    margin: 0 0 6px 0;
+}
+
+h2 {
+    font-size: 17px;
+    margin: 0 0 12px 0;
+}
+
+.subtitle {
+    color: #5d6d7b;
+    margin: 0 0 18px 0;
+    font-size: 14px;
+}
+
+/* ---------------------------- messages -------------------------- */
+
+.message {
+    padding: 11px 14px;
+    border-radius: 5px;
+    margin-bottom: 16px;
+    border: 1px solid transparent;
+}
+
+.message.success {
+    background: #e6f5ee;
+    border-color: #a8dcc3;
+    color: #1d6b48;
+}
+
+.message.error {
+    background: #fdeaea;
+    border-color: #f3b7b7;
+    color: #97231f;
+}
+
+.message.info {
+    background: #eaf1fb;
+    border-color: #b8cdec;
+    color: #24507f;
+}
+
+/* ---------------------------- forms ----------------------------- */
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #c8d2da;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 14px;
+    background: #ffffff;
+}
+
+textarea {
+    resize: vertical;
+}
+
+.field {
+    margin-bottom: 15px;
+}
+
+.field .hint {
+    font-size: 12px;
+    color: #6b7b8a;
+    margin-top: 4px;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.row > .field {
+    flex: 1 1 180px;
+}
+
+/* ---------------------------- buttons --------------------------- */
+
+.btn {
+    display: inline-block;
+    padding: 9px 16px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    background: #0b6b5e;
+    color: #ffffff;
+}
+
+.btn:hover {
+    opacity: 0.9;
+}
+
+.btn.approve {
+    background: #1d7a4c;
+}
+
+.btn.reject {
+    background: #b3261e;
+}
+
+.btn.correction {
+    background: #b57600;
+}
+
+.btn.plain {
+    background: #ffffff;
+    color: #22303c;
+    border-color: #c8d2da;
+}
+
+.btn.small {
+    padding: 5px 10px;
+    font-size: 13px;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+/* ---------------------------- tables ---------------------------- */
+
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e6ebf0;
+    vertical-align: top;
+}
+
+th {
+    background: #f6f8fa;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #5d6d7b;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+.empty {
+    padding: 26px;
+    text-align: center;
+    color: #6b7b8a;
+}
+
+/* ---------------------------- badges ---------------------------- */
+
+.badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 11px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badge-pending {
+    background: #fff3d6;
+    color: #8a5b00;
+}
+
+.badge-approved {
+    background: #e0f3e8;
+    color: #1d6b48;
+}
+
+.badge-rejected {
+    background: #fbe0de;
+    color: #97231f;
+}
+
+.badge-correction {
+    background: #e7ecff;
+    color: #2c3e8f;
+}
+
+.badge-paid {
+    background: #dceffb;
+    color: #14567d;
+}
+
+.badge-expired {
+    background: #eceff1;
+    color: #5d6d7b;
+}
+
+/* ---------------------------- filters --------------------------- */
+
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.filters a {
+    padding: 6px 12px;
+    border: 1px solid #c8d2da;
+    border-radius: 15px;
+    text-decoration: none;
+    color: #22303c;
+    background: #ffffff;
+    font-size: 13px;
+}
+
+.filters a.active {
+    background: #0b6b5e;
+    border-color: #0b6b5e;
+    color: #ffffff;
+}
+
+/* ---------------------------- review ---------------------------- */
+
+.review-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.review-grid .details {
+    flex: 1 1 280px;
+}
+
+.review-grid .document {
+    flex: 1 1 320px;
+}
+
+.document img {
+    max-width: 100%;
+    border: 1px solid #dfe6ec;
+    border-radius: 4px;
+}
+
+.document iframe {
+    width: 100%;
+    height: 420px;
+    border: 1px solid #dfe6ec;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+dl.info {
+    margin: 0;
+}
+
+dl.info dt {
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #6b7b8a;
+    letter-spacing: 0.4px;
+    margin-top: 12px;
+}
+
+dl.info dd {
+    margin: 3px 0 0 0;
+}
+
+/* ---------------------------- payment --------------------------- */
+
+.test-note {
+    background: #fff8e1;
+    border: 1px dashed #e0b84c;
+    color: #7a5a00;
+    padding: 10px 14px;
+    border-radius: 5px;
+    font-size: 13px;
+    margin-bottom: 18px;
+}
+
+.totals {
+    border-top: 1px solid #e6ebf0;
+    margin-top: 12px;
+    padding-top: 12px;
+}
+
+.totals div {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+}
+
+.totals .grand {
+    font-weight: bold;
+    font-size: 17px;
+    border-top: 1px solid #e6ebf0;
+    margin-top: 8px;
+    padding-top: 10px;
+}
+
+/* ---------------------------- misc ------------------------------ */
+
+.note-box {
+    background: #f6f8fa;
+    border-left: 3px solid #c8d2da;
+    padding: 9px 12px;
+    font-size: 13px;
+    border-radius: 0 4px 4px 0;
+}
+
+.notification {
+    border-bottom: 1px solid #e6ebf0;
+    padding: 13px 4px;
+}
+
+.notification:last-child {
+    border-bottom: none;
+}
+
+.notification.unread {
+    background: #f4faf8;
+}
+
+.notification .time {
+    font-size: 12px;
+    color: #6b7b8a;
+    margin-top: 3px;
+}
+
+footer.site {
+    text-align: center;
+    color: #7b8a98;
+    font-size: 12px;
+    padding: 18px;
+}
+
+.module-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.module-list li {
+    padding: 9px 0;
+    border-bottom: 1px solid #eef2f5;
+    font-size: 14px;
+}
+
+.module-list li:last-child {
+    border-bottom: none;
+}
+
+.module-list .owner {
+    color: #6b7b8a;
+    font-size: 13px;
+}
+
+/* Placeholder text on pages that are not built yet */
+.placeholder {
+    color: #777;
+    font-style: italic;
+}
