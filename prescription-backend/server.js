@@ -5,6 +5,8 @@ const sql = require('mssql');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 
@@ -58,9 +60,71 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-// --- MODULE ENDPOINTS ---
+// ==========================================
+// --- USER & ROLE MANAGEMENT ENDPOINTS ---
+// ==========================================
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback_super_secret_key_123';
 
-// 1. UPLOAD PRESCRIPTION
+// 1. REGISTER USER
+app.post('/api/users/register', async (req, res) => {
+    console.log('[POST] /api/users/register - Registering new user');
+    try {
+        const { full_name, email, password, role } = req.body;
+        if (!full_name || !email || !password) return res.status(400).json({ error: 'Missing required fields' });
+
+        const salt = await bcrypt.genSalt(10);
+        const password_hash = await bcrypt.hash(password, salt);
+        const userRole = role || 'customer';
+
+        const db = await getDbPool();
+        await db.request()
+            .input('full_name', sql.VarChar, full_name)
+            .input('email', sql.VarChar, email)
+            .input('password_hash', sql.VarChar, password_hash)
+            .input('role', sql.VarChar, userRole)
+            .query(`INSERT INTO users (full_name, email, password_hash, role) 
+                    VALUES (@full_name, @email, @password_hash, @role)`);
+
+        res.status(201).json({ message: 'User registered successfully' });
+    } catch (err) {
+        console.error('[ERROR] Registration failed:', err.message);
+        res.status(500).json({ error: 'Registration failed. Email might already exist.' });
+    }
+});
+
+// 2. LOGIN USER
+app.post('/api/users/login', async (req, res) => {
+    console.log('[POST] /api/users/login - Authenticating user');
+    try {
+        const { email, password } = req.body;
+
+        const db = await getDbPool();
+        const result = await db.request()
+            .input('email', sql.VarChar, email)
+            .query('SELECT * FROM users WHERE email = @email');
+
+        const user = result.recordset[0];
+        if (!user) return res.status(400).json({ error: 'Invalid email or password' });
+
+        const validPassword = await bcrypt.compare(password, user.password_hash);
+        if (!validPassword) return res.status(400).json({ error: 'Invalid email or password' });
+
+        const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '2h' });
+
+        res.json({
+            message: 'Login successful',
+            token,
+            user: { id: user.id, full_name: user.full_name, role: user.role }
+        });
+    } catch (err) {
+        console.error('[ERROR] Login failed:', err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ==========================================
+// --- PRESCRIPTION ENDPOINTS ---
+// ==========================================
 app.post('/api/prescriptions/upload', upload.single('prescription'), async (req, res) => {
     console.log('[POST] /api/prescriptions/upload - Request received');
     try {
@@ -82,7 +146,6 @@ app.post('/api/prescriptions/upload', upload.single('prescription'), async (req,
     }
 });
 
-// 2. VIEW SUBMITTED PRESCRIPTIONS
 app.get('/api/prescriptions', async (req, res) => {
     console.log('[GET] /api/prescriptions - Fetching records');
     try {
@@ -96,7 +159,6 @@ app.get('/api/prescriptions', async (req, res) => {
     }
 });
 
-// 3. UPDATE STATUS (Approve / Reject / Request Fix)
 app.patch('/api/prescriptions/:id/status', async (req, res) => {
     console.log(`[PATCH] /api/prescriptions/${req.params.id}/status - Updating status`);
     try {
@@ -119,7 +181,6 @@ app.patch('/api/prescriptions/:id/status', async (req, res) => {
     }
 });
 
-// 4. DELETE EXPIRED PRESCRIPTIONS
 app.delete('/api/prescriptions/expired', async (req, res) => {
     console.log('[DELETE] /api/prescriptions/expired - Cleaning up old records');
     try {
@@ -133,17 +194,9 @@ app.delete('/api/prescriptions/expired', async (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`[SERVER] Running on http://localhost:${PORT}`);
-    try { await getDbPool(); } catch (e) {}
-});
-
 // ==========================================
 // --- MEDICINE INVENTORY ENDPOINTS ---
 // ==========================================
-
-// 1. ADD NEW MEDICINE
 app.post('/api/medicines', async (req, res) => {
     console.log('[POST] /api/medicines - Adding item');
     try {
@@ -167,7 +220,6 @@ app.post('/api/medicines', async (req, res) => {
     }
 });
 
-// 2. GET ALL ACTIVE MEDICINES
 app.get('/api/medicines', async (req, res) => {
     console.log('[GET] /api/medicines - Fetching inventory');
     try {
@@ -182,7 +234,6 @@ app.get('/api/medicines', async (req, res) => {
     }
 });
 
-// 3. EDIT MEDICINE (Details, Price, & Stock)
 app.put('/api/medicines/:id', async (req, res) => {
     console.log(`[PUT] /api/medicines/${req.params.id} - Updating item`);
     try {
@@ -209,7 +260,6 @@ app.put('/api/medicines/:id', async (req, res) => {
     }
 });
 
-// 4. DISCONTINUE MEDICINE
 app.delete('/api/medicines/:id', async (req, res) => {
     console.log(`[DELETE] /api/medicines/${req.params.id} - Discontinuing item`);
     try {
@@ -224,4 +274,11 @@ app.delete('/api/medicines/:id', async (req, res) => {
         console.error('[ERROR] Discontinue medicine failed:', err.message);
         res.status(500).json({ error: err.message });
     }
+});
+
+// START SERVER
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, async () => {
+    console.log(`[SERVER] Running on http://localhost:${PORT}`);
+    try { await getDbPool(); } catch (e) {}
 });
