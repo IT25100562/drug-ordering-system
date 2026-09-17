@@ -11,6 +11,10 @@
 USE MediSysDB;
 GO
 
+-- Needed for the filtered index on prescriptions (sqlcmd turns it off by default).
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- =================================================================
 -- Module 04 - User and Role Management
 -- =================================================================
@@ -107,4 +111,90 @@ SELECT u.id, m.id
 FROM medicines m
 JOIN users u ON u.email = N'nimal@example.com'
 WHERE m.name = N'Benadryl Cough Syrup';
+GO
+
+-- =================================================================
+-- Module 05 - Prescription Upload and Verification
+-- =================================================================
+-- The files behind these rows are in src/main/webapp/WEB-INF/sample-uploads.
+-- The app copies them into the file storage (key "samples/...") when it starts.
+--
+--   RX 1  Nimal   PENDING               waiting in the dashboard
+--   RX 2  Kasuni  CORRECTION_REQUESTED  blurry photo
+--   RX 3  Kasuni  REJECTED              not signed
+--   RX 4  Nimal   APPROVED, not paid    Metformin x5 + Panadol x2 -> Nimal can pay
+--   RX 5  Kasuni  PENDING, 40 days old  expired - the pharmacist should delete it
+--   RX 6  Kasuni  APPROVED and PAID     Losartan x3 -> shows the receipt
+
+INSERT INTO prescriptions
+    (user_id, customer_note, file_key, original_file_name, content_type, file_size,
+     status, pharmacist_note, reviewed_by, reviewed_at, uploaded_at, updated_at)
+SELECT u.id, v.customer_note, v.file_key, v.original_file_name, v.content_type, v.file_size,
+       v.status, v.pharmacist_note,
+       CASE WHEN v.status = 'PENDING' THEN NULL ELSE ph.id END,
+       CASE WHEN v.status = 'PENDING' THEN NULL ELSE DATEADD(hour, -v.hours_ago + 2, SYSDATETIME()) END,
+       DATEADD(hour, -v.hours_ago, SYSDATETIME()),
+       DATEADD(hour, -v.hours_ago + 2, SYSDATETIME())
+FROM (VALUES
+    (1, N'nimal@example.com',  N'For my throat infection.',
+     'samples/rx-demo-1.png', N'prescription-city-medical.png', 'image/png', 59269,
+     'PENDING', NULL, 5),
+    (2, N'kasuni@example.com', NULL,
+     'samples/rx-demo-2.jpg', N'IMG_20260910_0932.jpg', 'image/jpeg', 29912,
+     'CORRECTION_REQUESTED', N'The photo is too blurry to read the dosage. Please take a clear photo in good light.', 30),
+    (3, N'kasuni@example.com', NULL,
+     'samples/rx-demo-3.png', N'azithromycin-rx.png', 'image/png', 56581,
+     'REJECTED', N'The prescription is not signed by the doctor.', 72),
+    (4, N'nimal@example.com',  N'Monthly refill.',
+     'samples/rx-demo-4.pdf', N'diabetes-clinic-prescription.pdf', 'application/pdf', 1343,
+     'APPROVED', N'Take Metformin with food to avoid an upset stomach.', 48),
+    (5, N'kasuni@example.com', NULL,
+     'samples/rx-demo-5.png', N'old-prescription.png', 'image/png', 56228,
+     'PENDING', NULL, 40 * 24),
+    (6, N'kasuni@example.com', NULL,
+     'samples/rx-demo-6.png', N'blood-pressure-rx.png', 'image/png', 55096,
+     'APPROVED', NULL, 96)
+) AS v (sort_order, email, customer_note, file_key, original_file_name, content_type, file_size,
+        status, pharmacist_note, hours_ago)
+JOIN users u ON u.email = v.email
+CROSS JOIN (SELECT id FROM users WHERE email = N'pharmacist@medisys.lk') ph
+ORDER BY v.sort_order;
+
+-- The medicines the pharmacist listed (price copied from the catalog).
+INSERT INTO prescription_items (prescription_id, medicine_id, quantity, dosage_instructions, unit_price)
+SELECT p.id, m.id, v.quantity, v.dosage, m.price
+FROM (VALUES
+    ('samples/rx-demo-4.pdf', N'Metformin', 5, N'1 tablet twice daily with meals'),
+    ('samples/rx-demo-4.pdf', N'Panadol',   2, N'1-2 tablets when needed for pain, at most 8 in 24 hours'),
+    ('samples/rx-demo-6.png', N'Losartan',  3, N'1 tablet every morning')
+) AS v (file_key, medicine_name, quantity, dosage)
+JOIN prescriptions p ON p.file_key = v.file_key
+JOIN medicines m ON m.name = v.medicine_name;
+
+-- RX 6 was paid (test payment).
+UPDATE p SET
+    paid_at = DATEADD(hour, -90, SYSDATETIME()),
+    amount_paid = (SELECT SUM(i.quantity * i.unit_price) FROM prescription_items i WHERE i.prescription_id = p.id),
+    payment_reference = 'PAY-20260913-K7Q2XD',
+    card_last4 = '4242',
+    delivery_name = N'Kasuni Silva',
+    delivery_address = N'45 Lake Drive, Kandy',
+    delivery_phone = N'0719876543'
+FROM prescriptions p
+WHERE p.file_key = 'samples/rx-demo-6.png';
+
+-- The notifications those decisions sent.
+INSERT INTO notifications (user_id, message, link, is_read, created_at)
+SELECT u.id, v.message, v.link, v.is_read, DATEADD(hour, -v.hours_ago, SYSDATETIME())
+FROM (VALUES
+    (N'nimal@example.com', N'Your prescription RX-000004 was approved: 2 medicines, total Rs. 100.00. See how to use them and pay.',
+     N'/prescriptions', 0, 46),
+    (N'kasuni@example.com', N'Please upload a new copy of prescription RX-000002: The photo is too blurry to read the dosage. Please take a clear photo in good light.',
+     N'/prescriptions', 0, 28),
+    (N'kasuni@example.com', N'Your prescription RX-000003 was rejected: The prescription is not signed by the doctor.',
+     N'/prescriptions', 1, 70),
+    (N'kasuni@example.com', N'Payment PAY-20260913-K7Q2XD of Rs. 84.00 for prescription RX-000006 was received. We are preparing your medicines for delivery.',
+     N'/prescriptions', 1, 90)
+) AS v (email, message, link, is_read, hours_ago)
+JOIN users u ON u.email = v.email;
 GO

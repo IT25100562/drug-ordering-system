@@ -1,0 +1,13 @@
+# MediSys app settings (optional)
+#
+# Without an app.properties file the defaults below are used, so you only need
+# this when you want something different. To use it, copy this file to
+# app.properties in the same folder. app.properties is in .gitignore, because
+# cloud storage keys will go in here later.
+
+# Where uploaded prescription files are kept.
+#   local = a folder on this computer (the only option for now)
+storage.type=local
+
+# Folder for storage.type=local. Leave empty for <your home folder>/medisys-uploads
+storage.local.dir=

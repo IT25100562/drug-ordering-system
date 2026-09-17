@@ -18,8 +18,15 @@
 USE MediSysDB;
 GO
 
+-- Needed for the filtered index on prescriptions (sqlcmd turns it off by default).
+SET QUOTED_IDENTIFIER ON;
+GO
+
 -- ------------------------------------------------------------------ drop
 -- (child tables first, parent tables last)
+DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS prescription_items;
+DROP TABLE IF EXISTS prescriptions;
 DROP TABLE IF EXISTS wishlist_items;
 DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS medicines;
@@ -125,4 +132,95 @@ CREATE TABLE wishlist_items (
     CONSTRAINT fk_wishlist_medicine FOREIGN KEY (medicine_id) REFERENCES medicines (id),
     CONSTRAINT uq_wishlist_line     UNIQUE (user_id, medicine_id)
 );
+GO
+
+
+-- =================================================================
+-- Module 05 - Prescription Upload and Verification (Perera D. A. A. N. S.)
+-- =================================================================
+
+-- A prescription a customer uploaded (a photo or PDF).
+--   status: PENDING -> APPROVED / REJECTED / CORRECTION_REQUESTED
+--           CORRECTION_REQUESTED -> PENDING (when a new copy is uploaded)
+-- The customer only uploads the file. The pharmacist reads it and, when
+-- approving, writes down the medicines (prescription_items).
+-- The file itself is NOT in the database: file_key says where the file storage
+-- (see com.medisys.storage) keeps it.
+-- paid_at is set when the customer pays (test payment, module 02 placeholder).
+-- A paid prescription can no longer be deleted.
+CREATE TABLE prescriptions (
+    id                 INT IDENTITY(1,1) PRIMARY KEY,
+    user_id            INT            NOT NULL,
+    customer_note      NVARCHAR(500)  NULL,
+    file_key           VARCHAR(200)   NOT NULL,
+    original_file_name NVARCHAR(255)  NOT NULL,
+    content_type       VARCHAR(50)    NOT NULL,
+    file_size          INT            NOT NULL,
+    status             VARCHAR(25)    NOT NULL DEFAULT 'PENDING',
+    pharmacist_note    NVARCHAR(500)  NULL,
+    reviewed_by        INT            NULL,
+    reviewed_at        DATETIME2      NULL,
+    correction_count   INT            NOT NULL DEFAULT 0,
+    uploaded_at        DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+    updated_at         DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+
+    -- filled in by the payment
+    paid_at            DATETIME2      NULL,
+    amount_paid        DECIMAL(10,2)  NULL,
+    payment_reference  VARCHAR(30)    NULL,
+    card_last4         CHAR(4)        NULL,             -- never the full card number
+    delivery_name      NVARCHAR(100)  NULL,
+    delivery_address   NVARCHAR(255)  NULL,
+    delivery_phone     NVARCHAR(20)   NULL,
+
+    CONSTRAINT fk_rx_user      FOREIGN KEY (user_id)     REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rx_reviewer  FOREIGN KEY (reviewed_by) REFERENCES users (id),
+    CONSTRAINT ck_rx_status    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CORRECTION_REQUESTED')),
+    CONSTRAINT ck_rx_type      CHECK (content_type IN ('image/jpeg', 'image/png', 'application/pdf')),
+    CONSTRAINT ck_rx_paid      CHECK (paid_at IS NULL OR status = 'APPROVED'),
+    CONSTRAINT uq_rx_file      UNIQUE (file_key)
+);
+
+-- Unique, but only among paid prescriptions (a UNIQUE constraint would allow just one NULL).
+CREATE UNIQUE INDEX uq_rx_payment ON prescriptions (payment_reference) WHERE payment_reference IS NOT NULL;
+
+CREATE INDEX ix_rx_status ON prescriptions (status, uploaded_at);
+CREATE INDEX ix_rx_user   ON prescriptions (user_id);
+
+-- The medicines the pharmacist wrote down for an approved prescription:
+-- how many, how to use them, and the price at the time of approval.
+CREATE TABLE prescription_items (
+    id                  INT IDENTITY(1,1) PRIMARY KEY,
+    prescription_id     INT            NOT NULL,
+    medicine_id         INT            NOT NULL,
+    quantity            INT            NOT NULL,
+    dosage_instructions NVARCHAR(300)  NOT NULL,        -- e.g. 1 tablet twice daily after meals
+    unit_price          DECIMAL(10,2)  NOT NULL,
+
+    CONSTRAINT fk_rx_item_rx       FOREIGN KEY (prescription_id) REFERENCES prescriptions (id) ON DELETE CASCADE,
+    CONSTRAINT fk_rx_item_medicine FOREIGN KEY (medicine_id)     REFERENCES medicines (id),
+    CONSTRAINT uq_rx_item          UNIQUE (prescription_id, medicine_id),
+    CONSTRAINT ck_rx_item_quantity CHECK (quantity BETWEEN 1 AND 100),
+    CONSTRAINT ck_rx_item_price    CHECK (unit_price > 0)
+);
+GO
+
+
+-- =================================================================
+-- Module 06 - Delivery Tracking and Notification (Deshabhi R. G. S.)
+-- =================================================================
+
+-- A message the system sends to one user (prescription decisions, order updates ...).
+CREATE TABLE notifications (
+    id         INT IDENTITY(1,1) PRIMARY KEY,
+    user_id    INT           NOT NULL,
+    message    NVARCHAR(500) NOT NULL,
+    link       NVARCHAR(300) NULL,           -- page to open, e.g. /prescriptions
+    is_read    BIT           NOT NULL DEFAULT 0,
+    created_at DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_notification_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX ix_notifications_user ON notifications (user_id, is_read);
 GO

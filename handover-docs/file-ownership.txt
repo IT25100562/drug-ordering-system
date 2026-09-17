@@ -57,7 +57,7 @@ Files:
   JAVA  dao/impl/OrderDAOImpl.java
   JAVA  dao/impl/PaymentDAOImpl.java
   JAVA  service/OrderService.java
-  JAVA  service/PaymentService.java
+  JAVA  service/PaymentService.java          (test card check already used by module 05)
   JAVA  servlet/order/CheckoutServlet.java          /checkout
   JAVA  servlet/order/PaymentServlet.java           /checkout/payment
   JAVA  servlet/order/MyOrdersServlet.java          /orders
@@ -142,17 +142,22 @@ Files:
  Owner: Perera D. A. A. N. S.
 ---------------------------------------------------------------------
 
-Database tables: prescriptions
+Database tables: prescriptions, prescription_items
 
 Files:
   JAVA  model/Prescription.java
+  JAVA  model/PrescriptionItem.java
   JAVA  model/PrescriptionStatus.java
   JAVA  dao/PrescriptionDAO.java
   JAVA  dao/impl/PrescriptionDAOImpl.java
   JAVA  service/PrescriptionService.java
+  JAVA  servlet/prescription/UploadedFile.java                (reads the uploaded file)
   JAVA  servlet/prescription/UploadPrescriptionServlet.java   /prescriptions/upload
   JAVA  servlet/prescription/MyPrescriptionsServlet.java      /prescriptions
+  JAVA  servlet/prescription/ViewPrescriptionServlet.java     /prescriptions/view
+  JAVA  servlet/prescription/PrescriptionPaymentServlet.java  /prescriptions/pay
   JAVA  servlet/prescription/CorrectionUploadServlet.java     /prescriptions/correct
+  JAVA  servlet/prescription/CancelPrescriptionServlet.java   /prescriptions/delete
   JAVA  servlet/prescription/PrescriptionFileServlet.java     /prescriptions/file
   JAVA  servlet/prescription/PharmacistDashboardServlet.java  /pharmacist/dashboard
   JAVA  servlet/prescription/ReviewPrescriptionServlet.java   /pharmacist/review
@@ -162,6 +167,13 @@ Files:
   VIEWS prescription/correct.jsp
   VIEWS prescription/dashboard.jsp
   VIEWS prescription/review.jsp
+  VIEWS prescription/view.jsp
+  VIEWS prescription/pay.jsp
+  VIEWS prescription/items-table.jspf       (the medicines table)
+  VIEWS prescription/file-field.jspf        (the drag & drop file box)
+  src/main/webapp/js/prescription.js
+  src/main/webapp/WEB-INF/sample-uploads/   demo prescription files
+  (+ the "Module 05" sections of database/schema.sql and sample-data.sql)
 
 
 
@@ -172,6 +184,10 @@ Files:
 
 
 Database tables: deliveries, notifications
+
+Already done (early, because module 05 needs it): notifications table,
+NotificationDAO, NotificationService.notify(), the Notifications page and
+the bell in the menu. Still to build: delivery tracking.
 
 Files:
   JAVA  model/Delivery.java
@@ -210,6 +226,10 @@ Files:
   JAVA  util/TextUtil.java                  HTML escaping and helpers
   JAVA  util/AppInitListener.java           runs when the app starts
   JAVA  util/JsonUtil.java                  small JSON answers for JavaScript
+  JAVA  storage/FileStorage.java            where uploaded files are kept (interface)
+  JAVA  storage/LocalFileStorage.java       ... in a local folder
+  JAVA  storage/StorageFactory.java         picks the storage from app.properties
+  src/main/resources/app.properties.example optional settings (storage)
   src/main/webapp/WEB-INF/web.xml           app settings
   src/main/webapp/index.jsp                 home page
   src/main/webapp/css/style.css             one stylesheet for all pages

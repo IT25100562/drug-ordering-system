@@ -42,12 +42,17 @@ public class User implements Serializable {
         return role == Role.DELIVERY_STAFF;
     }
 
-    /** First word of the name, for "Hi, Nimal". */
+    /**
+     * First word of the name, for "Hi, Nimal". A title is kept together with
+     * the next word, so "Dr. Sunil Fernando" gives "Dr. Sunil".
+     */
     public String getFirstName() {
         if (fullName == null || fullName.isBlank()) {
             return "";
         }
-        return fullName.trim().split("\\s+")[0];
+        String[] words = fullName.trim().split("\\s+");
+        boolean isTitle = words[0].matches("(?i)(dr|mr|mrs|ms|miss|prof|rev)\\.?");
+        return isTitle && words.length > 1 ? words[0] + " " + words[1] : words[0];
     }
 
     public int getId() {

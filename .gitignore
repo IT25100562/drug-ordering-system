@@ -15,3 +15,6 @@ src/main/resources/db.properties
 
 # Uploaded prescription files, if someone points uploadDir inside the project
 medisys-uploads/
+
+# Local app settings (will hold cloud storage keys later)
+src/main/resources/app.properties

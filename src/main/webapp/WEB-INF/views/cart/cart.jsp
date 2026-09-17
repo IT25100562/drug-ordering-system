@@ -47,7 +47,7 @@
     <section class="card cart-lines" aria-label="Items in your cart">
         <% for (CartItem item : cart.getItems()) {
                Medicine m = item.getMedicine();
-               int maxAllowed = Math.max(1, Math.min(maxPerItem, m.getStockQuantity()));
+               int maxAllowed = Math.max(1, item.getMaxQuantity());
         %>
         <div class="cart-line <%= item.hasProblem() ? "has-problem" : "" %>" data-line="<%= m.getId() %>">
             <a class="<%= m.getThumbCssClass() %>" href="<%= ctx %>/medicines/view?id=<%= m.getId() %>"

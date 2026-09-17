@@ -485,6 +485,7 @@ footer.site {
 
 input[type="date"],
 input[type="email"],
+input[type="tel"],
 input[type="search"] {
     width: 100%;
     padding: 9px 10px;
@@ -685,20 +686,21 @@ input[type="search"] {
     border-left-color: #8a99a6;
 }
 
+/* A table cell must stay a table cell (display: flex would break the row borders),
+   so the buttons inside are laid out inline instead. */
 .row-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
     min-width: 230px;
 }
 
-.row-actions form {
-    margin: 0;
+.row-actions > a,
+.row-actions > form {
+    display: inline-block;
+    vertical-align: middle;
+    margin: 2px 4px 2px 0;
 }
 
-.restock {
-    display: flex;
+.row-actions > form.restock {
+    display: inline-flex;
     gap: 4px;
 }
 
@@ -1393,5 +1395,799 @@ input[type="search"] {
     .buy-box,
     .cart-summary {
         position: static;
+    }
+}
+
+/* ================================================================
+   Prescriptions and notifications (modules 05 + 06)
+   ================================================================ */
+
+.topbar .bell {
+    display: inline-flex;
+    align-items: center;
+}
+
+.topbar .bell svg {
+    fill: #ffffff;
+}
+
+a.stat {
+    text-decoration: none;
+    color: #5d6d7b;
+}
+
+a.stat:hover {
+    background: #f6f8fa;
+}
+
+.btn.plain.danger-text {
+    color: #b3261e;
+}
+
+.btn.busy {
+    opacity: 0.75;
+    cursor: progress;
+}
+
+.field-error {
+    color: #97231f;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 6px 0 0 0;
+}
+
+textarea.invalid {
+    border-color: #b3261e;
+    box-shadow: 0 0 0 2px #fbe0de;
+}
+
+.label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.link-look {
+    color: #0b6b5e;
+    text-decoration: underline;
+}
+
+.note-box {
+    margin: 12px 0;
+    border-left-color: #b57600;
+    background: #fff8ec;
+}
+
+.note-box p {
+    margin: 4px 0;
+    font-size: 14px;
+    white-space: pre-line;
+}
+
+.note-title {
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #8a5b00;
+}
+
+/* Upload page */
+.upload-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 18px;
+    align-items: start;
+}
+
+@media (max-width: 800px) {
+    .upload-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.selected-medicine {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    padding: 10px 12px;
+    background: #f9fbfc;
+}
+
+.selected-medicine div {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.change-link {
+    font-size: 13px;
+}
+
+.drop-zone {
+    position: relative;
+    border: 2px dashed #b9c6d0;
+    border-radius: 8px;
+    background: #f9fbfc;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.drop-zone:hover,
+.drop-zone.dragging {
+    border-color: #0b6b5e;
+    background: #eef7f5;
+}
+
+.drop-zone.has-file {
+    border-style: solid;
+    border-color: #a8dcc3;
+    background: #f4faf8;
+}
+
+.drop-zone.invalid {
+    border-color: #b3261e;
+    background: #fff8f7;
+}
+
+/* The real file input covers the whole box, so clicking anywhere opens the file picker. */
+.drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+}
+
+.drop-zone:focus-within {
+    outline: 3px solid #ffb703;
+    outline-offset: 2px;
+}
+
+.drop-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 20px;
+    text-align: center;
+    pointer-events: none;
+}
+
+.drop-empty svg {
+    fill: #0b6b5e;
+}
+
+.drop-preview {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    width: 100%;
+}
+
+.drop-preview img {
+    width: 110px;
+    height: 110px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid #dfe6ec;
+    background: #ffffff;
+}
+
+.pdf-icon {
+    width: 90px;
+    height: 110px;
+    border-radius: 6px;
+    background: #b3261e;
+    color: #ffffff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.drop-file-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    word-break: break-all;
+}
+
+/* The "Choose a different file" button must sit above the invisible file input. */
+.drop-file-info .link-button {
+    position: relative;
+    z-index: 2;
+}
+
+.confirm-check {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-weight: normal;
+    background: #f6f8fa;
+    padding: 10px 12px;
+    border-radius: 5px;
+}
+
+.confirm-check input {
+    margin-top: 3px;
+}
+
+.help-card h2 {
+    font-size: 15px;
+    margin-top: 4px;
+}
+
+.help-card h2 + * {
+    margin-top: 0;
+}
+
+.steps,
+.tips {
+    padding-left: 20px;
+    font-size: 14px;
+    margin-bottom: 18px;
+}
+
+.steps li,
+.tips li {
+    margin-bottom: 6px;
+}
+
+.file-chip {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px;
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #22303c;
+    margin-bottom: 18px;
+    word-break: break-all;
+}
+
+.file-chip:hover {
+    border-color: #0b6b5e;
+}
+
+.file-type {
+    flex-shrink: 0;
+    width: 44px;
+    height: 52px;
+    border-radius: 6px;
+    background: #e6ecfb;
+    color: #2c4a9a;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.file-chip.small {
+    padding: 0;
+    border: none;
+    margin: 0;
+}
+
+/* My Prescriptions */
+.rx-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.rx-card.highlight {
+    border-color: #0b6b5e;
+    box-shadow: 0 0 0 3px #d5ede6;
+}
+
+.rx-head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+}
+
+.rx-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.rx-title h2 {
+    margin: 0 0 2px 0;
+}
+
+.rx-title h2 a {
+    color: #22303c;
+    text-decoration: none;
+}
+
+.rx-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+}
+
+.rx-steps {
+    list-style: none;
+    display: flex;
+    padding: 0;
+    margin: 16px 0 6px 0;
+    font-size: 12px;
+    color: #8a99a6;
+}
+
+.rx-steps li {
+    flex: 1;
+    position: relative;
+    padding-top: 16px;
+    text-align: center;
+}
+
+/* a dot for each step, joined by a line */
+.rx-steps li::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin-left: -6px;
+    border-radius: 50%;
+    background: #d3dce3;
+    z-index: 1;
+}
+
+.rx-steps li::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: -50%;
+    width: 100%;
+    height: 2px;
+    background: #d3dce3;
+}
+
+.rx-steps li:first-child::after {
+    display: none;
+}
+
+.rx-steps li.done,
+.rx-steps li.current,
+.rx-steps li.stopped {
+    color: #22303c;
+    font-weight: 600;
+}
+
+.rx-steps li.done::before,
+.rx-steps li.done::after,
+.rx-steps li.current::after,
+.rx-steps li.stopped::after {
+    background: #1d7a4c;
+}
+
+.rx-steps li.current::before {
+    background: #ffb703;
+    box-shadow: 0 0 0 4px #fff3d6;
+}
+
+.rx-steps li.stopped::before {
+    background: #b3261e;
+}
+
+.rx-status-text {
+    font-size: 14px;
+    margin: 10px 0 0 0;
+}
+
+.rx-card .actions form {
+    margin: 0;
+}
+
+/* Details page: prescription states */
+.rx-panel p {
+    font-size: 13px;
+    margin: 0 0 10px 0;
+}
+
+.rx-note {
+    font-style: italic;
+    color: #7a4a00;
+}
+
+.rx-approved {
+    margin: 10px 0 0 0;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background: #e6f5ee;
+    color: #1d6b48;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* Dashboard */
+.rx-table td {
+    vertical-align: middle;
+}
+
+.row-muted td {
+    background: #fafbfc;
+    color: #6b7b8a;
+}
+
+/* Review page */
+.review-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 18px;
+    align-items: start;
+}
+
+@media (max-width: 900px) {
+    .review-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.document-card {
+    padding: 0;
+    overflow: hidden;
+    position: sticky;
+    top: 84px;
+}
+
+.document-bar {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e6ebf0;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.document-view {
+    background: #525a61;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 420px;
+    max-height: 78vh;
+    overflow: auto;
+}
+
+.document-view img {
+    max-width: 100%;
+    display: block;
+    cursor: zoom-in;
+}
+
+.document-view iframe {
+    width: 100%;
+    height: 78vh;
+    border: none;
+    background: #ffffff;
+}
+
+dl.info.compact {
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    row-gap: 8px;
+    font-size: 14px;
+}
+
+dl.info.compact dt,
+dl.info.compact dd {
+    margin: 0;
+}
+
+.checklist {
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 0 0 14px 0;
+}
+
+.checklist legend {
+    font-weight: 600;
+    font-size: 13px;
+    padding: 0 4px;
+}
+
+.checklist label {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    font-weight: normal;
+    font-size: 13px;
+    margin: 6px 0;
+}
+
+.checklist input {
+    margin-top: 2px;
+}
+
+.decision-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.decision-buttons .btn {
+    flex: 1 1 auto;
+}
+
+.delete-rx {
+    text-align: center;
+    margin: 4px 0 18px 0;
+}
+
+/* Notifications */
+.notification {
+    padding: 13px 12px;
+}
+
+.notification p {
+    margin: 0 0 4px 0;
+}
+
+.notification .badge {
+    float: right;
+    margin-left: 8px;
+}
+
+@media (max-width: 600px) {
+    .document-card {
+        position: static;
+    }
+}
+
+/* ---------- module 05: medicines listed by the pharmacist, payment ---------- */
+
+.view-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 18px;
+    align-items: start;
+}
+
+@media (max-width: 800px) {
+    .view-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.pay-box {
+    position: sticky;
+    top: 84px;
+}
+
+.pay-box h2 {
+    margin-bottom: 8px;
+}
+
+.pay-box .price.big {
+    margin: 0 0 4px 0;
+}
+
+.btn.pay-button {
+    margin: 14px 0 8px 0;
+    padding: 12px 16px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.paid-note {
+    background: #e6f5ee;
+    color: #1d6b48;
+    border-radius: 5px;
+    padding: 8px 10px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.file-chip.inline {
+    margin: 0;
+    max-width: 320px;
+    background: #ffffff;
+}
+
+.rx-link {
+    display: block;
+    text-align: center;
+    margin-top: 8px;
+    font-size: 13px;
+}
+
+.test-note code {
+    background: #ffffff;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 13px;
+}
+
+.view-layout h2 {
+    margin-top: 6px;
+}
+
+.view-layout form h2 {
+    margin-top: 22px;
+    font-size: 15px;
+}
+
+/* Items table (customer view, review page) */
+.items-table td {
+    vertical-align: middle;
+}
+
+.items-table .num {
+    text-align: right;
+}
+
+.items-table .dosage {
+    font-weight: 600;
+    color: #14315a;
+    min-width: 180px;
+}
+
+.items-table .total-row td {
+    font-weight: 700;
+    font-size: 16px;
+    background: #f6f8fa;
+    border-top: 2px solid #dfe6ec;
+}
+
+.item-medicine {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.item-medicine .thumb {
+    width: 40px;
+    height: 40px;
+    font-size: 11px;
+}
+
+.summary-lines {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 8px 0;
+    font-size: 14px;
+}
+
+.summary-lines li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid #eef2f5;
+}
+
+/* Pharmacist's medicine lines editor */
+.decision-card {
+    border-top: 4px solid #0b6b5e;
+}
+
+.medicine-lines {
+    border: 1px solid #dfe6ec;
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 0 0 14px 0;
+}
+
+.medicine-lines legend {
+    font-weight: 700;
+    padding: 0 4px;
+}
+
+.item-row {
+    display: grid;
+    grid-template-columns: minmax(200px, 2fr) 80px minmax(200px, 3fr) 120px;
+    gap: 10px;
+    align-items: end;
+    padding: 10px 0;
+    border-bottom: 1px dashed #dfe6ec;
+}
+
+.item-row .field {
+    margin: 0;
+}
+
+.item-row label {
+    font-size: 12px;
+    color: #5d6d7b;
+}
+
+.item-row.invalid {
+    background: #fff8f7;
+}
+
+.item-row .field-error {
+    grid-column: 1 / -1;
+    margin: 0;
+}
+
+.line-col {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-bottom: 8px;
+}
+
+.line-price {
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.remove-line {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 1px solid #dfe6ec;
+    background: #ffffff;
+    color: #b3261e;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+.remove-line:disabled {
+    color: #c3ccd4;
+    cursor: default;
+}
+
+.lines-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 12px;
+}
+
+.lines-total {
+    font-size: 16px;
+}
+
+@media (max-width: 700px) {
+    .item-row {
+        grid-template-columns: 1fr 80px;
+    }
+    .item-row .dosage-col,
+    .item-row .line-col {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Receipt printing: only the page content */
+@media print {
+    .topbar,
+    footer.site,
+    .breadcrumb,
+    .toast-area,
+    .btn,
+    .skip-link {
+        display: none !important;
+    }
+    body {
+        background: #ffffff;
+    }
+    .card {
+        border: none;
+    }
+    .view-layout {
+        grid-template-columns: 1fr;
     }
 }

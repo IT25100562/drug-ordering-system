@@ -19,15 +19,9 @@
     <response-character-encoding>UTF-8</response-character-encoding>
 
     <!--
-        Folder where uploaded prescription files are kept. It is outside the web
-        folder on purpose, so files can only be opened through a servlet that
-        checks who is asking.
-        Leave empty to use the default:  <your home folder>/medisys-uploads
+        Where uploaded prescription files are kept is set in app.properties
+        (see app.properties.example). Default: <your home folder>/medisys-uploads
     -->
-    <context-param>
-        <param-name>uploadDir</param-name>
-        <param-value></param-value>
-    </context-param>
 
     <welcome-file-list>
         <welcome-file>index.jsp</welcome-file>

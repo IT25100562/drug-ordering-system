@@ -24,6 +24,9 @@ public class CartItem {
      */
     private String problem;
 
+    /** The most the customer may buy of this medicine right now. Filled in by CartService. */
+    private int maxQuantity;
+
     /** Unit price x quantity. */
     public BigDecimal getLineTotal() {
         return medicine.getPrice().multiply(BigDecimal.valueOf(quantity));
@@ -71,6 +74,14 @@ public class CartItem {
 
     public void setAddedAt(LocalDateTime addedAt) {
         this.addedAt = addedAt;
+    }
+
+    public int getMaxQuantity() {
+        return maxQuantity;
+    }
+
+    public void setMaxQuantity(int maxQuantity) {
+        this.maxQuantity = maxQuantity;
     }
 
     public String getProblem() {

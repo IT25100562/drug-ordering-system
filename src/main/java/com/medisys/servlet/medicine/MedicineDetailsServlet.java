@@ -24,7 +24,7 @@ import java.sql.SQLException;
  *
  * Discontinued and expired medicines are shown as "not found" to customers.
  * For a logged in customer it also sends the cart / wishlist / prescription
- * state of this medicine (module 01 and 05).
+ * state of this medicine (module 01).
  *
  * Module : 03 - Medicine Catalog and Inventory
  * Owner  : Divisekara A. W. D. M. D. M. B.
@@ -50,9 +50,9 @@ public class MedicineDetailsServlet extends HttpServlet {
             }
             request.setAttribute("medicine", medicine);
             request.setAttribute("related", medicineService.getRelated(medicine));
-            request.setAttribute("maxQuantity", cartService.maxQuantity(medicine));
 
             int inCart = 0;
+            int maxQuantity = cartService.maxQuantity(medicine);
             boolean saved = false;
             // Guests and staff see the prescription notice too; only a customer can have one approved.
             boolean needsPrescription = medicine.isRequiresPrescription();
@@ -60,7 +60,9 @@ public class MedicineDetailsServlet extends HttpServlet {
                 inCart = cartService.getQuantity(user.getId(), medicine.getId());
                 saved = wishlistService.isSaved(user.getId(), medicine.getId());
                 needsPrescription = cartService.needsPrescriptionUpload(user.getId(), medicine);
+                maxQuantity = cartService.maxQuantity(user.getId(), medicine);
             }
+            request.setAttribute("maxQuantity", maxQuantity);
             request.setAttribute("inCart", inCart);
             request.setAttribute("saved", saved);
             request.setAttribute("needsPrescription", needsPrescription);

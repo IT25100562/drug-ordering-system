@@ -51,7 +51,7 @@ public class AddToCartServlet extends HttpServlet {
                 CartReply.send(request, response, true, message, extra, "/cart");
 
             } catch (PrescriptionRequiredException e) {
-                String uploadPath = "/prescriptions/upload?medicineId=" + e.getMedicine().getId();
+                String uploadPath = "/prescriptions/upload";
                 if (JsonUtil.wantsJson(request)) {
                     extra.put("prescriptionRequired", true);
                     extra.put("uploadUrl", request.getContextPath() + uploadPath);

@@ -100,4 +100,24 @@ public final class TextUtil {
     public static String dateTime(LocalDateTime time) {
         return time == null ? "-" : time.format(DATE_TIME_FORMAT);
     }
+
+    /** "just now", "5 min ago", "3 hours ago", "2 days ago". */
+    public static String timeAgo(LocalDateTime time) {
+        if (time == null) {
+            return "-";
+        }
+        long minutes = java.time.Duration.between(time, LocalDateTime.now()).toMinutes();
+        if (minutes < 1) {
+            return "just now";
+        }
+        if (minutes < 60) {
+            return minutes + " min ago";
+        }
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + (hours == 1 ? " hour ago" : " hours ago");
+        }
+        long days = hours / 24;
+        return days + (days == 1 ? " day ago" : " days ago");
+    }
 }

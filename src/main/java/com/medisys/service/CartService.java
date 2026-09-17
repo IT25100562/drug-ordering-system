@@ -16,7 +16,9 @@ import java.util.Map;
  *
  *  - only medicines that are on sale (not discontinued / expired / out of stock)
  *    can be added
- *  - a prescription-only medicine needs an APPROVED prescription (module 05)
+ *  - a prescription-only medicine never goes into the cart: the customer
+ *    uploads the prescription (module 05), the pharmacist lists the medicines,
+ *    and the customer pays for that prescription directly
  *  - the quantity of one medicine is 1 .. min(stock, MAX_QUANTITY_PER_ITEM)
  *  - adding a medicine that is already in the cart increases its quantity
  *  - the cart is checked again every time it is shown, because prices and
@@ -38,12 +40,12 @@ public class CartService {
 
     private final CartDAO cartDAO = new CartDAOImpl();
     private final MedicineService medicineService = new MedicineService();
-    private final PrescriptionService prescriptionService = new PrescriptionService();
 
     /** The customer's cart, with a problem message on every line that cannot be bought. */
     public Cart getCart(int userId) throws SQLException {
         List<CartItem> items = cartDAO.findByUser(userId);
         for (CartItem item : items) {
+            item.setMaxQuantity(maxQuantity(userId, item.getMedicine()));
             item.setProblem(findProblem(userId, item));
         }
         return new Cart(items);
@@ -63,15 +65,22 @@ public class CartService {
         return cartDAO.findQuantity(userId, medicineId);
     }
 
-    /** The most of this medicine one customer can have in the cart. */
+    /** The most of this medicine anyone can have in the cart (stock and the per-order limit). */
     public int maxQuantity(Medicine medicine) {
         return Math.max(0, Math.min(medicine.getStockQuantity(), MAX_QUANTITY_PER_ITEM));
     }
 
-    /** True when the customer must upload a prescription before buying this medicine. */
-    public boolean needsPrescriptionUpload(int userId, Medicine medicine) throws SQLException {
-        return medicine.isRequiresPrescription()
-                && !prescriptionService.hasApprovedPrescription(userId, medicine.getId());
+    /**
+     * The most of this medicine this customer can have in the cart
+     * (0 for a prescription-only medicine).
+     */
+    public int maxQuantity(int userId, Medicine medicine) {
+        return medicine.isRequiresPrescription() ? 0 : maxQuantity(medicine);
+    }
+
+    /** True when the medicine can only be ordered by uploading a prescription. */
+    public boolean needsPrescriptionUpload(int userId, Medicine medicine) {
+        return medicine.isRequiresPrescription();
     }
 
     /**
@@ -95,7 +104,7 @@ public class CartService {
             throw new PrescriptionRequiredException(medicine);
         }
 
-        int limit = maxQuantity(medicine);
+        int limit = maxQuantity(userId, medicine);
         int inCart = cartDAO.findQuantity(userId, medicineId);
         if (inCart >= limit) {
             throw new ValidationException("You already have the most you can buy of "
@@ -153,6 +162,9 @@ public class CartService {
                     ? medicine.getDisplayName() + " is out of stock."
                     : "Only " + medicine.getStockQuantity() + " of " + medicine.getDisplayName() + " left in stock.");
         }
+        if (medicine.isRequiresPrescription()) {
+            throw new ValidationException(medicine.getDisplayName() + " can only be ordered with a prescription.");
+        }
         cartDAO.updateQuantity(userId, medicineId, quantity);
         return "Quantity of " + medicine.getDisplayName() + " changed to " + quantity + ".";
     }
@@ -183,8 +195,8 @@ public class CartService {
         if (item.getQuantity() > m.getStockQuantity()) {
             return "Only " + m.getStockQuantity() + " left in stock. Please lower the quantity.";
         }
-        if (needsPrescriptionUpload(userId, m)) {
-            return "Needs a prescription approved by our pharmacist.";
+        if (m.isRequiresPrescription()) {
+            return "Prescription-only. Remove it and upload your prescription instead.";
         }
         return null;
     }

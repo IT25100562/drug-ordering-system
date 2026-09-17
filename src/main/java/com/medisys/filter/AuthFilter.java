@@ -92,6 +92,10 @@ public class AuthFilter implements Filter {
         if (path.startsWith("/pharmacist")) {
             return new Role[]{Role.PHARMACIST};
         }
+        if (path.equals("/prescriptions/file")) {
+            // The servlet itself checks that a customer only gets their own file.
+            return new Role[]{Role.CUSTOMER, Role.PHARMACIST};
+        }
         if (path.startsWith("/staff")) {
             return new Role[]{Role.DELIVERY_STAFF, Role.ADMIN};
         }

@@ -96,12 +96,14 @@
             <div class="rx-panel" id="prescription">
                 <h2>Prescription required</h2>
                 <ol>
-                    <li>Upload a clear photo or PDF of your prescription.</li>
-                    <li>Our senior pharmacist checks it (usually within a few hours).</li>
-                    <li>Once approved, you can add this medicine to your cart.</li>
+                    <li>Upload a photo or PDF of your prescription.</li>
+                    <li>Our senior pharmacist reads it and lists your medicines and how to use them.</li>
+                    <li>You see the total and pay. We deliver to your door.</li>
                 </ol>
-                <a class="btn block rx" href="<%= ctx %>/prescriptions/upload?medicineId=<%= m.getId() %>">
-                    Upload prescription</a>
+                <a class="btn block rx" href="<%= ctx %>/prescriptions/upload">Upload prescription</a>
+                <% if (currentUser != null) { %>
+                    <a class="rx-link" href="<%= ctx %>/prescriptions">See my prescriptions</a>
+                <% } %>
             </div>
             <div class="buy-row">
                 <%@ include file="../common/heart-button.jspf" %>

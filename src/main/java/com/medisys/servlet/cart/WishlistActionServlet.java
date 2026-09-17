@@ -92,7 +92,7 @@ public class WishlistActionServlet extends HttpServlet {
 
             } catch (PrescriptionRequiredException e) {
                 // "Move to cart" on a prescription-only medicine.
-                String uploadPath = "/prescriptions/upload?medicineId=" + e.getMedicine().getId();
+                String uploadPath = "/prescriptions/upload";
                 if (JsonUtil.wantsJson(request)) {
                     extra.put("prescriptionRequired", true);
                     extra.put("uploadUrl", request.getContextPath() + uploadPath);
