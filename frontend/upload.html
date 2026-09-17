@@ -4,36 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PharmaCare - Upload Prescription</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Modern Clinical Theme Customizations */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+        }
+        .medical-nav {
+            background-color: #00695c !important;
+        }
+        .content-card {
+            border-radius: 12px;
+            border: none;
+            overflow: hidden;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark bg-dark shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-dark medical-nav shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="dashboard.html">⬅ Back to Dashboard</a>
+        <a class="navbar-brand fw-bold" href="dashboard.html">
+            <i class="bi bi-arrow-left-short me-1 fs-5 align-middle"></i>Back to Dashboard
+        </a>
     </div>
 </nav>
 
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
     <div class="row justify-content-center">
 
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-info text-white">
-                    <h4 class="mb-0">📄 Upload Medical Prescription</h4>
+        <div class="col-md-7 col-lg-6">
+            <div class="card content-card shadow-sm">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h4 class="mb-0 fw-bold text-dark">
+                        <i class="bi bi-file-earmark-medical text-info me-2"></i>Upload Prescription
+                    </h4>
                 </div>
-                <div class="card-body p-4">
-                    <p class="text-muted mb-4">Please upload a clear image or PDF of your doctor's prescription. A pharmacist will review it shortly.</p>
+                <div class="card-body p-4 p-md-5">
 
-                    <div class="mb-4">
-                        <label class="form-label fw-bold">Select File</label>
-                        <input type="file" id="fileInput" class="form-control form-control-lg" accept=".jpg,.jpeg,.png,.pdf">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-cloud-arrow-up text-muted opacity-25" style="font-size: 4rem;"></i>
+                        <p class="text-muted mt-2 fw-medium">Please upload a clear image or PDF of your doctor's prescription. A pharmacist will review it shortly.</p>
                     </div>
 
-                    <button class="btn btn-primary btn-lg w-100" onclick="uploadPrescription()">Submit Prescription</button>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold text-secondary">Select File</label>
+                        <input type="file" id="fileInput" class="form-control form-control-lg bg-light rounded-3 border-2" accept=".jpg,.jpeg,.png,.pdf">
+                    </div>
 
-                    <div id="uploadAlert" class="alert mt-3 d-none" role="alert"></div>
+                    <button class="btn btn-primary btn-lg w-100 rounded-pill fw-medium shadow-sm" onclick="uploadPrescription()">
+                        <i class="bi bi-send-check me-2"></i>Submit Prescription
+                    </button>
+
+                    <div id="uploadAlert" class="alert mt-4 d-none rounded-3" role="alert"></div>
                 </div>
             </div>
         </div>
@@ -54,8 +85,8 @@
         const alertBox = document.getElementById('uploadAlert');
 
         if (fileInput.files.length === 0) {
-            alertBox.className = 'alert alert-danger mt-3';
-            alertBox.textContent = 'Please select a file to upload.';
+            alertBox.className = 'alert alert-danger mt-4 rounded-3';
+            alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-2"></i>Please select a file to upload.';
             return;
         }
 
@@ -64,8 +95,8 @@
         formData.append('prescription', fileInput.files[0]);
         formData.append('user_id', user.id);
 
-        alertBox.className = 'alert alert-info mt-3';
-        alertBox.textContent = 'Uploading...';
+        alertBox.className = 'alert alert-info mt-4 rounded-3';
+        alertBox.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Uploading...';
 
         try {
             const res = await fetch(`${API_URL}/prescriptions/upload`, {
@@ -75,16 +106,16 @@
             const result = await res.json();
 
             if (res.ok) {
-                alertBox.className = 'alert alert-success mt-3';
-                alertBox.textContent = 'Success! Your prescription has been securely uploaded.';
+                alertBox.className = 'alert alert-success mt-4 rounded-3';
+                alertBox.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Success! Your prescription has been securely uploaded.';
                 fileInput.value = ''; // Clear the input
             } else {
-                alertBox.className = 'alert alert-danger mt-3';
-                alertBox.textContent = 'Error: ' + result.error;
+                alertBox.className = 'alert alert-danger mt-4 rounded-3';
+                alertBox.innerHTML = `<i class="bi bi-x-circle-fill me-2"></i>Error: ${result.error}`;
             }
         } catch (err) {
-            alertBox.className = 'alert alert-danger mt-3';
-            alertBox.textContent = 'Upload failed. Check server connection.';
+            alertBox.className = 'alert alert-danger mt-4 rounded-3';
+            alertBox.innerHTML = '<i class="bi bi-wifi-off me-2"></i>Upload failed. Check server connection.';
         }
     }
 </script>

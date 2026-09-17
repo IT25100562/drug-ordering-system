@@ -4,67 +4,99 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PharmaCare - Login & Register</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Modern Clinical Theme Customizations */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+        }
+        .medical-nav {
+            background-color: #00695c !important;
+        }
+        .content-card {
+            border-radius: 12px;
+            border: none;
+        }
+        .form-control, .form-select {
+            border-radius: 0.5rem;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 <!-- Navigation Bar -->
-<nav class="navbar navbar-dark bg-primary shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-dark medical-nav shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="#">PharmaCare System</a>
+        <a class="navbar-brand fw-bold" href="#">
+            <i class="bi bi-heart-pulse-fill me-2"></i>PharmaCare System
+        </a>
     </div>
 </nav>
 
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
     <div class="row justify-content-center gap-4">
 
         <!-- Login Card -->
         <div class="col-md-5">
-            <div class="card shadow border-0">
-                <div class="card-body p-4">
-                    <h4 class="card-title mb-4">Account Login</h4>
+            <div class="card content-card shadow-sm h-100">
+                <div class="card-body p-4 p-md-5">
+                    <h4 class="card-title mb-4 fw-bold text-dark">
+                        <i class="bi bi-box-arrow-in-right text-primary me-2"></i>Account Login
+                    </h4>
                     <div class="mb-3">
-                        <label class="form-label">Email address</label>
-                        <input type="email" id="loginEmail" class="form-control" placeholder="name@example.com">
+                        <label class="form-label fw-medium text-secondary">Email address</label>
+                        <input type="email" id="loginEmail" class="form-control form-control-lg bg-light" placeholder="name@example.com">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" id="loginPassword" class="form-control" placeholder="••••••••">
+                    <div class="mb-4">
+                        <label class="form-label fw-medium text-secondary">Password</label>
+                        <input type="password" id="loginPassword" class="form-control form-control-lg bg-light" placeholder="••••••••">
                     </div>
-                    <button class="btn btn-primary w-100" onclick="login()">Login</button>
-                    <div id="loginAlert" class="alert alert-danger mt-3 d-none" role="alert"></div>
+                    <button class="btn btn-primary btn-lg w-100 rounded-pill fw-medium shadow-sm mt-auto" onclick="login()">
+                        Login to Account
+                    </button>
+                    <div id="loginAlert" class="alert alert-danger mt-3 d-none rounded-3" role="alert"></div>
                 </div>
             </div>
         </div>
 
         <!-- Registration Card -->
         <div class="col-md-5">
-            <div class="card shadow border-0">
-                <div class="card-body p-4">
-                    <h4 class="card-title mb-4">Create an Account</h4>
+            <div class="card content-card shadow-sm h-100">
+                <div class="card-body p-4 p-md-5">
+                    <h4 class="card-title mb-4 fw-bold text-dark">
+                        <i class="bi bi-person-plus text-success me-2"></i>Create an Account
+                    </h4>
                     <div class="mb-3">
-                        <label class="form-label">Full Name</label>
-                        <input type="text" id="regName" class="form-control" placeholder="John Doe">
+                        <label class="form-label fw-medium text-secondary">Full Name</label>
+                        <input type="text" id="regName" class="form-control bg-light" placeholder="John Doe">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Email address</label>
-                        <input type="email" id="regEmail" class="form-control" placeholder="name@example.com">
+                        <label class="form-label fw-medium text-secondary">Email address</label>
+                        <input type="email" id="regEmail" class="form-control bg-light" placeholder="name@example.com">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Password</label>
-                        <input type="password" id="regPassword" class="form-control" placeholder="••••••••">
+                        <label class="form-label fw-medium text-secondary">Password</label>
+                        <input type="password" id="regPassword" class="form-control bg-light" placeholder="••••••••">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Role</label>
-                        <select id="regRole" class="form-select">
+                    <div class="mb-4">
+                        <label class="form-label fw-medium text-secondary">Role</label>
+                        <select id="regRole" class="form-select bg-light">
                             <option value="customer">Customer</option>
                             <option value="pharmacist">Pharmacist</option>
                             <option value="admin">Admin</option>
                         </select>
                     </div>
-                    <button class="btn btn-success w-100" onclick="register()">Register</button>
-                    <div id="regAlert" class="alert mt-3 d-none" role="alert"></div>
+                    <button class="btn btn-success btn-lg w-100 rounded-pill fw-medium shadow-sm mt-auto" onclick="register()">
+                        Register Account
+                    </button>
+                    <div id="regAlert" class="alert mt-3 d-none rounded-3" role="alert"></div>
                 </div>
             </div>
         </div>
@@ -100,7 +132,7 @@
                 // Redirect to the main dashboard
                 window.location.href = 'dashboard.html';
             } else {
-                alertBox.textContent = result.error;
+                alertBox.innerHTML = `<i class="bi bi-exclamation-circle-fill me-2"></i>${result.error}`;
                 alertBox.classList.remove('d-none');
             }
         } catch (err) {
@@ -126,10 +158,10 @@
             alertBox.classList.remove('d-none', 'alert-danger', 'alert-success');
             if (res.ok) {
                 alertBox.classList.add('alert-success');
-                alertBox.textContent = 'Account created successfully! You can now log in.';
+                alertBox.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Account created successfully! You can now log in.';
             } else {
                 alertBox.classList.add('alert-danger');
-                alertBox.textContent = result.error;
+                alertBox.innerHTML = `<i class="bi bi-exclamation-circle-fill me-2"></i>${result.error}`;
             }
         } catch (err) {
             console.error('[ERROR] Registration failed:', err);
