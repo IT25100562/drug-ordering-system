@@ -95,7 +95,7 @@
         // Short "Added" feedback on the button itself.
         if (button) {
             var label = button.textContent;
-            button.textContent = "Added ✓";
+            button.textContent = "Added \u2713";
             button.classList.add("done");
             setTimeout(function () {
                 button.textContent = label;

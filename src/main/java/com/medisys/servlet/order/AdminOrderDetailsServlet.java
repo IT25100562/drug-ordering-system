@@ -1,8 +1,7 @@
 package com.medisys.servlet.order;
 
+import com.medisys.model.Order;
 import com.medisys.service.OrderService;
-import com.medisys.service.ValidationException;
-import com.medisys.util.SessionUtil;
 import com.medisys.util.TextUtil;
 
 import jakarta.servlet.ServletException;
@@ -15,15 +14,15 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * One of the customer's orders: timeline, medicines, totals, payment and delivery.
+ * Admin view of one order, with the buttons to move it on or cancel it.
  *
- *   GET /orders/view?id=12            (&placed=1 right after checkout)
+ *   GET /admin/orders/view?id=12
  *
  * Module : 02 - Order Placement and Checkout
  * Owner  : Hewage B. H. A. S.
  */
-@WebServlet("/orders/view")
-public class OrderDetailsServlet extends HttpServlet {
+@WebServlet("/admin/orders/view")
+public class AdminOrderDetailsServlet extends HttpServlet {
 
     private final OrderService orderService = new OrderService();
 
@@ -32,15 +31,13 @@ public class OrderDetailsServlet extends HttpServlet {
             throws ServletException, IOException {
         Integer id = TextUtil.parseInt(request.getParameter("id"));
         try {
-            if (id == null) {
-                throw new ValidationException("Not found");
+            Order order = id == null ? null : orderService.getOrder(id);
+            if (order == null) {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                return;
             }
-            request.setAttribute("order", orderService.getOwnOrder(SessionUtil.currentUser(request), id));
-            request.setAttribute("justPlaced", "1".equals(request.getParameter("placed")));
-            request.getRequestDispatcher("/WEB-INF/views/order/order-details.jsp").forward(request, response);
-        } catch (ValidationException e) {
-            // Someone else's (or no such) order: do not reveal which.
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            request.setAttribute("order", order);
+            request.getRequestDispatcher("/WEB-INF/views/order/admin-order-details.jsp").forward(request, response);
         } catch (SQLException e) {
             throw new ServletException("Could not load the order", e);
         }

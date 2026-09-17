@@ -25,7 +25,8 @@ import java.util.Map;
  *
  * A prescription is read with its customer and reviewer (one query), then its
  * medicine lines are read for all prescriptions of the list at once (a second
- * query), using MedicineDAOImpl.mapRow for the medicines.
+ * query), using MedicineDAOImpl.mapRow for the medicines. The payment details
+ * come from the order that paid for the prescription (prescriptions.order_id).
  *
  * Module : 05 - Prescription Upload and Verification
  * Owner  : Perera D. A. A. N. S.
@@ -34,10 +35,16 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
 
     private static final String SELECT_PRESCRIPTION =
             "SELECT p.*, u.full_name AS customer_name, u.email AS customer_email, "
-            + "u.phone AS customer_phone, u.address AS customer_address, r.full_name AS reviewer_name "
+            + "u.phone AS customer_phone, u.address AS customer_address, r.full_name AS reviewer_name, "
+            // the payment comes from the order that paid for it (module 02)
+            + "o.created_at AS paid_at, o.total AS amount_paid, o.status AS order_status, "
+            + "o.delivery_name, o.delivery_address, o.delivery_phone, "
+            + "pay.reference AS payment_reference, pay.card_last4 "
             + "FROM prescriptions p "
             + "JOIN users u ON u.id = p.user_id "
-            + "LEFT JOIN users r ON r.id = p.reviewed_by ";
+            + "LEFT JOIN users r ON r.id = p.reviewed_by "
+            + "LEFT JOIN orders o ON o.id = p.order_id "
+            + "LEFT JOIN payments pay ON pay.order_id = o.id ";
 
     private static final String SELECT_ITEMS = MedicineDAOImpl.SELECT_MEDICINE.replace("SELECT ",
             "SELECT i.id AS item_id, i.prescription_id AS item_rx_id, i.quantity AS item_quantity, "
@@ -46,7 +53,7 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
 
     /** SQL condition: uploaded more than 30 days ago and not paid. */
     private static final String EXPIRED =
-            "(p.paid_at IS NULL AND p.uploaded_at < DATEADD(day, -" + Prescription.EXPIRY_DAYS + ", SYSDATETIME()))";
+            "(p.order_id IS NULL AND p.uploaded_at < DATEADD(day, -" + Prescription.EXPIRY_DAYS + ", SYSDATETIME()))";
 
     @Override
     public int create(Prescription p) throws SQLException {
@@ -96,11 +103,11 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
                 where = "WHERE p.status = 'REJECTED' ";
                 break;
             case FILTER_APPROVED:
-                where = "WHERE p.status = 'APPROVED' AND p.paid_at IS NULL ";
+                where = "WHERE p.status = 'APPROVED' AND p.order_id IS NULL ";
                 break;
             case FILTER_PAID:
-                where = "WHERE p.paid_at IS NOT NULL ";
-                order = "ORDER BY p.paid_at DESC";
+                where = "WHERE p.order_id IS NOT NULL ";
+                order = "ORDER BY o.created_at DESC";
                 break;
             case FILTER_EXPIRED:
                 where = "WHERE " + EXPIRED + " ";
@@ -119,8 +126,8 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
         String sql = "SELECT "
                 + "SUM(CASE WHEN status = 'PENDING' THEN 1 ELSE 0 END), "
                 + "SUM(CASE WHEN status = 'CORRECTION_REQUESTED' THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN status = 'APPROVED' AND paid_at IS NULL THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN paid_at IS NOT NULL THEN 1 ELSE 0 END), "
+                + "SUM(CASE WHEN status = 'APPROVED' AND order_id IS NULL THEN 1 ELSE 0 END), "
+                + "SUM(CASE WHEN order_id IS NOT NULL THEN 1 ELSE 0 END), "
                 + "SUM(CASE WHEN status = 'REJECTED' THEN 1 ELSE 0 END), "
                 + "SUM(CASE WHEN " + EXPIRED + " THEN 1 ELSE 0 END), "
                 + "COUNT(*) "
@@ -234,74 +241,11 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
     @Override
     public boolean delete(int id) throws SQLException {
         // The medicine lines go too (ON DELETE CASCADE).
-        String sql = "DELETE FROM prescriptions WHERE id = ? AND paid_at IS NULL";
+        String sql = "DELETE FROM prescriptions WHERE id = ? AND order_id IS NULL";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, id);
             return ps.executeUpdate() == 1;
-        }
-    }
-
-    @Override
-    public int pay(Prescription p, String paymentReference, String cardLast4,
-                   String deliveryName, String deliveryAddress, String deliveryPhone) throws SQLException {
-        try (Connection con = DBConnection.getInstance().getConnection()) {
-            con.setAutoCommit(false);
-            try {
-                // 1. Lock the row and check it can still be paid.
-                String check = "SELECT COUNT(*) FROM prescriptions p WITH (UPDLOCK, ROWLOCK) "
-                             + "WHERE p.id = ? AND p.user_id = ? AND p.status = 'APPROVED' AND NOT " + EXPIRED;
-                try (PreparedStatement ps = con.prepareStatement(check)) {
-                    ps.setInt(1, p.getId());
-                    ps.setInt(2, p.getUserId());
-                    try (ResultSet rs = ps.executeQuery()) {
-                        rs.next();
-                        if (rs.getInt(1) == 0) {
-                            con.rollback();
-                            return PAY_NOT_PAYABLE;
-                        }
-                    }
-                }
-
-                // 2. Take every medicine out of stock (only if there is enough).
-                String stock = "UPDATE medicines SET stock_quantity = stock_quantity - ?, updated_at = SYSDATETIME() "
-                             + "WHERE id = ? AND stock_quantity >= ? AND is_discontinued = 0";
-                try (PreparedStatement ps = con.prepareStatement(stock)) {
-                    for (PrescriptionItem item : p.getItems()) {
-                        ps.setInt(1, item.getQuantity());
-                        ps.setInt(2, item.getMedicine().getId());
-                        ps.setInt(3, item.getQuantity());
-                        if (ps.executeUpdate() != 1) {
-                            con.rollback();
-                            return item.getMedicine().getId();
-                        }
-                    }
-                }
-
-                // 3. Record the payment ("paid_at IS NULL" stops a double payment).
-                String paid = "UPDATE prescriptions SET paid_at = SYSDATETIME(), amount_paid = ?, "
-                            + "payment_reference = ?, card_last4 = ?, delivery_name = ?, delivery_address = ?, "
-                            + "delivery_phone = ?, updated_at = SYSDATETIME() "
-                            + "WHERE id = ? AND paid_at IS NULL";
-                try (PreparedStatement ps = con.prepareStatement(paid)) {
-                    ps.setBigDecimal(1, p.getTotal());
-                    ps.setString(2, paymentReference);
-                    ps.setString(3, cardLast4);
-                    ps.setString(4, deliveryName);
-                    ps.setString(5, deliveryAddress);
-                    ps.setString(6, deliveryPhone);
-                    ps.setInt(7, p.getId());
-                    if (ps.executeUpdate() != 1) {
-                        con.rollback();
-                        return PAY_NOT_PAYABLE;
-                    }
-                }
-                con.commit();
-                return PAY_OK;
-            } catch (SQLException e) {
-                con.rollback();
-                throw e;
-            }
         }
     }
 
@@ -376,6 +320,8 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
         p.setCorrectionCount(rs.getInt("correction_count"));
         p.setUploadedAt(toTime(rs.getTimestamp("uploaded_at")));
         p.setUpdatedAt(toTime(rs.getTimestamp("updated_at")));
+        p.setOrderId((Integer) rs.getObject("order_id"));
+        p.setOrderStatus(rs.getString("order_status"));
         p.setPaidAt(toTime(rs.getTimestamp("paid_at")));
         p.setAmountPaid(rs.getBigDecimal("amount_paid"));
         p.setPaymentReference(rs.getString("payment_reference"));

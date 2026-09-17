@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * A prescription a customer uploaded (a photo or PDF). One row of the
  * prescriptions table, together with the customer, the medicines the
- * pharmacist wrote down, and the payment.
+ * pharmacist wrote down, and the payment (from the order that paid for it).
  *
  * Module : 05 - Prescription Upload and Verification
  * Owner  : Perera D. A. A. N. S.
@@ -47,7 +47,9 @@ public class Prescription {
     private LocalDateTime uploadedAt;
     private LocalDateTime updatedAt;
 
-    // The payment.
+    // The payment: read from the order that paid for it (module 02).
+    private Integer orderId;
+    private String orderStatus;
     private LocalDateTime paidAt;
     private BigDecimal amountPaid;
     private String paymentReference;
@@ -59,7 +61,12 @@ public class Prescription {
     // ------------------------------------------------------------ helpers
 
     public boolean isPaid() {
-        return paidAt != null;
+        return orderId != null;
+    }
+
+    /** "ORD-000012", or null when not paid. */
+    public String getOrderReference() {
+        return orderId == null ? null : String.format("ORD-%06d", orderId);
     }
 
     /** Uploaded more than EXPIRY_DAYS ago and not paid. */
@@ -300,6 +307,23 @@ public class Prescription {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(Integer orderId) {
+        this.orderId = orderId;
+    }
+
+    /** The status name of the paying order, e.g. "SHIPPED" (null when not paid). */
+    public String getOrderStatus() {
+        return orderStatus;
+    }
+
+    public void setOrderStatus(String orderStatus) {
+        this.orderStatus = orderStatus;
     }
 
     public LocalDateTime getPaidAt() {

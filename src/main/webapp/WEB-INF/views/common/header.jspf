@@ -11,6 +11,7 @@
 <%@ page import="com.medisys.model.User" %>
 <%@ page import="com.medisys.service.CartService" %>
 <%@ page import="com.medisys.service.NotificationService" %>
+<%@ page import="com.medisys.service.OrderService" %>
 <%@ page import="com.medisys.service.PrescriptionService" %>
 <%@ page import="com.medisys.service.WishlistService" %>
 <%@ page import="com.medisys.util.SessionUtil" %>
@@ -29,6 +30,7 @@
     int headerWishlistCount = 0;
     int headerUnreadCount = 0;
     int headerPendingCount = 0;
+    int headerNewOrderCount = 0;
     try {
         if (currentUser != null && currentUser.isCustomer()) {
             headerCartCount = new CartService().countItems(currentUser.getId());
@@ -36,6 +38,8 @@
             headerUnreadCount = new NotificationService().countUnread(currentUser.getId());
         } else if (currentUser != null && currentUser.isPharmacist()) {
             headerPendingCount = new PrescriptionService().getDashboardCounts().get("PENDING");
+        } else if (currentUser != null && currentUser.isAdmin()) {
+            headerNewOrderCount = new OrderService().getCounts().get("PAID");
         }
     } catch (java.sql.SQLException e) {
         log("Could not load the menu counts", e);
@@ -90,6 +94,7 @@
         <% } else { %>
             <% if (currentUser.isCustomer()) { %>
                 <a class="<%= activeIf(currentPath, "/prescriptions") %>" href="<%= ctx %>/prescriptions">Prescriptions</a>
+                <a class="<%= activeIf(currentPath, "/orders") %>" href="<%= ctx %>/orders">Orders</a>
                 <a class="<%= activeIf(currentPath, "/wishlist") %>" href="<%= ctx %>/wishlist">Wishlist<span
                    class="count <%= headerWishlistCount == 0 ? "hidden" : "" %>" data-wishlist-count><%= headerWishlistCount %></span></a>
                 <a class="<%= activeIf(currentPath, "/cart") %>" href="<%= ctx %>/cart">Cart<span
@@ -100,6 +105,8 @@
                    class="count <%= headerUnreadCount == 0 ? "hidden" : "" %>"><%= headerUnreadCount %></span></a>
             <% } else if (currentUser.isAdmin()) { %>
                 <a class="<%= activeIf(currentPath, "/admin/medicines") %>" href="<%= ctx %>/admin/medicines">Inventory</a>
+                <a class="<%= activeIf(currentPath, "/admin/orders") %>" href="<%= ctx %>/admin/orders">Orders<span
+                   class="count <%= headerNewOrderCount == 0 ? "hidden" : "" %>"><%= headerNewOrderCount %></span></a>
                 <a class="<%= activeIf(currentPath, "/admin/categories") %>" href="<%= ctx %>/admin/categories">Categories</a>
             <% } else if (currentUser.isPharmacist()) { %>
                 <a class="<%= activeIf(currentPath, "/pharmacist") %>" href="<%= ctx %>/pharmacist/dashboard">Verification Dashboard<span

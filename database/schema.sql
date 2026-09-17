@@ -18,7 +18,7 @@
 USE MediSysDB;
 GO
 
--- Needed for the filtered index on prescriptions (sqlcmd turns it off by default).
+-- Recommended SQL Server setting (sqlcmd turns it off by default).
 SET QUOTED_IDENTIFIER ON;
 GO
 
@@ -27,6 +27,10 @@ GO
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS prescription_items;
 DROP TABLE IF EXISTS prescriptions;
+DROP TABLE IF EXISTS order_status_history;
+DROP TABLE IF EXISTS payments;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS wishlist_items;
 DROP TABLE IF EXISTS cart_items;
 DROP TABLE IF EXISTS medicines;
@@ -136,6 +140,92 @@ GO
 
 
 -- =================================================================
+-- Module 02 - Order Placement and Checkout (Hewage B. H. A. S.)
+-- =================================================================
+
+-- A placed (and paid) order.
+--   source: CART          - checked out from the shopping cart
+--           PRESCRIPTION  - paid for a prescription (prescriptions.order_id points here)
+--   status: PAID -> PROCESSING -> SHIPPED -> DELIVERED, or CANCELLED (before shipping)
+-- The delivery details are copied into the order, so later changes to the
+-- customer's profile do not change old orders.
+CREATE TABLE orders (
+    id               INT IDENTITY(1,1) PRIMARY KEY,
+    user_id          INT            NOT NULL,
+    source           VARCHAR(15)    NOT NULL,
+    status           VARCHAR(15)    NOT NULL DEFAULT 'PAID',
+    subtotal         DECIMAL(10,2)  NOT NULL,
+    delivery_fee     DECIMAL(10,2)  NOT NULL,
+    total            DECIMAL(10,2)  NOT NULL,
+    delivery_name    NVARCHAR(100)  NOT NULL,
+    delivery_address NVARCHAR(255)  NOT NULL,
+    delivery_phone   NVARCHAR(20)   NOT NULL,
+    delivery_note    NVARCHAR(300)  NULL,
+    cancel_reason    NVARCHAR(300)  NULL,
+    created_at       DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+    updated_at       DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_orders_user    FOREIGN KEY (user_id) REFERENCES users (id),
+    CONSTRAINT ck_orders_source  CHECK (source IN ('CART', 'PRESCRIPTION')),
+    CONSTRAINT ck_orders_status  CHECK (status IN ('PAID', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED')),
+    CONSTRAINT ck_orders_total   CHECK (total = subtotal + delivery_fee AND subtotal > 0 AND delivery_fee >= 0)
+);
+
+CREATE INDEX ix_orders_user   ON orders (user_id, created_at);
+CREATE INDEX ix_orders_status ON orders (status, created_at);
+
+-- One medicine in an order. Name and price are copied at order time, so the
+-- order stays correct even if the medicine is renamed or its price changes.
+CREATE TABLE order_items (
+    id                  INT IDENTITY(1,1) PRIMARY KEY,
+    order_id            INT            NOT NULL,
+    medicine_id         INT            NOT NULL,
+    medicine_name       NVARCHAR(210)  NOT NULL,        -- e.g. Panadol 500 mg
+    dosage_form         NVARCHAR(30)   NOT NULL,
+    unit_price          DECIMAL(10,2)  NOT NULL,
+    quantity            INT            NOT NULL,
+    dosage_instructions NVARCHAR(300)  NULL,            -- only for prescription orders
+
+    CONSTRAINT fk_order_items_order    FOREIGN KEY (order_id)    REFERENCES orders (id) ON DELETE CASCADE,
+    CONSTRAINT fk_order_items_medicine FOREIGN KEY (medicine_id) REFERENCES medicines (id),
+    CONSTRAINT ck_order_items_quantity CHECK (quantity > 0),
+    CONSTRAINT ck_order_items_price    CHECK (unit_price > 0)
+);
+
+-- The (test) card payment of an order. Only the last 4 digits of the card are kept.
+CREATE TABLE payments (
+    id           INT IDENTITY(1,1) PRIMARY KEY,
+    order_id     INT            NOT NULL,
+    amount       DECIMAL(10,2)  NOT NULL,
+    method       VARCHAR(20)    NOT NULL DEFAULT 'TEST_CARD',
+    card_last4   CHAR(4)        NOT NULL,
+    reference    VARCHAR(30)    NOT NULL,
+    status       VARCHAR(10)    NOT NULL DEFAULT 'PAID',
+    paid_at      DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+    refunded_at  DATETIME2      NULL,
+
+    CONSTRAINT fk_payments_order     FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+    CONSTRAINT uq_payments_order     UNIQUE (order_id),
+    CONSTRAINT uq_payments_reference UNIQUE (reference),
+    CONSTRAINT ck_payments_status    CHECK (status IN ('PAID', 'REFUNDED'))
+);
+
+-- Every status an order went through, for the timeline on the order page.
+CREATE TABLE order_status_history (
+    id         INT IDENTITY(1,1) PRIMARY KEY,
+    order_id   INT            NOT NULL,
+    status     VARCHAR(15)    NOT NULL,
+    note       NVARCHAR(300)  NULL,
+    changed_by INT            NULL,                     -- NULL = the customer / the system
+    changed_at DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_history_order FOREIGN KEY (order_id)   REFERENCES orders (id) ON DELETE CASCADE,
+    CONSTRAINT fk_history_user  FOREIGN KEY (changed_by) REFERENCES users (id)
+);
+GO
+
+
+-- =================================================================
 -- Module 05 - Prescription Upload and Verification (Perera D. A. A. N. S.)
 -- =================================================================
 
@@ -146,8 +236,9 @@ GO
 -- approving, writes down the medicines (prescription_items).
 -- The file itself is NOT in the database: file_key says where the file storage
 -- (see com.medisys.storage) keeps it.
--- paid_at is set when the customer pays (test payment, module 02 placeholder).
--- A paid prescription can no longer be deleted.
+-- order_id is set when the customer pays: paying creates an order (module 02),
+-- and the payment details live in orders / payments. A paid prescription can
+-- no longer be deleted. If that order is cancelled, order_id goes back to NULL.
 CREATE TABLE prescriptions (
     id                 INT IDENTITY(1,1) PRIMARY KEY,
     user_id            INT            NOT NULL,
@@ -163,26 +254,16 @@ CREATE TABLE prescriptions (
     correction_count   INT            NOT NULL DEFAULT 0,
     uploaded_at        DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
     updated_at         DATETIME2      NOT NULL DEFAULT SYSDATETIME(),
-
-    -- filled in by the payment
-    paid_at            DATETIME2      NULL,
-    amount_paid        DECIMAL(10,2)  NULL,
-    payment_reference  VARCHAR(30)    NULL,
-    card_last4         CHAR(4)        NULL,             -- never the full card number
-    delivery_name      NVARCHAR(100)  NULL,
-    delivery_address   NVARCHAR(255)  NULL,
-    delivery_phone     NVARCHAR(20)   NULL,
+    order_id           INT            NULL,             -- the order that paid for it
 
     CONSTRAINT fk_rx_user      FOREIGN KEY (user_id)     REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT fk_rx_reviewer  FOREIGN KEY (reviewed_by) REFERENCES users (id),
+    CONSTRAINT fk_rx_order     FOREIGN KEY (order_id)    REFERENCES orders (id),
     CONSTRAINT ck_rx_status    CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CORRECTION_REQUESTED')),
     CONSTRAINT ck_rx_type      CHECK (content_type IN ('image/jpeg', 'image/png', 'application/pdf')),
-    CONSTRAINT ck_rx_paid      CHECK (paid_at IS NULL OR status = 'APPROVED'),
+    CONSTRAINT ck_rx_paid      CHECK (order_id IS NULL OR status = 'APPROVED'),
     CONSTRAINT uq_rx_file      UNIQUE (file_key)
 );
-
--- Unique, but only among paid prescriptions (a UNIQUE constraint would allow just one NULL).
-CREATE UNIQUE INDEX uq_rx_payment ON prescriptions (payment_reference) WHERE payment_reference IS NOT NULL;
 
 CREATE INDEX ix_rx_status ON prescriptions (status, uploaded_at);
 CREATE INDEX ix_rx_user   ON prescriptions (user_id);

@@ -15,14 +15,11 @@ import java.util.Map;
  * accepted. The full card number and the CVV are never stored or logged -
  * only the last 4 digits are kept for the receipt.
  *
- * PLACEHOLDER: module 02 (Order Placement and Checkout) owns payments. Module
- * 05 uses checkTestCard() for paying an approved prescription. Module 02 can
- * reuse it for the cart checkout, or replace it with a real gateway.
+ * OrderService uses it for both the cart checkout and prescription payments.
+ * A real gateway can replace checkTestCard() later without touching the pages.
  *
  * Module : 02 - Order Placement and Checkout
  * Owner  : Hewage B. H. A. S.
- *
- * TODO (module 02): orders, order items and the cart checkout.
  */
 public class PaymentService {
 

@@ -15,34 +15,34 @@ import java.io.IOException;
 import java.sql.SQLException;
 
 /**
- * One of the customer's orders: timeline, medicines, totals, payment and delivery.
+ * "Buy again": puts the medicines of an old order back into the cart.
  *
- *   GET /orders/view?id=12            (&placed=1 right after checkout)
+ *   POST /orders/reorder   id=12
  *
  * Module : 02 - Order Placement and Checkout
  * Owner  : Hewage B. H. A. S.
  */
-@WebServlet("/orders/view")
-public class OrderDetailsServlet extends HttpServlet {
+@WebServlet("/orders/reorder")
+public class ReorderServlet extends HttpServlet {
 
     private final OrderService orderService = new OrderService();
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         Integer id = TextUtil.parseInt(request.getParameter("id"));
         try {
             if (id == null) {
-                throw new ValidationException("Not found");
+                throw new ValidationException("That order was not found.");
             }
-            request.setAttribute("order", orderService.getOwnOrder(SessionUtil.currentUser(request), id));
-            request.setAttribute("justPlaced", "1".equals(request.getParameter("placed")));
-            request.getRequestDispatcher("/WEB-INF/views/order/order-details.jsp").forward(request, response);
+            String message = orderService.reorder(SessionUtil.currentUser(request), id);
+            SessionUtil.flash(request, "success", message);
+            response.sendRedirect(request.getContextPath() + "/cart");
         } catch (ValidationException e) {
-            // Someone else's (or no such) order: do not reveal which.
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            SessionUtil.flash(request, "error", e.getMessage());
+            response.sendRedirect(request.getContextPath() + (id == null ? "/orders" : "/orders/view?id=" + id));
         } catch (SQLException e) {
-            throw new ServletException("Could not load the order", e);
+            throw new ServletException("Could not add the order to the cart", e);
         }
     }
 }

@@ -45,7 +45,8 @@ import java.util.Set;
  *
  * 3. Payment (customer)
  *  - only an approved, unpaid, not expired prescription can be paid
- *  - stock is taken out at the same moment (all medicines or none)
+ *  - paying creates an order (module 02): stock is taken out at the same
+ *    moment (all medicines or none) and the order is delivered like any other
  *
  * 4. Delete
  *  - a paid prescription can never be deleted
@@ -72,7 +73,7 @@ public class PrescriptionService {
     private final PrescriptionDAO prescriptionDAO = new PrescriptionDAOImpl();
     private final MedicineService medicineService = new MedicineService();
     private final NotificationService notificationService = new NotificationService();
-    private final PaymentService paymentService = new PaymentService();
+    private final OrderService orderService = new OrderService();
 
     // ============================================================ customer
 
@@ -160,11 +161,11 @@ public class PrescriptionService {
     }
 
     /**
-     * Pays for an approved prescription (test payment) and takes the medicines
-     * out of stock.
+     * Pays for an approved prescription. This creates an order (module 02),
+     * which takes the medicines out of stock and records the payment.
      *
-     * @param form delivery fields (deliveryName, deliveryAddress, deliveryPhone)
-     *             and card fields (see PaymentService.checkTestCard)
+     * @param form delivery fields, card fields and expectedTotal
+     *             (see OrderService.placeCartOrder)
      * @return the paid prescription
      */
     public Prescription pay(User customer, int id, Map<String, String> form)
@@ -172,47 +173,9 @@ public class PrescriptionService {
         Prescription p = getOwnPrescription(customer, id);
         checkPayable(p);
 
-        List<String> errors = new ArrayList<>();
-        String name = TextUtil.clean(form.get("deliveryName"));
-        String address = TextUtil.clean(form.get("deliveryAddress"));
-        String phone = TextUtil.clean(form.get("deliveryPhone"));
-        if (name.length() < 2 || name.length() > 100) {
-            errors.add("Please enter the name of the person receiving the medicines.");
-        }
-        if (address.length() < 5 || address.length() > 255) {
-            errors.add("Please enter the full delivery address.");
-        }
-        if (!phone.matches("\\+?[0-9 ]{9,15}")) {
-            errors.add("Please enter a valid contact number, e.g. 0771234567.");
-        }
-        PaymentService.CardCheck card = paymentService.checkTestCard(form, errors);
-        if (!errors.isEmpty()) {
-            throw new ValidationException(errors);
-        }
-
-        String reference = paymentService.newReference();
-        int result = prescriptionDAO.pay(p, reference, card.last4, name, address, phone);
-        if (result == PrescriptionDAO.PAY_NOT_PAYABLE) {
-            throw new ValidationException(p.getReference() + " can no longer be paid. Please refresh the page.");
-        }
-        if (result != PrescriptionDAO.PAY_OK) {
-            String medicine = "a medicine";
-            for (PrescriptionItem item : p.getItems()) {
-                if (item.getMedicine().getId() == result) {
-                    medicine = item.getMedicine().getDisplayName();
-                }
-            }
-            throw new ValidationException("Sorry, " + medicine + " is no longer in stock. Please contact the "
-                    + "pharmacy. Your card was not charged.");
-        }
-
-        Prescription paid = prescriptionDAO.findById(id);
-        notificationService.notify(customer.getId(), "Payment " + reference + " of "
-                + TextUtil.money(paid.getAmountPaid()) + " for prescription " + p.getReference()
-                + " was received. We are preparing your medicines for delivery.",
-                "/prescriptions/view?id=" + id);
-        // TODO (module 06): create the delivery for this order here.
-        return paid;
+        // Paying creates an order with the approved medicines (module 02).
+        orderService.placePrescriptionOrder(customer, p, form);
+        return prescriptionDAO.findById(id);
     }
 
     // ========================================================== pharmacist

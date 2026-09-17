@@ -2191,3 +2191,268 @@ dl.info.compact dd {
         grid-template-columns: 1fr;
     }
 }
+
+/* ================================================================
+   Orders and checkout (module 02)
+   ================================================================ */
+
+.checkout-steps {
+    list-style: none;
+    display: flex;
+    gap: 8px;
+    padding: 0;
+    margin: 0 0 16px 0;
+    font-size: 13px;
+    counter-reset: step;
+}
+
+.checkout-steps li {
+    flex: 1;
+    padding: 8px 12px;
+    border-radius: 5px;
+    background: #e9eef2;
+    color: #6b7b8a;
+    counter-increment: step;
+}
+
+.checkout-steps li::before {
+    content: counter(step) ". ";
+    font-weight: 700;
+}
+
+.checkout-steps li.done {
+    background: #e0f3e8;
+    color: #1d6b48;
+}
+
+.checkout-steps li.current {
+    background: #0b6b5e;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.pay-box .title-row h2 {
+    margin: 0;
+}
+
+.free-delivery-hint {
+    margin: 12px 0 6px 0;
+    padding: 8px 10px;
+    border-radius: 5px;
+    background: #fff6ec;
+    color: #9a4a00;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.free-delivery-hint.done {
+    background: #e6f5ee;
+    color: #1d6b48;
+}
+
+.thank-you {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    border-left: 5px solid #1d7a4c;
+}
+
+.thank-you p {
+    margin: 4px 0 0 0;
+}
+
+.big-tick {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #1d7a4c;
+    color: #ffffff;
+    font-size: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Status timeline: Placed - Packed - Out for delivery - Delivered */
+.order-timeline {
+    list-style: none;
+    display: flex;
+    padding: 0;
+    margin: 4px 0;
+}
+
+.order-timeline li {
+    flex: 1;
+    position: relative;
+    text-align: center;
+    padding-top: 26px;
+    font-size: 13px;
+    color: #8a99a6;
+}
+
+.order-timeline li strong {
+    display: block;
+}
+
+.order-timeline .dot {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin-left: -9px;
+    border-radius: 50%;
+    background: #d3dce3;
+    z-index: 1;
+}
+
+.order-timeline li::after {
+    content: "";
+    position: absolute;
+    top: 8px;
+    left: -50%;
+    width: 100%;
+    height: 3px;
+    background: #d3dce3;
+}
+
+.order-timeline li:first-child::after {
+    display: none;
+}
+
+.order-timeline li.done,
+.order-timeline li.current {
+    color: #22303c;
+}
+
+.order-timeline li.done .dot,
+.order-timeline li.done::after,
+.order-timeline li.current::after {
+    background: #1d7a4c;
+}
+
+.order-timeline li.current .dot {
+    background: #ffffff;
+    border: 4px solid #1d7a4c;
+    box-shadow: 0 0 0 4px #e0f3e8;
+}
+
+.history {
+    margin-top: 14px;
+    font-size: 13px;
+}
+
+.history summary {
+    cursor: pointer;
+    color: #0b6b5e;
+}
+
+.history ul {
+    padding-left: 18px;
+    margin: 8px 0 0 0;
+}
+
+.history li {
+    margin-bottom: 4px;
+}
+
+.cancelled-banner {
+    background: #f3f4f6;
+    border-left: 4px solid #8a99a6;
+    padding: 10px 14px;
+    border-radius: 0 5px 5px 0;
+}
+
+.order-totals {
+    max-width: 320px;
+    margin-left: auto;
+}
+
+.next-step {
+    border-top: 4px solid #1d7a4c;
+}
+
+/* My Orders */
+.order-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.order-card-head h2 {
+    margin: 0 0 2px 0;
+}
+
+.order-card-head h2 a {
+    color: #22303c;
+    text-decoration: none;
+}
+
+.order-thumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0;
+    flex-wrap: wrap;
+}
+
+.order-thumbs .thumb {
+    width: 42px;
+    height: 42px;
+    font-size: 11px;
+}
+
+.order-thumbs .more {
+    font-weight: 700;
+    color: #5d6d7b;
+}
+
+.order-summary-text {
+    flex: 1 1 200px;
+    margin: 0 0 0 6px;
+    font-size: 13px;
+    color: #5d6d7b;
+}
+
+.order-card-foot {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-top: 1px solid #eef2f5;
+    padding-top: 10px;
+}
+
+.order-card-foot .actions {
+    margin: 0;
+}
+
+.order-card-foot form {
+    margin: 0;
+}
+
+.order-items-cell {
+    max-width: 280px;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .checkout-steps {
+        flex-direction: column;
+    }
+    .order-timeline li {
+        font-size: 11px;
+    }
+}
+
+@media print {
+    .checkout-steps,
+    .actions,
+    aside form,
+    .history summary {
+        display: none !important;
+    }
+}

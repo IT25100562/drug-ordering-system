@@ -11,7 +11,7 @@
 USE MediSysDB;
 GO
 
--- Needed for the filtered index on prescriptions (sqlcmd turns it off by default).
+-- Recommended SQL Server setting (sqlcmd turns it off by default).
 SET QUOTED_IDENTIFIER ON;
 GO
 
@@ -114,6 +114,80 @@ WHERE m.name = N'Benadryl Cough Syrup';
 GO
 
 -- =================================================================
+-- Module 02 - Order Placement and Checkout
+-- =================================================================
+--   ORD 1  Nimal   cart          DELIVERED   6 days ago
+--   ORD 2  Kasuni  prescription  SHIPPED     paid for RX 6 (linked in the module 05 section)
+--   ORD 3  Nimal   cart          PAID        new - waiting to be packed
+--   ORD 4  Kasuni  cart          CANCELLED   refunded
+--   ORD 5  Kasuni  cart          PROCESSING  free delivery (over Rs. 2,500)
+-- Totals follow the rule: delivery Rs. 300, free from Rs. 2,500.
+
+INSERT INTO orders (user_id, source, status, subtotal, delivery_fee, total, delivery_name,
+                    delivery_address, delivery_phone, delivery_note, cancel_reason, created_at, updated_at)
+SELECT u.id, v.source, v.status, v.subtotal, v.fee, v.subtotal + v.fee, u.full_name, u.address, u.phone,
+       v.note, v.cancel_reason, DATEADD(hour, -v.hours_ago, SYSDATETIME()), DATEADD(hour, -v.hours_ago, SYSDATETIME())
+FROM (VALUES
+    (1, N'nimal@example.com',  'CART',         'DELIVERED',  91.00,   300.00, N'Please ring the bell twice', NULL,                                          144),
+    (2, N'kasuni@example.com', 'PRESCRIPTION', 'SHIPPED',    84.00,   300.00, NULL,                          NULL,                                           90),
+    (3, N'nimal@example.com',  'CART',         'PAID',       1070.00, 300.00, NULL,                          NULL,                                            2),
+    (4, N'kasuni@example.com', 'CART',         'CANCELLED',  380.00,  300.00, NULL,                          N'Cancelled by the customer: Ordered by mistake', 72),
+    (5, N'kasuni@example.com', 'CART',         'PROCESSING', 2532.00, 0.00,   N'Leave with the security guard', NULL,                                 26)
+) AS v (sort_order, email, source, status, subtotal, fee, note, cancel_reason, hours_ago)
+JOIN users u ON u.email = v.email
+ORDER BY v.sort_order;
+
+-- The lines (name and price copied from the catalog).
+INSERT INTO order_items (order_id, medicine_id, medicine_name, dosage_form, unit_price, quantity, dosage_instructions)
+SELECT v.order_id, m.id, CONCAT(m.name, ' ', m.strength), m.dosage_form, m.price, v.quantity, v.dosage
+FROM (VALUES
+    (1, N'Panadol',              2, NULL),
+    (1, N'Vitamin C',            3, NULL),
+    (2, N'Losartan',             3, N'1 tablet every morning'),
+    (3, N'Dettol Antiseptic',    1, NULL),
+    (3, N'Benadryl Cough Syrup', 1, NULL),
+    (4, N'Hydrocortisone Cream', 1, NULL),
+    (5, N'Benadryl Cough Syrup', 6, NULL),
+    (5, N'Piriton',              2, NULL)
+) AS v (order_id, medicine_name, quantity, dosage)
+JOIN medicines m ON m.name = v.medicine_name;
+
+-- One (test) card payment per order.
+INSERT INTO payments (order_id, amount, card_last4, reference, status, paid_at, refunded_at)
+SELECT o.id, o.total, v.last4, v.reference, v.status, o.created_at,
+       CASE WHEN v.status = 'REFUNDED' THEN DATEADD(minute, 20, o.created_at) END
+FROM (VALUES
+    (1, '4242', 'PAY-20260911-A3KD7Q', 'PAID'),
+    (2, '4242', 'PAY-20260913-K7Q2XD', 'PAID'),
+    (3, '4242', 'PAY-20260917-M8TR2E', 'PAID'),
+    (4, '1881', 'PAY-20260914-Q4WZ9N', 'REFUNDED'),
+    (5, '4242', 'PAY-20260916-H2VB6P', 'PAID')
+) AS v (order_id, last4, reference, status)
+JOIN orders o ON o.id = v.order_id;
+
+-- The history behind each order's timeline.
+INSERT INTO order_status_history (order_id, status, note, changed_by, changed_at)
+SELECT o.id, v.status, v.note, CASE WHEN v.by_admin = 1 THEN a.id END,
+       DATEADD(minute, v.minutes_after, o.created_at)
+FROM (VALUES
+    (1, 'PAID',       N'Order placed and paid', 0, 0),
+    (1, 'PROCESSING', NULL,                     1, 90),
+    (1, 'SHIPPED',    N'Rider Kamal, 077 123 4567', 1, 600),
+    (1, 'DELIVERED',  NULL,                     1, 1000),
+    (2, 'PAID',       N'Order placed and paid', 0, 0),
+    (2, 'PROCESSING', NULL,                     1, 60),
+    (2, 'SHIPPED',    N'Rider Nuwan, 071 555 0101', 1, 300),
+    (3, 'PAID',       N'Order placed and paid', 0, 0),
+    (4, 'PAID',       N'Order placed and paid', 0, 0),
+    (4, 'CANCELLED',  N'Cancelled by the customer: Ordered by mistake', 0, 20),
+    (5, 'PAID',       N'Order placed and paid', 0, 0),
+    (5, 'PROCESSING', NULL,                     1, 45)
+) AS v (order_id, status, note, by_admin, minutes_after)
+JOIN orders o ON o.id = v.order_id
+CROSS JOIN (SELECT id FROM users WHERE email = N'admin@medisys.lk') a;
+GO
+
+-- =================================================================
 -- Module 05 - Prescription Upload and Verification
 -- =================================================================
 -- The files behind these rows are in src/main/webapp/WEB-INF/sample-uploads.
@@ -124,7 +198,7 @@ GO
 --   RX 3  Kasuni  REJECTED              not signed
 --   RX 4  Nimal   APPROVED, not paid    Metformin x5 + Panadol x2 -> Nimal can pay
 --   RX 5  Kasuni  PENDING, 40 days old  expired - the pharmacist should delete it
---   RX 6  Kasuni  APPROVED and PAID     Losartan x3 -> shows the receipt
+--   RX 6  Kasuni  APPROVED and PAID     Losartan x3, paid by order 2 -> shows the receipt
 
 INSERT INTO prescriptions
     (user_id, customer_note, file_key, original_file_name, content_type, file_size,
@@ -171,17 +245,8 @@ FROM (VALUES
 JOIN prescriptions p ON p.file_key = v.file_key
 JOIN medicines m ON m.name = v.medicine_name;
 
--- RX 6 was paid (test payment).
-UPDATE p SET
-    paid_at = DATEADD(hour, -90, SYSDATETIME()),
-    amount_paid = (SELECT SUM(i.quantity * i.unit_price) FROM prescription_items i WHERE i.prescription_id = p.id),
-    payment_reference = 'PAY-20260913-K7Q2XD',
-    card_last4 = '4242',
-    delivery_name = N'Kasuni Silva',
-    delivery_address = N'45 Lake Drive, Kandy',
-    delivery_phone = N'0719876543'
-FROM prescriptions p
-WHERE p.file_key = 'samples/rx-demo-6.png';
+-- RX 6 was paid: order 2 (see the module 02 section) paid for it.
+UPDATE prescriptions SET order_id = 2 WHERE file_key = 'samples/rx-demo-6.png';
 
 -- The notifications those decisions sent.
 INSERT INTO notifications (user_id, message, link, is_read, created_at)
@@ -193,8 +258,12 @@ FROM (VALUES
      N'/prescriptions', 0, 28),
     (N'kasuni@example.com', N'Your prescription RX-000003 was rejected: The prescription is not signed by the doctor.',
      N'/prescriptions', 1, 70),
-    (N'kasuni@example.com', N'Payment PAY-20260913-K7Q2XD of Rs. 84.00 for prescription RX-000006 was received. We are preparing your medicines for delivery.',
-     N'/prescriptions', 1, 90)
+    (N'kasuni@example.com', N'Thank you! Order ORD-000002 (Rs. 384.00) was placed and paid. Payment reference PAY-20260913-K7Q2XD.',
+     N'/orders/view?id=2', 1, 90),
+    (N'kasuni@example.com', N'Order ORD-000002 is out for delivery to 45 Lake Drive, Kandy. Note: Rider Nuwan, 071 555 0101',
+     N'/orders/view?id=2', 0, 85),
+    (N'nimal@example.com', N'Order ORD-000001 was delivered. Thank you for shopping with MediSys!',
+     N'/orders/view?id=1', 1, 127)
 ) AS v (email, message, link, is_read, hours_ago)
 JOIN users u ON u.email = v.email;
 GO

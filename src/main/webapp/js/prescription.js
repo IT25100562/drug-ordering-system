@@ -9,7 +9,6 @@
  *  - review page: the medicine lines editor (add / remove, totals),
  *                 Approve only after the checklist is ticked and the lines are right,
  *                 Reject / Request correction need a note
- *  - payment page: card number / expiry formatting and checks
  *  - live character counters (textarea[data-counter])
  *
  * PrescriptionService checks everything again on the server.
@@ -26,7 +25,6 @@
         document.querySelectorAll("[data-file-drop]").forEach(setUpDropZone);
         document.querySelectorAll("form[data-upload-form]").forEach(setUpUploadForm);
         document.querySelectorAll("form[data-decision-form]").forEach(setUpDecisionForm);
-        document.querySelectorAll("form[data-pay-form]").forEach(setUpPayForm);
         document.querySelectorAll("textarea[data-counter]").forEach(setUpCounter);
     });
 
@@ -391,94 +389,6 @@
                 return ok;
             }
         };
-    }
-
-    // --------------------------------------------------- payment form
-
-    function setUpPayForm(form) {
-        var number = form.querySelector("[data-card-number]");
-        var expiry = form.querySelector("[data-card-expiry]");
-
-        // "4242424242424242" -> "4242 4242 4242 4242"
-        number.addEventListener("input", function () {
-            var digits = number.value.replace(/\D/g, "").slice(0, 19);
-            number.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ");
-        });
-        // "1228" -> "12/28"
-        expiry.addEventListener("input", function (e) {
-            var digits = expiry.value.replace(/\D/g, "").slice(0, 4);
-            expiry.value = digits.length > 2 || (digits.length === 2 && e.inputType !== "deleteContentBackward")
-                    ? digits.slice(0, 2) + "/" + digits.slice(2) : digits;
-        });
-
-        form.addEventListener("change", function () {
-            var box = form.querySelector(".js-errors");
-            if (box) {
-                box.remove();
-            }
-        });
-
-        form.addEventListener("submit", function (event) {
-            var errors = [];
-            var value = function (name) { return form.elements[name].value.trim(); };
-
-            if (value("deliveryName").length < 2) {
-                errors.push("Please enter the name of the person receiving the medicines.");
-            }
-            if (!/^\+?[0-9 ]{9,15}$/.test(value("deliveryPhone"))) {
-                errors.push("Please enter a valid contact number, e.g. 0771234567.");
-            }
-            if (value("deliveryAddress").length < 5) {
-                errors.push("Please enter the full delivery address.");
-            }
-            if (value("cardName").length < 2) {
-                errors.push("Please enter the name on the card.");
-            }
-            var digits = value("cardNumber").replace(/\D/g, "");
-            if (digits.length < 13 || !luhn(digits)) {
-                errors.push("The card number is not valid.");
-            }
-            var m = /^(0[1-9]|1[0-2])\/(\d{2})$/.exec(value("cardExpiry"));
-            if (!m) {
-                errors.push("Card expiry must look like MM/YY.");
-            } else {
-                var now = new Date();
-                var expiryMonth = (2000 + Number(m[2])) * 12 + Number(m[1]);
-                if (expiryMonth < now.getFullYear() * 12 + now.getMonth() + 1) {
-                    errors.push("This card has expired.");
-                }
-            }
-            if (!/^\d{3,4}$/.test(value("cardCvv"))) {
-                errors.push("The CVV is the 3 or 4 digits on the back of the card.");
-            }
-
-            if (errors.length) {
-                event.preventDefault();
-                showFormErrors(form, errors);
-                return;
-            }
-            var button = form.querySelector('button[type="submit"]');
-            button.disabled = true;
-            button.classList.add("busy");
-            button.textContent = button.getAttribute("data-busy-text");
-        });
-    }
-
-    function luhn(digits) {
-        var sum = 0;
-        var double = false;
-        for (var i = digits.length - 1; i >= 0; i--) {
-            var d = Number(digits.charAt(i));
-            if (double) {
-                d *= 2;
-                if (d > 9) {
-                    d -= 9;
-                }
-            }
-            sum += d;
-            double = !double;
-        }
-        return sum % 10 === 0;
     }
 
     // ------------------------------------------------ char counters

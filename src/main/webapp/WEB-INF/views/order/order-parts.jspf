@@ -1,0 +1,92 @@
+<%--
+    Parts shared by the customer's and the admin's order page:
+      - the status timeline
+      - the medicines table with the totals
+    Needs an Order called "order".
+
+    Module : 02 - Order Placement and Checkout
+    Owner  : Hewage B. H. A. S.
+--%>
+<%
+    com.medisys.model.OrderStatus[] steps = {
+            com.medisys.model.OrderStatus.PAID, com.medisys.model.OrderStatus.PROCESSING,
+            com.medisys.model.OrderStatus.SHIPPED, com.medisys.model.OrderStatus.DELIVERED };
+%>
+<section class="card">
+    <% if (order.isCancelled()) { %>
+        <div class="cancelled-banner">
+            <strong>This order was cancelled</strong>
+            <% if (order.getCancelReason() != null) { %> &mdash; <%= TextUtil.html(order.getCancelReason()) %><% } %>
+            <br><span class="meta">The medicines went back to stock and the payment was refunded.</span>
+        </div>
+    <% } else { %>
+        <ol class="order-timeline" aria-label="Order progress">
+            <% for (com.medisys.model.OrderStatus step : steps) {
+                   java.time.LocalDateTime at = order.getTimeOf(step);
+                   boolean done = at != null;
+                   boolean current = step == order.getStatus();
+            %>
+                <li class="<%= current ? "current" : done ? "done" : "" %>">
+                    <span class="dot" aria-hidden="true"></span>
+                    <strong><%= step.getLabel() %></strong>
+                    <span class="meta"><%= done ? TextUtil.dateTime(at) : "" %></span>
+                </li>
+            <% } %>
+        </ol>
+    <% } %>
+
+    <% if (order.getHistory().size() > 1 || order.isCancelled()) { %>
+        <details class="history">
+            <summary>Full history</summary>
+            <ul>
+                <% for (com.medisys.model.OrderStatusChange change : order.getHistory()) { %>
+                    <li>
+                        <span class="nowrap"><%= TextUtil.dateTime(change.getChangedAt()) %></span>
+                        <strong><%= change.getStatus().getLabel() %></strong>
+                        <% if (change.getNote() != null) { %> &mdash; <%= TextUtil.html(change.getNote()) %><% } %>
+                        <% if (change.getChangedByName() != null) { %>
+                            <span class="meta">(<%= TextUtil.html(change.getChangedByName()) %>)</span>
+                        <% } %>
+                    </li>
+                <% } %>
+            </ul>
+        </details>
+    <% } %>
+</section>
+
+<section class="card">
+    <h2>Medicines</h2>
+    <div class="table-wrap">
+    <table class="items-table">
+        <tr>
+            <th>Medicine</th>
+            <% if (order.isFromPrescription()) { %><th>How to use</th><% } %>
+            <th class="num">Qty</th>
+            <th class="num">Price</th>
+            <th class="num">Total</th>
+        </tr>
+        <% for (com.medisys.model.OrderItem item : order.getItems()) { %>
+        <tr>
+            <td>
+                <div class="item-medicine">
+                    <span class="<%= item.getThumbCssClass() %>" aria-hidden="true"><%= item.getThumbText() %></span>
+                    <span><strong><%= TextUtil.html(item.getMedicineName()) %></strong>
+                        <br><span class="meta"><%= TextUtil.html(item.getDosageForm()) %></span></span>
+                </div>
+            </td>
+            <% if (order.isFromPrescription()) { %>
+                <td class="dosage"><%= TextUtil.html(item.getDosageInstructions()) %></td>
+            <% } %>
+            <td class="num"><%= item.getQuantity() %></td>
+            <td class="num nowrap"><%= TextUtil.money(item.getUnitPrice()) %></td>
+            <td class="num nowrap"><strong><%= TextUtil.money(item.getLineTotal()) %></strong></td>
+        </tr>
+        <% } %>
+    </table>
+    </div>
+    <div class="totals order-totals">
+        <div><span>Subtotal</span><span><%= TextUtil.money(order.getSubtotal()) %></span></div>
+        <div><span>Delivery</span><span><%= order.getDeliveryFee().signum() == 0 ? "Free" : TextUtil.money(order.getDeliveryFee()) %></span></div>
+        <div class="grand"><span>Total</span><span><%= TextUtil.money(order.getTotal()) %></span></div>
+    </div>
+</section>

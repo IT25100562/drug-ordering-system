@@ -10,6 +10,7 @@ import java.util.Map;
 
 /**
  * Database operations for prescriptions and their medicine lines.
+ * (Paying for a prescription creates an order: see OrderDAO.create.)
  *
  * Module : 05 - Prescription Upload and Verification
  * Owner  : Perera D. A. A. N. S.
@@ -21,10 +22,6 @@ public interface PrescriptionDAO {
     String FILTER_PAID = "PAID";
     String FILTER_EXPIRED = "EXPIRED";
     String FILTER_ALL = "ALL";
-
-    /** Results of pay(). */
-    int PAY_OK = 0;
-    int PAY_NOT_PAYABLE = -1;               // any positive number = id of a medicine without enough stock
 
     /** Inserts a new PENDING prescription and returns its id. */
     int create(Prescription prescription) throws SQLException;
@@ -59,13 +56,4 @@ public interface PrescriptionDAO {
 
     /** Deletes the prescription (and its lines), only if it was never paid. */
     boolean delete(int id) throws SQLException;
-
-    /**
-     * Records the payment and takes the medicines out of stock, all in one
-     * transaction (either everything happens or nothing does).
-     *
-     * @return PAY_OK, PAY_NOT_PAYABLE, or the id of a medicine that is short in stock
-     */
-    int pay(Prescription prescription, String paymentReference, String cardLast4,
-            String deliveryName, String deliveryAddress, String deliveryPhone) throws SQLException;
 }

@@ -118,7 +118,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | Module | model | dao (+ impl) | service | servlet/ + views/ folder |
 |--------|-------|--------------|---------|--------------------------|
 | 01 | `CartItem`, `Cart`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartService`, `WishlistService` | `cart/` |
-| 02 | `Order`, `OrderItem`, `OrderStatus`, `Payment` | `OrderDAO`, `PaymentDAO` | `OrderService`, `PaymentService` | `order/` |
+| 02 | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` (+ `StockShortageException`) | `OrderService`, `PaymentService` | `order/` |
 | 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
 | 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` |
 | 05 | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` (+ `PrescriptionRequiredException`) | `prescription/` |
@@ -139,9 +139,9 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/restock`, `/admin/medicines/discontinue`, `/admin/categories` | admin |
 | 01 | `/cart`, `/cart/add`, `/cart/update`, `/cart/remove` | customer |
 | 01 | `/wishlist`, `/wishlist/action` | customer |
-| 02 | `/checkout`, `/checkout/payment` | customer |
-| 02 | `/orders`, `/orders/view?id=`, `/orders/cancel` | customer |
-| 02 | `/admin/orders` | admin |
+| 02 | `/checkout` | customer |
+| 02 | `/orders`, `/orders/view?id=`, `/orders/cancel`, `/orders/reorder` | customer |
+| 02 | `/admin/orders`, `/admin/orders/view?id=`, `/admin/orders/status` | admin |
 | 05 | `/prescriptions`, `/prescriptions/upload`, `/prescriptions/view?id=`, `/prescriptions/pay?id=`, `/prescriptions/correct`, `/prescriptions/delete` | customer |
 | 05 | `/prescriptions/file?id=` | the customer who uploaded it, or a pharmacist |
 | 05 | `/pharmacist/dashboard`, `/pharmacist/review`, `/pharmacist/delete` | pharmacist |
@@ -157,8 +157,11 @@ for DELIVERY_STAFF.
 - **01 → 05:** a prescription-only medicine never goes in the cart. The customer is sent
   to `/prescriptions/upload`, and pays for the medicines the pharmacist lists.
 - **01 → 02:** checkout turns the cart into an order.
-- **02 → 03:** placing an order reduces stock through `MedicineService`.
-- **02 → 06:** a successful payment creates a delivery through `DeliveryService`.
+- **05 → 02:** paying for an approved prescription creates an order
+  (`OrderService.placePrescriptionOrder`), so it is packed and tracked like any other order.
+- **02 → 03:** placing an order reduces stock (in the same transaction); cancelling puts it back.
+- **02 → 06:** a successful payment should create a delivery through `DeliveryService`
+  (see the `TODO (module 06)` in `OrderService.notifyPlaced`).
 - **05, 02, 06 → 06:** anything that needs to tell a user something calls
   `NotificationService.notify(...)`.
 
@@ -167,7 +170,7 @@ for DELIVERY_STAFF.
 | # | Module | Status |
 |---|--------|--------|
 | 01 | Shopping Cart and Wishlist | **done** (see below) |
-| 02 | Order Placement and Checkout | not started |
+| 02 | Order Placement and Checkout | **done** (see below) |
 | 03 | Medicine Catalog and Inventory | **done** (see below) |
 | 04 | User and Role Management | login / logout / roles done early; register, profile, manage users still to do |
 | 05 | Prescription Upload and Verification | **done** (see below) |
@@ -243,6 +246,69 @@ messages, badges, totals). The servlets answer with JSON when the request asks f
 **Performance:** `DBConnection` keeps a pool of open connections (Tomcat's built-in DBCP),
 because opening a SQL Server connection takes about 250 ms.
 
+### Module 02: Order Placement and Checkout
+
+```
+ cart / approved prescription ──pay──> PAID ──> PROCESSING ──> SHIPPED ──> DELIVERED
+                                        │           │
+                                        └───────────┴──cancel──> CANCELLED (stock back, payment refunded)
+```
+Labels shown to people: Order placed, Being packed, Out for delivery, Delivered, Cancelled.
+
+**Customer pages**
+- `/checkout`: step bar (Cart, Delivery & payment, Confirmation), delivery details filled
+  in from the account, an optional note for the rider, the test card form, and the order
+  summary with subtotal, delivery fee and total. The Pay button shows the amount.
+- `/orders`: every order, newest first, with its status, items and total, plus Buy again
+  and View order.
+- `/orders/view?id=`: a thank-you box right after paying, a timeline with the time of
+  each step, the medicines (with "how to use" for prescription orders), delivery details,
+  payment (or refund), Print, Buy again (cart orders), and Cancel while it is still
+  "Order placed".
+- `/orders/reorder`: Buy again puts the same medicines back in the cart. Medicines that
+  can't be bought now (out of stock, prescription only, ...) are skipped with a message.
+
+**Admin pages**
+- `/admin/orders`: totals per status, tabs (Open, each status, All), search by order number
+  (`ORD-000012` or `12`), customer name or email, and a one-click "Mark: next step"
+  button per row. The menu shows how many new orders are waiting.
+- `/admin/orders/view?id=`: the whole order, "Next step" with an optional note for the
+  customer (for example the rider's name and phone), the full history, a packing slip to
+  print, and Cancel and refund with a required reason.
+
+**Rules (all in `OrderService` / `OrderDAOImpl`)**
+- Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`OrderService.DELIVERY_FEE`,
+  `FREE_DELIVERY_FROM`). This applies to cart and prescription orders.
+- The cart must be ready for checkout (module 01's checks). Delivery name, address and
+  phone are required, and the rider note is optional. Card checks come from
+  `PaymentService` (test card, Luhn, MM/YY in the future, CVV).
+- The page sends the total it showed (`expectedTotal`). If a price or the cart changed in
+  the meantime, nothing is charged and the customer sees the new total.
+- Placing an order is **one database transaction**: stock is reduced for every line
+  (never below 0), the order, lines, payment and first history row are saved, and the
+  bought medicines leave the cart. If one medicine is short, everything is rolled back and
+  the customer is told which one.
+- A prescription order also links the prescription (`prescriptions.order_id`) in the
+  same transaction, so it can't be paid twice.
+- Status only moves one step forward. If two admins click at the same time, the second
+  one is told the order already changed.
+- The customer can cancel only while "Order placed". The pharmacy can cancel until it is
+  "Out for delivery" and must give a reason (5-300 characters). Cancelling puts the
+  stock back, marks the payment REFUNDED, and frees a prescription so it can be paid again.
+- Customers can only see their own orders (anyone else's gives 404). Only the last 4 card
+  digits are stored. Every status change notifies the customer.
+
+**Demo data:** five orders: delivered (Nimal), out for delivery (Kasuni, paid prescription
+RX-000006), new (Nimal), cancelled and refunded (Kasuni), and being packed with free
+delivery (Kasuni).
+
+**For other modules**
+- 05 (prescriptions): `PrescriptionService.pay()` calls
+  `orderService.placePrescriptionOrder(...)`. The receipt links to the order.
+- 06 (delivery): add the delivery at the `TODO (module 06)` in
+  `OrderService.notifyPlaced()`. `OrderService.advance()` is the one place that moves the
+  status forward, so delivery staff updates can call it too.
+
 ### Module 05: Prescription Upload and Verification
 
 Customers can't always read a doctor's handwriting, so **they only upload the
@@ -251,7 +317,7 @@ customer pays for that list.
 
 ```
  customer uploads file ──> PENDING ──pharmacist lists medicines + approves──> APPROVED ──customer pays──> PAID
-                             │  ▲                                                          (stock taken out)
+                             │  ▲                                                      (an order is created)
              reject / ask    │  │  customer sends a new copy
              for correction  ▼  │
                 REJECTED / CORRECTION_REQUESTED
@@ -266,10 +332,10 @@ customer pays for that list.
   Send corrected copy, Upload a new prescription, View file, or Delete.
 - `/prescriptions/view?id=`: once approved, the medicines with **how to use each one**,
   the quantities, prices and total, the pharmacist's note, and the **Pay** button.
-  After payment the same page is the receipt (reference, amount, card ending, delivery
-  address, and a Print button).
-- `/prescriptions/pay?id=`: the test payment page. Delivery name, address and phone are
-  filled in from the account, plus the card form. The order summary is shown alongside.
+  After payment the same page is the receipt (order number and status, payment
+  reference, amount, card ending, delivery address, Track order and Print).
+- `/prescriptions/pay?id=`: the same delivery and card form as the cart checkout. The
+  summary shows the medicines, the delivery fee and the total.
 - `/prescriptions/correct?id=`: shows the pharmacist's note and takes the new copy.
 - `/notifications`: messages about each decision and the payment.
 
@@ -299,13 +365,12 @@ customer pays for that list.
 - Reject and Correction need a note of at least 5 characters. An expired prescription
   can't be approved.
 - **Pay:** only an approved, unpaid, not expired prescription, by its own customer.
-  Delivery details and the card format are checked (`PaymentService`). Payment runs as
-  **one database transaction**: every medicine's stock is reduced, or nothing happens
-  if one is short, and "paid" is recorded. A prescription can't be paid twice. Only the
-  card's last 4 digits are stored.
+  Paying creates a module 02 order in **one database transaction** (stock, order,
+  payment, and the link `prescriptions.order_id`). A prescription can't be paid twice.
+  If the order is cancelled, the link is cleared and the prescription can be paid again.
 - **Expired:** uploaded more than 30 days ago and not paid. A corrected copy starts the
   30 days again.
-- A paid prescription can never be deleted. Deleting also removes the stored file, and
+- A paid prescription (linked to an order) can never be deleted. Deleting also removes the stored file, and
   the customer is notified.
 - The cart never accepts a prescription-only medicine. It sends the customer to the
   upload page instead.
@@ -322,11 +387,9 @@ paid (Kasuni: Losartan). Their files are in `src/main/webapp/WEB-INF/sample-uplo
 **Test card:** `4242 4242 4242 4242`, any future expiry date (MM/YY), and any 3-digit CVV.
 
 **For other modules**
-- 02 (checkout): `PaymentService.checkTestCard()` can be reused for the cart checkout.
-  The prescription payment is kept separate from cart orders.
-- 06 (delivery): a paid prescription has `delivery_name`, `delivery_address` and
-  `delivery_phone`. Create the delivery at the `TODO (module 06)` in
-  `PrescriptionService.pay()`.
+- 02 (orders): paying goes through `OrderService.placePrescriptionOrder()`, and the
+  delivery details live on the order.
+- 06 (delivery): prescription orders are normal orders, so nothing extra is needed.
 
 ### File storage and moving to the cloud
 

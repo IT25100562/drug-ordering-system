@@ -2,6 +2,7 @@ package com.medisys.servlet.prescription;
 
 import com.medisys.model.Prescription;
 import com.medisys.model.User;
+import com.medisys.service.OrderService;
 import com.medisys.service.PrescriptionService;
 import com.medisys.service.ValidationException;
 import com.medisys.util.SessionUtil;
@@ -23,8 +24,9 @@ import java.util.Map;
  * Test payment for an approved prescription.
  *
  *   GET  /prescriptions/pay?id=12
- *   POST /prescriptions/pay        id, deliveryName, deliveryAddress, deliveryPhone,
- *                                  cardName, cardNumber, cardExpiry, cardCvv
+ *   POST /prescriptions/pay        id + the checkout fields (OrderService.FORM_FIELDS)
+ *
+ * Paying creates an order (module 02) with the approved medicines.
  *
  * The card number and CVV are only checked, never stored or sent back to the
  * page (after an error the card fields are empty again).
@@ -37,8 +39,6 @@ import java.util.Map;
 public class PrescriptionPaymentServlet extends HttpServlet {
 
     private static final String VIEW = "/WEB-INF/views/prescription/pay.jsp";
-    private static final String[] DELIVERY_FIELDS = {"deliveryName", "deliveryAddress", "deliveryPhone"};
-    private static final String[] CARD_FIELDS = {"cardName", "cardNumber", "cardExpiry", "cardCvv"};
 
     private final PrescriptionService prescriptionService = new PrescriptionService();
 
@@ -70,10 +70,7 @@ public class PrescriptionPaymentServlet extends HttpServlet {
         User user = SessionUtil.currentUser(request);
         Integer id = TextUtil.parseInt(request.getParameter("id"));
         Map<String, String> form = new HashMap<>();
-        for (String field : DELIVERY_FIELDS) {
-            form.put(field, request.getParameter(field));
-        }
-        for (String field : CARD_FIELDS) {
+        for (String field : OrderService.FORM_FIELDS) {
             form.put(field, request.getParameter(field));
         }
 
@@ -84,8 +81,8 @@ public class PrescriptionPaymentServlet extends HttpServlet {
             }
             try {
                 Prescription paid = prescriptionService.pay(user, id, form);
-                SessionUtil.flash(request, "success", "Payment successful. Reference "
-                        + paid.getPaymentReference() + ". We are preparing your medicines for delivery.");
+                SessionUtil.flash(request, "success", "Payment successful. Order " + paid.getOrderReference()
+                        + " (reference " + paid.getPaymentReference() + ") is being prepared for delivery.");
                 response.sendRedirect(request.getContextPath() + "/prescriptions/view?id=" + id);
             } catch (ValidationException e) {
                 // Never show the card number or CVV again.
@@ -129,6 +126,8 @@ public class PrescriptionPaymentServlet extends HttpServlet {
     private void showForm(HttpServletRequest request, HttpServletResponse response, Prescription p,
                           Map<String, String> form, List<String> errors) throws ServletException, IOException {
         request.setAttribute("prescription", p);
+        request.setAttribute("deliveryFee", OrderService.deliveryFeeFor(p.getTotal()));
+        request.setAttribute("total", OrderService.totalFor(p.getTotal()));
         request.setAttribute("form", form);
         request.setAttribute("errors", errors);
         request.getRequestDispatcher(VIEW).forward(request, response);

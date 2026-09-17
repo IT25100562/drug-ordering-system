@@ -10,6 +10,9 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%@ page import="com.medisys.model.Prescription" %>
 <%@ page import="com.medisys.model.PrescriptionStatus" %>
+<%@ page import="com.medisys.model.OrderStatus" %>
+<%@ page import="com.medisys.service.OrderService" %>
+<%@ page import="java.math.BigDecimal" %>
 <% String pageTitle = "Prescription"; %>
 <%@ include file="../common/header.jspf" %>
 <%
@@ -82,25 +85,33 @@
             <h2>Receipt</h2>
             <dl class="info compact">
                 <dt>Reference</dt><dd><strong><%= TextUtil.html(p.getPaymentReference()) %></strong></dd>
-                <dt>Amount</dt><dd><%= TextUtil.money(p.getAmountPaid()) %></dd>
+                <dt>Order</dt><dd><a href="<%= ctx %>/orders/view?id=<%= p.getOrderId() %>"><%= p.getOrderReference() %></a></dd>
+                <dt>Amount</dt><dd><%= TextUtil.money(p.getAmountPaid()) %> <span class="meta">(incl. delivery)</span></dd>
                 <dt>Paid on</dt><dd><%= TextUtil.dateTime(p.getPaidAt()) %></dd>
                 <dt>Card</dt><dd>&bull;&bull;&bull;&bull; <%= TextUtil.html(p.getCardLast4()) %></dd>
                 <dt>Deliver to</dt><dd><%= TextUtil.html(p.getDeliveryName()) %><br>
                     <%= TextUtil.html(p.getDeliveryAddress()) %><br><%= TextUtil.html(p.getDeliveryPhone()) %></dd>
             </dl>
-            <p class="paid-note">&#10003; We are preparing your medicines for delivery.</p>
+            <% OrderStatus orderStatus = OrderStatus.fromText(p.getOrderStatus()); %>
+            <p class="paid-note">&#10003; Order <%= p.getOrderReference() %>:
+                <%= orderStatus == null ? "" : orderStatus.getLabel() %></p>
+            <a class="btn block" href="<%= ctx %>/orders/view?id=<%= p.getOrderId() %>">Track order</a>
             <button class="btn plain block" type="button" onclick="window.print()">Print receipt</button>
         <% } else if (p.isExpired()) { %>
             <h2>Expired</h2>
             <p>This prescription can no longer be paid. Please upload a new one.</p>
             <a class="btn block" href="<%= ctx %>/prescriptions/upload">Upload a new prescription</a>
         <% } else { %>
+            <% BigDecimal fee = OrderService.deliveryFeeFor(p.getTotal());
+               BigDecimal toPay = OrderService.totalFor(p.getTotal()); %>
             <h2>Total to pay</h2>
-            <div class="price big"><%= TextUtil.money(p.getTotal()) %></div>
-            <p class="meta"><%= p.getItems().size() %> medicine<%= p.getItems().size() == 1 ? "" : "s" %>
-                &middot; <%= p.getPackCount() %> pack<%= p.getPackCount() == 1 ? "" : "s" %> &middot; free delivery</p>
+            <div class="price big"><%= TextUtil.money(toPay) %></div>
+            <div class="totals">
+                <div><span>Medicines</span><span><%= TextUtil.money(p.getTotal()) %></span></div>
+                <div><span>Delivery</span><span><%= fee.signum() == 0 ? "Free" : TextUtil.money(fee) %></span></div>
+            </div>
             <a class="btn block pay-button" href="<%= ctx %>/prescriptions/pay?id=<%= p.getId() %>">
-                Pay <%= TextUtil.money(p.getTotal()) %></a>
+                Pay <%= TextUtil.money(toPay) %></a>
             <p class="meta center">Please pay before <%= TextUtil.date(p.getExpiresAt().toLocalDate()) %>.</p>
         <% } %>
     </aside>

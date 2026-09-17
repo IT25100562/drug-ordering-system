@@ -115,7 +115,9 @@
         <a class="btn block <%= cart.isReadyForCheckout() ? "" : "disabled" %>" href="<%= ctx %>/checkout"
            data-checkout <%= cart.isReadyForCheckout() ? "" : "aria-disabled=\"true\" tabindex=\"-1\"" %>>
             Proceed to checkout</a>
-        <p class="meta center">Maximum <%= maxPerItem %> packs of each medicine per order.</p>
+        <p class="meta center">Free delivery on orders of <%= TextUtil.money(com.medisys.service.OrderService.FREE_DELIVERY_FROM) %>
+            or more (otherwise <%= TextUtil.money(com.medisys.service.OrderService.DELIVERY_FEE) %>).<br>
+            Maximum <%= maxPerItem %> packs of each medicine per order.</p>
     </aside>
 </div>
 <% } %>
