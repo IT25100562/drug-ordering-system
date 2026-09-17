@@ -28,6 +28,10 @@ Design patterns used:
 
 ## Getting started
 
+> **New to the project?** Follow the step-by-step [SETUP.md](SETUP.md). It covers installing IntelliJ,
+> SQL Server and Tomcat, creating the database, running the app, a tour of all six modules, and troubleshooting.
+> The short version is below.
+
 1. Clone the repo and open the folder in IntelliJ IDEA. When IntelliJ asks, load it as a
    Maven project. It downloads the dependencies itself.
 2. **Database** (SQL Server must be running, with TCP port 1433 enabled). From the project
@@ -134,7 +138,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 
 | Module | URL | Who |
 |--------|-----|-----|
-| 04 | `/login`, `/logout`, `/register` | everyone |
+| 04 | `/login`, `/logout`, `/register`, `/forgot-password` | everyone |
 | 04 | `/account/profile`, `/account/photo` | logged in |
 | 04 | `/users/photo?id=` | the user, pharmacists, admins |
 | 04 | `/users/flag` | pharmacist / admin |
@@ -192,6 +196,12 @@ page has a **Create a free account** link, and after registering the customer is
 straight back to the upload page.
 
 **Pages**
+- `/forgot-password`: a customer sets a new password after entering the email, NIC and
+  date of birth they registered with. There is no e-mail server, so no reset link is
+  sent. Every mismatch gets the same message. Staff passwords are reset by the admin on
+  `/admin/users`.
+- `/` (home): guests and customers see the start page; staff are sent straight to their
+  work page.
 - `/register`: only what the pharmacy needs: full name, NIC, date of birth, phone,
   WhatsApp (with a "same as my phone number" box), email and password. All errors are
   shown together, and the typed values are kept (except the password).
@@ -292,9 +302,8 @@ messages, badges, totals). The servlets answer with JSON when the request asks f
 **Rules (all in `CartService` / `WishlistService`)**
 - only medicines on sale can be added (not discontinued / expired / out of stock)
 - quantity per medicine: 1 to min(stock, 10); adding again raises the quantity (capped)
-- prescription-only medicines need an APPROVED prescription:
-  `PrescriptionService.hasApprovedPrescription()`. Until module 05 is built it always
-  returns false, so those medicines show "Upload prescription" instead of Add to Cart.
+- prescription-only medicines never go into the cart. They show "Upload prescription",
+  and the customer pays for them through the prescription (module 05).
 - the cart is checked again each time it is shown, because prices and stock can change
 - a customer can only see or change their own cart (every query uses the logged-in user id)
 

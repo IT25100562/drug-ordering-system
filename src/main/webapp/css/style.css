@@ -2829,3 +2829,77 @@ dl.info.compact dd {
         grid-template-columns: 1fr;
     }
 }
+
+/* ------------------ home page and password reset ------------------ */
+
+.home-hero {
+    background: linear-gradient(135deg, #0b6b5e, #13907e);
+    color: #ffffff;
+    padding: 36px 32px;
+}
+
+.home-hero h1 {
+    font-size: 30px;
+    margin: 0 0 8px;
+}
+
+.home-hero .subtitle {
+    color: #e3f4f0;
+    max-width: 620px;
+    font-size: 16px;
+}
+
+.home-hero .btn {
+    background: #ffffff;
+    color: #0b6b5e;
+    border: 1px solid #ffffff;
+}
+
+.home-hero .btn.plain {
+    background: transparent;
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.home-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 18px;
+}
+
+.home-steps h2 {
+    margin-top: 8px;
+}
+
+.step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #dcefe9;
+    color: #0b6b5e;
+    font-weight: 700;
+}
+
+.auth-wrap.single {
+    grid-template-columns: minmax(0, 520px);
+    justify-content: center;
+}
+
+.reset-box summary {
+    cursor: pointer;
+    font-size: 13px;
+    color: #0b6b5e;
+}
+
+.reset-box form {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.reset-box input {
+    max-width: 150px;
+}

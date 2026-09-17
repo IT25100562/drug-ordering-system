@@ -131,6 +131,7 @@ Files:
   JAVA  servlet/user/LoginServlet.java              /login
   JAVA  servlet/user/LogoutServlet.java             /logout
   JAVA  servlet/user/RegisterServlet.java           /register
+  JAVA  servlet/user/ForgotPasswordServlet.java     /forgot-password
   JAVA  servlet/user/ProfileServlet.java            /account/profile
   JAVA  servlet/user/ProfilePhotoServlet.java       /account/photo
   JAVA  servlet/user/UserPhotoServlet.java          /users/photo
@@ -138,6 +139,7 @@ Files:
   JAVA  servlet/user/ManageUsersServlet.java        /admin/users
   VIEWS user/login.jsp
   VIEWS user/register.jsp
+  VIEWS user/forgot-password.jsp
   VIEWS user/profile.jsp
   VIEWS user/manage-users.jsp
   FILES WEB-INF/sample-uploads/avatar-*.png          demo profile photos

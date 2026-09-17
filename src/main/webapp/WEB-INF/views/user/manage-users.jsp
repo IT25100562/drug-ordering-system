@@ -125,6 +125,20 @@
                             <%= u.isActive() ? "Switch off" : "Switch on" %></button>
                     </form>
                 <% } %>
+                <% if (!u.isCustomer()) { %>
+                    <details class="reset-box">
+                        <summary>Reset password</summary>
+                        <form method="post" action="<%= ctx %>/admin/users">
+                            <input type="hidden" name="id" value="<%= u.getId() %>">
+                            <input type="hidden" name="action" value="reset">
+                            <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
+                            <label class="sr-only" for="newPassword-<%= u.getId() %>">New password for <%= TextUtil.html(u.getFullName()) %></label>
+                            <input type="text" id="newPassword-<%= u.getId() %>" name="password" autocomplete="off"
+                                   minlength="<%= UserService.PASSWORD_MIN %>" maxlength="100" required placeholder="New password">
+                            <button class="btn small" type="submit">Save</button>
+                        </form>
+                    </details>
+                <% } %>
             </td>
         </tr>
         <% } %>

@@ -29,6 +29,7 @@ import java.util.Map;
  *   POST /admin/users   action=create      fullName, email, phone, role, password
  *   POST /admin/users   action=deactivate  id      (staff only)
  *   POST /admin/users   action=activate    id
+ *   POST /admin/users   action=reset       id, password   (staff only)
  *
  * Module : 04 - User and Role Management
  * Owner  : Kaweesha P. M. G. S.
@@ -69,10 +70,16 @@ public class ManageUsersServlet extends HttpServlet {
             } else {
                 Integer id = TextUtil.parseInt(request.getParameter("id"));
                 try {
-                    if (id == null || !("activate".equals(action) || "deactivate".equals(action))) {
+                    if (id == null) {
+                        throw new ValidationException("No account was selected.");
+                    } else if ("reset".equals(action)) {
+                        SessionUtil.flash(request, "success",
+                                userService.resetStaffPassword(admin, id, request.getParameter("password")));
+                    } else if ("activate".equals(action) || "deactivate".equals(action)) {
+                        SessionUtil.flash(request, "success", userService.setActive(admin, id, "activate".equals(action)));
+                    } else {
                         throw new ValidationException("Unknown action.");
                     }
-                    SessionUtil.flash(request, "success", userService.setActive(admin, id, "activate".equals(action)));
                 } catch (ValidationException e) {
                     SessionUtil.flash(request, "error", e.getMessage());
                 }

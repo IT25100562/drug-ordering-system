@@ -43,6 +43,7 @@
                        autocomplete="current-password" required>
             </div>
             <button class="btn block" type="submit">Log in</button>
+            <p class="meta center"><a href="<%= ctx %>/forgot-password">Forgot your password?</a></p>
         </form>
 
         <div class="auth-switch">

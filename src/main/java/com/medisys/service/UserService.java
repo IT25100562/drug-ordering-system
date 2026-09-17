@@ -27,6 +27,10 @@ import java.util.Map;
  *    the date of birth
  *  - at least 18 years old; password at least 8 characters with a letter and a digit
  *
+ * Forgot password
+ *  - a customer resets it with their email + NIC + date of birth
+ *  - a staff member's password is reset by the admin
+ *
  * Profile
  *  - a user can change their name, phone, WhatsApp, address, password and photo
  *  - NIC, date of birth and email identify the person, so they can't be changed online
@@ -171,6 +175,57 @@ public class UserService {
             day -= 500;
         }
         return day >= 1 && day <= 366 ? year : null;
+    }
+
+    // ==================================================== forgot password
+
+    /**
+     * A customer who forgot their password proves who they are with the
+     * email, NIC and date of birth they registered with, then picks a new one.
+     * (There is no e-mail server, so no reset link can be sent.)
+     * The same message is used for every mismatch, so the page does not
+     * reveal which part was wrong.
+     */
+    public User resetForgottenPassword(String emailText, String nicText, String dateText,
+                                       String password, String confirm) throws SQLException, ValidationException {
+        String email = TextUtil.clean(emailText).toLowerCase();
+        String nic = TextUtil.clean(nicText).toUpperCase().replace(" ", "");
+        LocalDate born = TextUtil.parseDate(dateText);
+        if (email.isEmpty() || nic.isEmpty() || born == null) {
+            throw new ValidationException("Please enter your email, NIC number and date of birth.");
+        }
+
+        User user = userDAO.findByEmail(email);
+        boolean matches = user != null && user.isCustomer()
+                && nic.equals(user.getNic()) && born.equals(user.getDateOfBirth());
+        if (!matches) {
+            throw new ValidationException("These details do not match any customer account. "
+                    + "Staff members: please ask the administrator to reset your password.");
+        }
+
+        List<String> errors = new ArrayList<>();
+        checkNewPassword(password, confirm, errors);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        userDAO.updatePassword(user.getId(), PasswordUtil.hash(password));
+        return user;
+    }
+
+    /** The admin gives a staff member a new password (staff have no NIC to prove who they are). */
+    public String resetStaffPassword(User admin, int id, String password) throws SQLException, ValidationException {
+        checkAdmin(admin);
+        User user = userDAO.findById(id);
+        if (user == null || user.isCustomer()) {
+            throw new ValidationException("Only staff passwords can be reset here. Customers use \"Forgot password\".");
+        }
+        List<String> errors = new ArrayList<>();
+        checkNewPassword(password, password, errors);
+        if (!errors.isEmpty()) {
+            throw new ValidationException(errors);
+        }
+        userDAO.updatePassword(id, PasswordUtil.hash(password));
+        return "The password of " + user.getFullName() + " was changed. Give them the new password in person.";
     }
 
     // ============================================================ profile
