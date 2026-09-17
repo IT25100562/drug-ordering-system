@@ -1,0 +1,85 @@
+<%--
+    Delivery details + test card fields + Pay button, used inside a
+    <form data-pay-form> by order/checkout.jsp and prescription/pay.jsp.
+
+    The including page must have:
+        Map<String, String> form      the values to show again
+        List<String> errors           messages from the server, or null
+        java.math.BigDecimal total    the amount that will be charged
+
+    The total is also sent back (expectedTotal), so the server can refuse the
+    payment if the amount changed while the customer was on this page.
+    The card number and CVV are never filled in again.
+
+    Module : Shared (02 - Order Placement and Checkout owns payments)
+    Owner  : Whole team
+--%>
+<%!
+    // Escaped value of one form field, "" when empty.
+    private String cf(java.util.Map<String, String> form, String field) {
+        return com.medisys.util.TextUtil.html(form.get(field));
+    }
+%>
+<p class="test-note"><strong>Test payment.</strong> No money is taken. Use any valid-looking card,
+    for example <code>4242 4242 4242 4242</code>, any future expiry date and any 3-digit CVV.
+    Card details are never stored.</p>
+
+<% if (errors != null && !errors.isEmpty()) { %>
+    <div class="message error" role="alert">
+        <ul><% for (String e : errors) { %><li><%= TextUtil.html(e) %></li><% } %></ul>
+    </div>
+<% } %>
+
+<input type="hidden" name="expectedTotal" value="<%= total.toPlainString() %>">
+
+<h2>Delivery</h2>
+<div class="row">
+    <div class="field">
+        <label for="deliveryName">Name *</label>
+        <input type="text" id="deliveryName" name="deliveryName" value="<%= cf(form, "deliveryName") %>"
+               maxlength="100" autocomplete="name" required>
+    </div>
+    <div class="field">
+        <label for="deliveryPhone">Contact number *</label>
+        <input type="tel" id="deliveryPhone" name="deliveryPhone" value="<%= cf(form, "deliveryPhone") %>"
+               maxlength="15" autocomplete="tel" placeholder="0771234567" required>
+    </div>
+</div>
+<div class="field">
+    <label for="deliveryAddress">Delivery address *</label>
+    <textarea id="deliveryAddress" name="deliveryAddress" rows="2" maxlength="255"
+              autocomplete="street-address" required><%= cf(form, "deliveryAddress") %></textarea>
+</div>
+<div class="field">
+    <label for="deliveryNote">Note for the rider <span class="meta">(optional)</span></label>
+    <input type="text" id="deliveryNote" name="deliveryNote" value="<%= cf(form, "deliveryNote") %>"
+           maxlength="300" placeholder="e.g. Blue gate, call when you arrive">
+</div>
+
+<h2>Card</h2>
+<div class="field">
+    <label for="cardName">Name on card *</label>
+    <input type="text" id="cardName" name="cardName" value="<%= cf(form, "cardName") %>"
+           maxlength="100" autocomplete="cc-name" required>
+</div>
+<div class="field">
+    <label for="cardNumber">Card number *</label>
+    <input type="text" id="cardNumber" name="cardNumber" inputmode="numeric" maxlength="23"
+           autocomplete="cc-number" placeholder="1234 5678 9012 3456" required data-card-number>
+</div>
+<div class="row">
+    <div class="field">
+        <label for="cardExpiry">Expiry (MM/YY) *</label>
+        <input type="text" id="cardExpiry" name="cardExpiry" value="<%= cf(form, "cardExpiry") %>"
+               inputmode="numeric" maxlength="5" autocomplete="cc-exp" placeholder="MM/YY" required data-card-expiry>
+    </div>
+    <div class="field">
+        <label for="cardCvv">CVV *</label>
+        <input type="password" id="cardCvv" name="cardCvv" inputmode="numeric" maxlength="4"
+               autocomplete="cc-csc" placeholder="123" required>
+    </div>
+</div>
+
+<button class="btn block pay-button" type="submit" data-busy-text="Processing payment...">
+    Pay <%= TextUtil.money(total) %></button>
+<p class="meta center">By paying you confirm the delivery details above.</p>

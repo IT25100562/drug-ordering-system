@@ -1,0 +1,20 @@
+<%--
+    Heart (wishlist) button for one medicine. Included inside a loop that has
+    a Medicine called "m" and a boolean called "isSaved".
+    Shared by the catalog, the details page and the wishlist (module 01 + 03).
+
+    Works without JavaScript (normal form post); cart.js turns it into an
+    instant toggle.
+--%>
+<form class="heart-form" method="post" action="<%= ctx %>/wishlist/action" data-ajax="wishlist-toggle">
+    <input type="hidden" name="medicineId" value="<%= m.getId() %>">
+    <input type="hidden" name="action" value="toggle">
+    <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
+    <button type="submit" class="heart <%= isSaved ? "saved" : "" %>" aria-pressed="<%= isSaved %>"
+            title="<%= isSaved ? "Remove from wishlist" : "Save to wishlist" %>"
+            aria-label="Save <%= TextUtil.html(m.getDisplayName()) %> to wishlist">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+        </svg>
+    </button>
+</form>
