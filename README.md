@@ -1,6 +1,6 @@
 # PharmaCare - Drug Ordering System
 
-A full-stack, role-based web application for ordering medicines, uploading medical prescriptions, and managing pharmacy inventory. Built as a solo module for a group project (Student ID: IT25100562).
+A full-stack, role-based web application for ordering medicines, uploading medical prescriptions, and managing pharmacy inventory.
 
 ## 🚀 Features
 
