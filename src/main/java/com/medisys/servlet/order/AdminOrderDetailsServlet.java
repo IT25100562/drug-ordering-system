@@ -1,6 +1,7 @@
 package com.medisys.servlet.order;
 
 import com.medisys.model.Order;
+import com.medisys.service.DeliveryService;
 import com.medisys.service.OrderService;
 import com.medisys.util.TextUtil;
 
@@ -25,6 +26,7 @@ import java.sql.SQLException;
 public class AdminOrderDetailsServlet extends HttpServlet {
 
     private final OrderService orderService = new OrderService();
+    private final DeliveryService deliveryService = new DeliveryService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -37,6 +39,7 @@ public class AdminOrderDetailsServlet extends HttpServlet {
                 return;
             }
             request.setAttribute("order", order);
+            request.setAttribute("delivery", deliveryService.getForOrder(id));
             request.getRequestDispatcher("/WEB-INF/views/order/admin-order-details.jsp").forward(request, response);
         } catch (SQLException e) {
             throw new ServletException("Could not load the order", e);

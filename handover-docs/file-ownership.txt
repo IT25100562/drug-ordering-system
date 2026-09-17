@@ -190,15 +190,14 @@ Files:
 ---------------------------------------------------------------------
 
 
-Database tables: deliveries, notifications
+Database tables: deliveries, delivery_updates, notifications
 
-Already done (early, because module 05 needs it): notifications table,
-NotificationDAO, NotificationService.notify(), the Notifications page and
-the bell in the menu. Still to build: delivery tracking.
+Status: done (delivery tracking, rider assignment, notifications with delete).
 
 Files:
   JAVA  model/Delivery.java
   JAVA  model/DeliveryStatus.java
+  JAVA  model/DeliveryUpdate.java
   JAVA  model/Notification.java
   JAVA  dao/DeliveryDAO.java
   JAVA  dao/NotificationDAO.java
@@ -208,11 +207,20 @@ Files:
   JAVA  service/NotificationService.java
   JAVA  servlet/delivery/TrackDeliveryServlet.java          /deliveries/track
   JAVA  servlet/delivery/ManageDeliveriesServlet.java       /staff/deliveries
+  JAVA  servlet/delivery/DeliveryDetailsServlet.java        /staff/deliveries/view
   JAVA  servlet/delivery/UpdateDeliveryStatusServlet.java   /staff/deliveries/update
   JAVA  servlet/delivery/NotificationsServlet.java          /notifications
+  JAVA  servlet/delivery/DeleteNotificationServlet.java     /notifications/delete
   VIEWS delivery/track.jsp
   VIEWS delivery/manage-deliveries.jsp
+  VIEWS delivery/delivery-details.jsp
+  VIEWS delivery/delivery-parts.jspf        (progress bar + history, used by both pages)
   VIEWS delivery/notifications.jsp
+
+Hooks in other modules' files (marked "module 06"):
+  OrderDAOImpl.create / cancel   creates / cancels the delivery in the order's transaction
+  OrderStatus.nextForPharmacy    the admin only marks orders as packed
+  order pages                    delivery card and Track buttons
 
 
 ---------------------------------------------------------------------

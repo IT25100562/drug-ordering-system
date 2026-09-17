@@ -6,6 +6,7 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page import="com.medisys.model.Delivery" %>
 <%@ page import="com.medisys.model.Order" %>
 <%@ page import="com.medisys.model.OrderStatus" %>
 <%@ page import="com.medisys.model.Payment" %>
@@ -14,7 +15,8 @@
 <%
     Order order = (Order) request.getAttribute("order");
     Payment payment = order.getPayment();
-    OrderStatus next = order.getStatus().next();
+    OrderStatus next = order.getStatus().nextForPharmacy();
+    Delivery delivery = (Delivery) request.getAttribute("delivery");   // module 06, may be null
 %>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -52,11 +54,29 @@
                 <input type="hidden" name="current" value="<%= order.getStatus().name() %>">
                 <div class="field">
                     <label for="note">Note for the customer <span class="meta">(optional)</span></label>
-                    <input type="text" id="note" name="note" maxlength="300"
-                           placeholder="<%= next == OrderStatus.SHIPPED ? "e.g. Rider Kamal, 077 123 4567" : "" %>">
+                    <input type="text" id="note" name="note" maxlength="300">
                 </div>
                 <button class="btn approve block" type="submit">Mark as &ldquo;<%= next.getLabel() %>&rdquo;</button>
             </form>
+        </section>
+        <% } %>
+
+        <% if (delivery != null) { %>
+        <section class="card">
+            <h2>Delivery</h2>
+            <dl class="info compact">
+                <dt>Status</dt><dd><span class="badge <%= delivery.getStatus().getCssClass() %>"><%= delivery.getStatus().getLabel() %></span></dd>
+                <dt>Rider</dt><dd><%= delivery.hasRider() ? TextUtil.html(delivery.getStaffName()) : "Not assigned yet" %></dd>
+                <% if (!delivery.getStatus().isFinished()) { %>
+                    <dt>Due</dt><dd><%= TextUtil.date(delivery.getEstimatedDate()) %>
+                        <% if (delivery.isLate()) { %><span class="badge badge-rejected">Late</span><% } %></dd>
+                <% } %>
+            </dl>
+            <% if (order.getStatus() == OrderStatus.PROCESSING || order.getStatus() == OrderStatus.SHIPPED) { %>
+                <p class="meta">Once packed, the rider marks the parcel as picked up and delivered.</p>
+            <% } %>
+            <a class="btn plain block" href="<%= ctx %>/staff/deliveries/view?id=<%= delivery.getId() %>">
+                <%= delivery.getStatus().canAssignRider() ? "Assign rider / track" : "Track delivery" %></a>
         </section>
         <% } %>
 

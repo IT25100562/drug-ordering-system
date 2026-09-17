@@ -1,5 +1,6 @@
 package com.medisys.servlet.order;
 
+import com.medisys.service.DeliveryService;
 import com.medisys.service.OrderService;
 import com.medisys.service.ValidationException;
 import com.medisys.util.SessionUtil;
@@ -26,6 +27,7 @@ import java.sql.SQLException;
 public class OrderDetailsServlet extends HttpServlet {
 
     private final OrderService orderService = new OrderService();
+    private final DeliveryService deliveryService = new DeliveryService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -36,6 +38,8 @@ public class OrderDetailsServlet extends HttpServlet {
                 throw new ValidationException("Not found");
             }
             request.setAttribute("order", orderService.getOwnOrder(SessionUtil.currentUser(request), id));
+            // Checked above that the order is theirs, so its delivery is theirs too (module 06).
+            request.setAttribute("delivery", deliveryService.getForOrder(id));
             request.setAttribute("justPlaced", "1".equals(request.getParameter("placed")));
             request.getRequestDispatcher("/WEB-INF/views/order/order-details.jsp").forward(request, response);
         } catch (ValidationException e) {

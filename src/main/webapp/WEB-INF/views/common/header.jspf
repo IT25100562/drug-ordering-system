@@ -10,6 +10,7 @@
 --%>
 <%@ page import="com.medisys.model.User" %>
 <%@ page import="com.medisys.service.CartService" %>
+<%@ page import="com.medisys.service.DeliveryService" %>
 <%@ page import="com.medisys.service.NotificationService" %>
 <%@ page import="com.medisys.service.OrderService" %>
 <%@ page import="com.medisys.service.PrescriptionService" %>
@@ -31,6 +32,7 @@
     int headerUnreadCount = 0;
     int headerPendingCount = 0;
     int headerNewOrderCount = 0;
+    int headerDeliveryCount = 0;
     try {
         if (currentUser != null && currentUser.isCustomer()) {
             headerCartCount = new CartService().countItems(currentUser.getId());
@@ -40,6 +42,12 @@
             headerPendingCount = new PrescriptionService().getDashboardCounts().get("PENDING");
         } else if (currentUser != null && currentUser.isAdmin()) {
             headerNewOrderCount = new OrderService().getCounts().get("PAID");
+            // deliveries still waiting for a rider
+            headerDeliveryCount = new DeliveryService().getCounts(currentUser).get("UNASSIGNED");
+        } else if (currentUser != null && currentUser.isDeliveryStaff()) {
+            // the rider's open deliveries
+            headerDeliveryCount = new DeliveryService().getCounts(currentUser).get("ACTIVE");
+            headerUnreadCount = new NotificationService().countUnread(currentUser.getId());
         }
     } catch (java.sql.SQLException e) {
         log("Could not load the menu counts", e);
@@ -99,20 +107,25 @@
                    class="count <%= headerWishlistCount == 0 ? "hidden" : "" %>" data-wishlist-count><%= headerWishlistCount %></span></a>
                 <a class="<%= activeIf(currentPath, "/cart") %>" href="<%= ctx %>/cart">Cart<span
                    class="count <%= headerCartCount == 0 ? "hidden" : "" %>" data-cart-count><%= headerCartCount %></span></a>
-                <a class="bell <%= activeIf(currentPath, "/notifications") %>" href="<%= ctx %>/notifications"
-                   title="Notifications" aria-label="Notifications<%= headerUnreadCount > 0 ? ", " + headerUnreadCount + " new" : "" %>">
-                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span
-                   class="count <%= headerUnreadCount == 0 ? "hidden" : "" %>"><%= headerUnreadCount %></span></a>
             <% } else if (currentUser.isAdmin()) { %>
                 <a class="<%= activeIf(currentPath, "/admin/medicines") %>" href="<%= ctx %>/admin/medicines">Inventory</a>
                 <a class="<%= activeIf(currentPath, "/admin/orders") %>" href="<%= ctx %>/admin/orders">Orders<span
                    class="count <%= headerNewOrderCount == 0 ? "hidden" : "" %>"><%= headerNewOrderCount %></span></a>
+                <a class="<%= activeIf(currentPath, "/staff/deliveries") %>" href="<%= ctx %>/staff/deliveries">Deliveries<span
+                   class="count <%= headerDeliveryCount == 0 ? "hidden" : "" %>" title="Waiting for a rider"><%= headerDeliveryCount %></span></a>
                 <a class="<%= activeIf(currentPath, "/admin/categories") %>" href="<%= ctx %>/admin/categories">Categories</a>
             <% } else if (currentUser.isPharmacist()) { %>
                 <a class="<%= activeIf(currentPath, "/pharmacist") %>" href="<%= ctx %>/pharmacist/dashboard">Verification Dashboard<span
                    class="count <%= headerPendingCount == 0 ? "hidden" : "" %>"><%= headerPendingCount %></span></a>
             <% } else if (currentUser.isDeliveryStaff()) { %>
-                <a class="<%= activeIf(currentPath, "/staff") %>" href="<%= ctx %>/staff/deliveries">Deliveries</a>
+                <a class="<%= activeIf(currentPath, "/staff") %>" href="<%= ctx %>/staff/deliveries">My Deliveries<span
+                   class="count <%= headerDeliveryCount == 0 ? "hidden" : "" %>"><%= headerDeliveryCount %></span></a>
+            <% } %>
+            <% if (currentUser.isCustomer() || currentUser.isDeliveryStaff()) { %>
+                <a class="bell <%= activeIf(currentPath, "/notifications") %>" href="<%= ctx %>/notifications"
+                   title="Notifications" aria-label="Notifications<%= headerUnreadCount > 0 ? ", " + headerUnreadCount + " new" : "" %>">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22zm7-6V11a7 7 0 0 0-5.5-6.84V3.5a1.5 1.5 0 0 0-3 0v.66A7 7 0 0 0 5 11v5l-2 2v1h18v-1l-2-2z"/></svg><span
+                   class="count <%= headerUnreadCount == 0 ? "hidden" : "" %>"><%= headerUnreadCount %></span></a>
             <% } %>
 
             <span class="who" title="<%= TextUtil.html(currentUser.getEmail()) %>">

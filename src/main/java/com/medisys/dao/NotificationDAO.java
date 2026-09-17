@@ -21,4 +21,10 @@ public interface NotificationDAO {
     int countUnread(int userId) throws SQLException;
 
     void markAllRead(int userId) throws SQLException;
+
+    /** Deletes one of the user's notifications. False if it is not theirs (or already gone). */
+    boolean delete(int id, int userId) throws SQLException;
+
+    /** Deletes all of the user's read notifications. Returns how many were deleted. */
+    int deleteRead(int userId) throws SQLException;
 }

@@ -7,6 +7,7 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
+<%@ page import="com.medisys.model.Delivery" %>
 <%@ page import="com.medisys.model.Order" %>
 <%@ page import="com.medisys.model.Payment" %>
 <% String pageTitle = "Order"; %>
@@ -15,6 +16,7 @@
     Order order = (Order) request.getAttribute("order");
     boolean justPlaced = (Boolean) request.getAttribute("justPlaced");
     Payment payment = order.getPayment();
+    Delivery delivery = (Delivery) request.getAttribute("delivery");   // module 06, may be null
 %>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
@@ -73,6 +75,15 @@
     <aside>
         <section class="card">
             <h2>Delivery</h2>
+            <% if (delivery != null) { %>
+                <p><span class="badge <%= delivery.getStatus().getCssClass() %>"><%= delivery.getStatus().getLabel() %></span>
+                    <% if (!delivery.getStatus().isFinished()) { %>
+                        <span class="meta">&middot; expected by <%= TextUtil.date(delivery.getEstimatedDate()) %></span>
+                    <% } %></p>
+                <% if (!order.isCancelled()) { %>
+                    <a class="btn block" href="<%= ctx %>/deliveries/track?orderId=<%= order.getId() %>">Track delivery</a>
+                <% } %>
+            <% } %>
             <p><strong><%= TextUtil.html(order.getDeliveryName()) %></strong><br>
                 <%= TextUtil.html(order.getDeliveryAddress()) %><br>
                 <%= TextUtil.html(order.getDeliveryPhone()) %></p>

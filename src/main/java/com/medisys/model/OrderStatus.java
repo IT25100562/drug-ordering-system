@@ -49,6 +49,15 @@ public enum OrderStatus {
         }
     }
 
+    /**
+     * The step the pharmacy (admin) can move the order to, or null.
+     * Only "Being packed": the later steps follow the delivery (module 06),
+     * because the rider marks the parcel as picked up and delivered.
+     */
+    public OrderStatus nextForPharmacy() {
+        return this == PAID ? PROCESSING : null;
+    }
+
     /** The pharmacy can still cancel before the parcel leaves. */
     public boolean canBeCancelledByPharmacy() {
         return this == PAID || this == PROCESSING;

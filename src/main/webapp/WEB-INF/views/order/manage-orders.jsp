@@ -37,7 +37,8 @@
 <div class="title-row">
     <div>
         <h1>Orders</h1>
-        <p class="subtitle">Pack new orders, send them out and mark them delivered.</p>
+        <p class="subtitle">Pack new orders, then give them to a rider on the
+            <a href="<%= ctx %>/staff/deliveries">Deliveries</a> page.</p>
     </div>
 </div>
 
@@ -79,7 +80,7 @@
             <th><span class="sr-only">Actions</span></th>
         </tr>
         <% for (Order o : orders) {
-               OrderStatus next = o.getStatus().next();
+               OrderStatus next = o.getStatus().nextForPharmacy();   // later steps: module 06 (Deliveries)
         %>
         <tr class="<%= o.isCancelled() ? "row-muted" : "" %>">
             <td>

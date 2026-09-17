@@ -25,6 +25,8 @@ GO
 -- ------------------------------------------------------------------ drop
 -- (child tables first, parent tables last)
 DROP TABLE IF EXISTS notifications;
+DROP TABLE IF EXISTS delivery_updates;
+DROP TABLE IF EXISTS deliveries;
 DROP TABLE IF EXISTS prescription_items;
 DROP TABLE IF EXISTS prescriptions;
 DROP TABLE IF EXISTS order_status_history;
@@ -304,4 +306,50 @@ CREATE TABLE notifications (
 );
 
 CREATE INDEX ix_notifications_user ON notifications (user_id, is_read);
+
+-- The delivery of one paid order. It is created together with the order, in
+-- the same transaction (see OrderDAOImpl.create).
+--   status: PENDING -> DISPATCHED -> OUT_FOR_DELIVERY -> DELIVERED
+--           OUT_FOR_DELIVERY -> FAILED -> OUT_FOR_DELIVERY (the rider tries again)
+--           PENDING -> CANCELLED (when the order is cancelled)
+-- Dispatching moves the order to SHIPPED and delivering moves it to DELIVERED,
+-- in the same transaction (see DeliveryDAOImpl.updateStatus).
+CREATE TABLE deliveries (
+    id             INT IDENTITY(1,1) PRIMARY KEY,
+    order_id       INT          NOT NULL,
+    staff_id       INT          NULL,               -- the rider; NULL until the admin assigns one
+    status         VARCHAR(20)  NOT NULL DEFAULT 'PENDING',
+    attempts       INT          NOT NULL DEFAULT 0, -- how many times a rider went out with it
+    estimated_date DATE         NOT NULL,
+    delivered_at   DATETIME2    NULL,
+    created_at     DATETIME2    NOT NULL DEFAULT SYSDATETIME(),
+    updated_at     DATETIME2    NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_delivery_order    FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+    CONSTRAINT fk_delivery_staff    FOREIGN KEY (staff_id) REFERENCES users (id),
+    CONSTRAINT uq_delivery_order    UNIQUE (order_id),
+    CONSTRAINT ck_delivery_status   CHECK (status IN ('PENDING', 'DISPATCHED', 'OUT_FOR_DELIVERY',
+                                                      'DELIVERED', 'FAILED', 'CANCELLED')),
+    CONSTRAINT ck_delivery_attempts CHECK (attempts >= 0),
+    -- a delivery that left the pharmacy always has a rider
+    CONSTRAINT ck_delivery_rider    CHECK (staff_id IS NOT NULL OR status IN ('PENDING', 'CANCELLED'))
+);
+
+CREATE INDEX ix_deliveries_staff  ON deliveries (staff_id, status);
+CREATE INDEX ix_deliveries_status ON deliveries (status, created_at);
+
+-- Every step of a delivery, for the tracking page ("Out for delivery" at 10:32 by Ruwan).
+CREATE TABLE delivery_updates (
+    id          INT IDENTITY(1,1) PRIMARY KEY,
+    delivery_id INT           NOT NULL,
+    status      VARCHAR(20)   NOT NULL,
+    note        NVARCHAR(300) NULL,
+    updated_by  INT           NULL,                 -- NULL = the system
+    created_at  DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_update_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries (id) ON DELETE CASCADE,
+    CONSTRAINT fk_update_user     FOREIGN KEY (updated_by)  REFERENCES users (id)
+);
+
+CREATE INDEX ix_delivery_updates ON delivery_updates (delivery_id, created_at);
 GO

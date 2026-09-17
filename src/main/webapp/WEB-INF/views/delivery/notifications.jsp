@@ -1,6 +1,7 @@
 <%--
     The logged in user's notifications, newest first.
     Filled by NotificationsServlet (/notifications).
+    Delete / Clear read post to DeleteNotificationServlet.
 
     Module : 06 - Delivery Tracking and Notification
     Owner  : Deshabhi R. G. S.
@@ -18,8 +19,17 @@
 <div class="title-row">
     <div>
         <h1>Notifications</h1>
-        <p class="subtitle">Messages about your prescriptions and orders.</p>
+        <p class="subtitle"><%= currentUser.isDeliveryStaff()
+                ? "Deliveries given to you."
+                : "Messages about your prescriptions, orders and deliveries." %></p>
     </div>
+    <% if (!notifications.isEmpty()) { %>
+        <form method="post" action="<%= ctx %>/notifications/delete"
+              data-confirm="Clear all notifications you have already read?">
+            <input type="hidden" name="all" value="read">
+            <button class="btn plain" type="submit">Clear read</button>
+        </form>
+    <% } %>
 </div>
 
 <section class="card">
@@ -36,6 +46,10 @@
             <% if (hasLink) { %>
                 &middot; <a href="<%= ctx %><%= TextUtil.html(n.getLink()) %>">Open</a>
             <% } %>
+            <form class="inline-form" method="post" action="<%= ctx %>/notifications/delete">
+                <input type="hidden" name="id" value="<%= n.getId() %>">
+                &middot; <button class="link-button danger" type="submit">Delete</button>
+            </form>
         </div>
     <% } %>
 </section>

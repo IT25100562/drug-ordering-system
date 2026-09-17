@@ -1,6 +1,7 @@
 package com.medisys.dao.impl;
 
 import com.medisys.config.DBConnection;
+import com.medisys.dao.DeliveryDAO;
 import com.medisys.dao.OrderDAO;
 import com.medisys.dao.StockShortageException;
 import com.medisys.model.Order;
@@ -37,6 +38,8 @@ import java.util.Set;
  * Owner  : Hewage B. H. A. S.
  */
 public class OrderDAOImpl implements OrderDAO {
+
+    private final DeliveryDAO deliveryDAO = new DeliveryDAOImpl();
 
     private static final String SELECT_ORDER =
             "SELECT o.*, u.full_name AS customer_name, u.email AS customer_email, rx.id AS prescription_id "
@@ -105,6 +108,9 @@ public class OrderDAOImpl implements OrderDAO {
 
                 // 6. First step of the history.
                 addHistory(con, orderId, OrderStatus.PAID, "Order placed and paid", null);
+
+                // 6b. Its delivery (module 06), so every paid order can be tracked.
+                deliveryDAO.createForOrder(con, orderId);
 
                 // 7. Link the prescription, or take the bought medicines out of the cart.
                 if (prescriptionId != null) {
@@ -347,6 +353,9 @@ public class OrderDAOImpl implements OrderDAO {
                     ps.setInt(1, id);
                     ps.executeUpdate();
                 }
+
+                // 6. The delivery is cancelled too (module 06).
+                deliveryDAO.cancelForOrder(con, id, reason, changedBy);
 
                 addHistory(con, id, OrderStatus.CANCELLED, reason, changedBy);
                 con.commit();

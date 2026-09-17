@@ -32,7 +32,7 @@ import java.util.Map;
  * Owner  : Whole team
  */
 @WebFilter(urlPatterns = {"/account/*", "/cart/*", "/wishlist/*", "/checkout/*", "/orders/*",
-        "/prescriptions/*", "/pharmacist/*", "/admin/*", "/staff/*", "/deliveries/*", "/notifications"})
+        "/prescriptions/*", "/pharmacist/*", "/admin/*", "/staff/*", "/deliveries/*", "/notifications", "/notifications/*"})
 public class AuthFilter implements Filter {
 
     @Override

@@ -35,8 +35,9 @@ import java.util.Map;
  *
  * After the order
  *  - the customer can cancel while it is "Order placed" (not yet packed)
- *  - the pharmacy moves it on: packed -> out for delivery -> delivered,
- *    and can cancel it until it leaves (a reason is required)
+ *  - the pharmacy marks it as packed; the rider then moves it on to
+ *    out for delivery -> delivered (DeliveryService, module 06)
+ *  - the pharmacy can cancel it until it leaves (a reason is required)
  *  - cancelling puts the stock back and refunds the payment
  *  - the customer is notified at every step
  *
@@ -207,8 +208,8 @@ public class OrderService {
         notificationService.notify(o.getUserId(), "Thank you! Order " + o.getReference() + " ("
                 + TextUtil.money(o.getTotal()) + ") was placed and paid. Payment reference "
                 + o.getPayment().getReference() + ".", "/orders/view?id=" + o.getId());
-        // TODO (module 06): create the delivery for this paid order here
-        // (DeliveryService), using o.getDeliveryName() / Address() / Phone().
+        // The delivery (module 06) was already created in the same transaction
+        // as the order (OrderDAOImpl.create), so it can't be missing.
     }
 
     // =========================================================== customer
@@ -288,7 +289,8 @@ public class OrderService {
     }
 
     /**
-     * Moves an order to its next step (packed / out for delivery / delivered).
+     * Marks a new order as packed ("Being packed"). The later steps are done
+     * by the rider through DeliveryService.
      *
      * @param currentText the status the admin saw on the page - stops a double
      *                    click from moving the order two steps
@@ -304,10 +306,10 @@ public class OrderService {
             throw new ValidationException(order.getReference() + " was already changed to \""
                     + order.getStatus().getLabel() + "\". Please check it again.");
         }
-        OrderStatus next = order.getStatus().next();
+        OrderStatus next = order.getStatus().nextForPharmacy();
         if (next == null) {
             throw new ValidationException(order.getReference() + " is " + order.getStatus().getLabel()
-                    + " and cannot be moved on.");
+                    + " and cannot be moved on here. Delivery staff update it from the Deliveries page.");
         }
         String note = TextUtil.clean(noteText);
         if (note.length() > NOTE_MAX) {
@@ -317,18 +319,7 @@ public class OrderService {
             throw new ValidationException(order.getReference() + " was just changed by someone else.");
         }
 
-        String message;
-        switch (next) {
-            case PROCESSING:
-                message = "Good news: order " + order.getReference() + " is being packed.";
-                break;
-            case SHIPPED:
-                message = "Order " + order.getReference() + " is out for delivery to "
-                        + order.getDeliveryAddress() + ".";
-                break;
-            default:
-                message = "Order " + order.getReference() + " was delivered. Thank you for shopping with MediSys!";
-        }
+        String message = "Good news: order " + order.getReference() + " is being packed.";
         if (!note.isEmpty()) {
             message += " Note: " + note;
         }

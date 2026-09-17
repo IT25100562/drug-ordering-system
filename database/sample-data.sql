@@ -24,6 +24,7 @@ GO
 --   nimal@example.com      / Customer@123   CUSTOMER
 --   kasuni@example.com     / Customer@123   CUSTOMER
 --   delivery@medisys.lk    / Delivery@123   DELIVERY_STAFF
+--   rider2@medisys.lk      / Delivery@123   DELIVERY_STAFF
 -- The hashes were made with:  java com.medisys.util.PasswordUtil <password>
 
 INSERT INTO users (full_name, email, phone, address, password_hash, role) VALUES
@@ -36,6 +37,8 @@ INSERT INTO users (full_name, email, phone, address, password_hash, role) VALUES
     (N'Kasuni Silva', N'kasuni@example.com', N'0719876543', N'45 Lake Drive, Kandy',
      'pbkdf2$120000$UAbhe9vXLT/vc3JkTryxAA==$eg07Xv88WmKfyx+tKFxuEoYQXOwL6Iow+YbKqHoympU=', 'CUSTOMER'),
     (N'Ruwan Jayasinghe', N'delivery@medisys.lk', N'0751112223', N'MediSys Pharmacy, Colombo 03',
+     'pbkdf2$120000$Aar7NMzQshP8R5PoZgOAXw==$16sWh8jVxtRuD2juDgWJKOB9FZE7ow+C8bvn0o7jA2E=', 'DELIVERY_STAFF'),
+    (N'Kamal Perera', N'rider2@medisys.lk', N'0771234599', N'MediSys Pharmacy, Colombo 03',
      'pbkdf2$120000$Aar7NMzQshP8R5PoZgOAXw==$16sWh8jVxtRuD2juDgWJKOB9FZE7ow+C8bvn0o7jA2E=', 'DELIVERY_STAFF');
 GO
 
@@ -172,11 +175,11 @@ SELECT o.id, v.status, v.note, CASE WHEN v.by_admin = 1 THEN a.id END,
 FROM (VALUES
     (1, 'PAID',       N'Order placed and paid', 0, 0),
     (1, 'PROCESSING', NULL,                     1, 90),
-    (1, 'SHIPPED',    N'Rider Kamal, 077 123 4567', 1, 600),
-    (1, 'DELIVERED',  NULL,                     1, 1000),
+    (1, 'SHIPPED',    N'Picked up by Kamal Perera', 1, 600),
+    (1, 'DELIVERED',  N'Handed to the customer', 1, 1000),
     (2, 'PAID',       N'Order placed and paid', 0, 0),
     (2, 'PROCESSING', NULL,                     1, 60),
-    (2, 'SHIPPED',    N'Rider Nuwan, 071 555 0101', 1, 300),
+    (2, 'SHIPPED',    N'Picked up by Ruwan Jayasinghe', 1, 300),
     (3, 'PAID',       N'Order placed and paid', 0, 0),
     (4, 'PAID',       N'Order placed and paid', 0, 0),
     (4, 'CANCELLED',  N'Cancelled by the customer: Ordered by mistake', 0, 20),
@@ -260,10 +263,77 @@ FROM (VALUES
      N'/prescriptions', 1, 70),
     (N'kasuni@example.com', N'Thank you! Order ORD-000002 (Rs. 384.00) was placed and paid. Payment reference PAY-20260913-K7Q2XD.',
      N'/orders/view?id=2', 1, 90),
-    (N'kasuni@example.com', N'Order ORD-000002 is out for delivery to 45 Lake Drive, Kandy. Note: Rider Nuwan, 071 555 0101',
-     N'/orders/view?id=2', 0, 85),
+    (N'kasuni@example.com', N'Your order ORD-000002 has left the pharmacy with Ruwan Jayasinghe.',
+     N'/deliveries/track?orderId=2', 1, 85),
     (N'nimal@example.com', N'Order ORD-000001 was delivered. Thank you for shopping with MediSys!',
      N'/orders/view?id=1', 1, 127)
 ) AS v (email, message, link, is_read, hours_ago)
+JOIN users u ON u.email = v.email;
+GO
+
+-- =================================================================
+-- Module 06 - Delivery Tracking and Notification
+-- =================================================================
+-- One delivery per order (the app creates it together with the order):
+--   ORD 1  DELIVERED          by Kamal
+--   ORD 2  OUT_FOR_DELIVERY   by Ruwan - 2nd attempt after "nobody at home", running late
+--   ORD 3  PENDING            no rider yet, not packed   -> admin assigns a rider
+--   ORD 4  CANCELLED          the order was cancelled
+--   ORD 5  PENDING            Ruwan, order packed         -> Ruwan can pick it up
+-- A new order is expected 2 days after it was placed (DeliveryDAOImpl.DELIVERY_DAYS).
+
+INSERT INTO deliveries (order_id, staff_id, status, attempts, estimated_date, delivered_at, created_at, updated_at)
+SELECT o.id, s.id, v.status, v.attempts, CAST(DATEADD(day, 2, o.created_at) AS DATE),
+       CASE WHEN v.status = 'DELIVERED' THEN DATEADD(minute, v.updated_after, o.created_at) END,
+       o.created_at, DATEADD(minute, v.updated_after, o.created_at)
+FROM (VALUES
+    (1, N'rider2@medisys.lk',   'DELIVERED',        1, 1000),
+    (2, N'delivery@medisys.lk', 'OUT_FOR_DELIVERY', 2, 5340),
+    (3, NULL,                   'PENDING',          0, 0),
+    (4, NULL,                   'CANCELLED',        0, 20),
+    (5, N'delivery@medisys.lk', 'PENDING',          0, 60)
+) AS v (order_id, rider_email, status, attempts, updated_after)
+JOIN orders o ON o.id = v.order_id
+LEFT JOIN users s ON s.email = v.rider_email
+ORDER BY v.order_id;          -- so delivery N belongs to order N (the links below rely on it)
+
+-- The tracking history (minutes after the order was placed).
+INSERT INTO delivery_updates (delivery_id, status, note, updated_by, created_at)
+SELECT d.id, v.status, v.note, u.id, DATEADD(minute, v.minutes_after, o.created_at)
+FROM (VALUES
+    (1, 'PENDING',          N'Order received. We are preparing your parcel.', NULL,                   0),
+    (1, 'PENDING',          N'Rider: Kamal Perera, 0771234599',               N'admin@medisys.lk',    100),
+    (1, 'DISPATCHED',       NULL,                                             N'rider2@medisys.lk',   600),
+    (1, 'OUT_FOR_DELIVERY', NULL,                                             N'rider2@medisys.lk',   620),
+    (1, 'DELIVERED',        N'Handed to the customer',                        N'rider2@medisys.lk',   1000),
+    (2, 'PENDING',          N'Order received. We are preparing your parcel.', NULL,                   0),
+    (2, 'PENDING',          N'Rider: Ruwan Jayasinghe, 0751112223',           N'admin@medisys.lk',    120),
+    (2, 'DISPATCHED',       NULL,                                             N'delivery@medisys.lk', 300),
+    (2, 'OUT_FOR_DELIVERY', NULL,                                             N'delivery@medisys.lk', 320),
+    (2, 'FAILED',           N'Nobody at home and the phone was not answered', N'delivery@medisys.lk', 420),
+    (2, 'OUT_FOR_DELIVERY', N'Trying again today',                            N'delivery@medisys.lk', 5340),
+    (3, 'PENDING',          N'Order received. We are preparing your parcel.', NULL,                   0),
+    (4, 'PENDING',          N'Order received. We are preparing your parcel.', NULL,                   0),
+    (4, 'CANCELLED',        N'Cancelled by the customer: Ordered by mistake', NULL,                   20),
+    (5, 'PENDING',          N'Order received. We are preparing your parcel.', NULL,                   0),
+    (5, 'PENDING',          N'Rider: Ruwan Jayasinghe, 0751112223',           N'admin@medisys.lk',    60)
+) AS v (order_id, status, note, by_email, minutes_after)
+JOIN deliveries d ON d.order_id = v.order_id
+JOIN orders o ON o.id = v.order_id
+LEFT JOIN users u ON u.email = v.by_email;
+
+-- The notifications those steps sent.
+INSERT INTO notifications (user_id, message, link, is_read, created_at)
+SELECT u.id, v.message, v.link, v.is_read, DATEADD(minute, -v.minutes_ago, SYSDATETIME())
+FROM (VALUES
+    (N'kasuni@example.com',  N'We could not deliver order ORD-000002: Nobody at home and the phone was not answered. Our rider will try again soon.',
+     N'/deliveries/track?orderId=2', 1, 90 * 60 - 420),
+    (N'kasuni@example.com',  N'Ruwan Jayasinghe is trying again to deliver your order ORD-000002 today. Please keep your phone nearby. Note: Trying again today',
+     N'/deliveries/track?orderId=2', 0, 60),
+    (N'delivery@medisys.lk', N'New delivery for you: ORD-000005 to 45 Lake Drive, Kandy.',
+     N'/staff/deliveries/view?id=5', 0, 26 * 60 - 60),
+    (N'delivery@medisys.lk', N'New delivery for you: ORD-000002 to 45 Lake Drive, Kandy.',
+     N'/staff/deliveries/view?id=2', 1, 90 * 60 - 120)
+) AS v (email, message, link, is_read, minutes_ago)
 JOIN users u ON u.email = v.email;
 GO

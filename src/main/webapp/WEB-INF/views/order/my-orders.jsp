@@ -61,6 +61,9 @@
                         <button class="btn small plain" type="submit">Buy again</button>
                     </form>
                 <% } %>
+                <% if (!o.isCancelled()) { %>
+                    <a class="btn small plain" href="<%= ctx %>/deliveries/track?orderId=<%= o.getId() %>">Track</a>
+                <% } %>
                 <a class="btn small" href="<%= ctx %>/orders/view?id=<%= o.getId() %>">View order</a>
             </span>
         </div>

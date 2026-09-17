@@ -80,4 +80,26 @@ public class NotificationDAOImpl implements NotificationDAO {
             ps.executeUpdate();
         }
     }
+
+    @Override
+    public boolean delete(int id, int userId) throws SQLException {
+        // "AND user_id = ?" makes sure nobody can delete someone else's notification.
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(
+                     "DELETE FROM notifications WHERE id = ? AND user_id = ?")) {
+            ps.setInt(1, id);
+            ps.setInt(2, userId);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    @Override
+    public int deleteRead(int userId) throws SQLException {
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(
+                     "DELETE FROM notifications WHERE user_id = ? AND is_read = 1")) {
+            ps.setInt(1, userId);
+            return ps.executeUpdate();
+        }
+    }
 }

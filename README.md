@@ -61,7 +61,8 @@ From the command line: `mvn package` builds `target/medisys.war`.
 | Customer | kasuni@example.com | Customer@123 |
 | Admin | admin@medisys.lk | Admin@123 |
 | Senior Pharmacist | pharmacist@medisys.lk | Pharma@123 |
-| Delivery Staff | delivery@medisys.lk | Delivery@123 |
+| Delivery Staff (rider) | delivery@medisys.lk | Delivery@123 |
+| Delivery Staff (rider) | rider2@medisys.lk | Delivery@123 |
 
 To make a hash for a new password: `java -cp target/classes com.medisys.util.PasswordUtil MyPassword`.
 
@@ -122,7 +123,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
 | 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` |
 | 05 | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` (+ `PrescriptionRequiredException`) | `prescription/` |
-| 06 | `Delivery`, `DeliveryStatus`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
+| 06 | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
 
 **Shared files (agree with the team before changing them):** `pom.xml`, `web.xml`,
 `DBConnection`, `SessionUtil`, `TextUtil`, `AppInitListener`, `ValidationException`,
@@ -146,8 +147,8 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 05 | `/prescriptions/file?id=` | the customer who uploaded it, or a pharmacist |
 | 05 | `/pharmacist/dashboard`, `/pharmacist/review`, `/pharmacist/delete` | pharmacist |
 | 06 | `/deliveries/track?orderId=` | customer |
-| 06 | `/staff/deliveries`, `/staff/deliveries/update` | delivery staff / admin |
-| 06 | `/notifications` | logged in |
+| 06 | `/staff/deliveries`, `/staff/deliveries/view?id=`, `/staff/deliveries/update` | delivery staff / admin |
+| 06 | `/notifications`, `/notifications/delete` | logged in |
 
 `AuthFilter` protects `/admin/*` for ADMIN, `/pharmacist/*` for PHARMACIST and `/staff/*`
 for DELIVERY_STAFF.
@@ -160,8 +161,11 @@ for DELIVERY_STAFF.
 - **05 → 02:** paying for an approved prescription creates an order
   (`OrderService.placePrescriptionOrder`), so it is packed and tracked like any other order.
 - **02 → 03:** placing an order reduces stock (in the same transaction); cancelling puts it back.
-- **02 → 06:** a successful payment should create a delivery through `DeliveryService`
-  (see the `TODO (module 06)` in `OrderService.notifyPlaced`).
+- **02 → 06:** placing an order also creates its delivery, in the same transaction
+  (`OrderDAOImpl.create` calls `DeliveryDAO.createForOrder`). Cancelling the order cancels
+  the delivery (`cancelForOrder`).
+- **06 → 02:** when the rider picks the parcel up, the order becomes SHIPPED. When it is
+  delivered, the order becomes DELIVERED (`DeliveryDAOImpl.updateStatus`, one transaction).
 - **05, 02, 06 → 06:** anything that needs to tell a user something calls
   `NotificationService.notify(...)`.
 
@@ -174,7 +178,7 @@ for DELIVERY_STAFF.
 | 03 | Medicine Catalog and Inventory | **done** (see below) |
 | 04 | User and Role Management | login / logout / roles done early; register, profile, manage users still to do |
 | 05 | Prescription Upload and Verification | **done** (see below) |
-| 06 | Delivery Tracking and Notification | notifications done early (needed by 05); delivery tracking still to do |
+| 06 | Delivery Tracking and Notification | **done** (see below) |
 
 ### Module 03: Medicine Catalog and Inventory
 
@@ -272,9 +276,12 @@ Labels shown to people: Order placed, Being packed, Out for delivery, Delivered,
 - `/admin/orders`: totals per status, tabs (Open, each status, All), search by order number
   (`ORD-000012` or `12`), customer name or email, and a one-click "Mark: next step"
   button per row. The menu shows how many new orders are waiting.
-- `/admin/orders/view?id=`: the whole order, "Next step" with an optional note for the
-  customer (for example the rider's name and phone), the full history, a packing slip to
-  print, and Cancel and refund with a required reason.
+- `/admin/orders/view?id=`: the whole order, "Next step" (mark as packed) with an optional
+  note for the customer, the delivery card (status, rider, due date) with a link to the
+  delivery, the full history, a packing slip to print, and Cancel and refund with a
+  required reason.
+- The admin only moves an order to "Being packed". "Out for delivery" and "Delivered"
+  are set by the rider through module 06.
 
 **Rules (all in `OrderService` / `OrderDAOImpl`)**
 - Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`OrderService.DELIVERY_FEE`,
@@ -305,9 +312,9 @@ delivery (Kasuni).
 **For other modules**
 - 05 (prescriptions): `PrescriptionService.pay()` calls
   `orderService.placePrescriptionOrder(...)`. The receipt links to the order.
-- 06 (delivery): add the delivery at the `TODO (module 06)` in
-  `OrderService.notifyPlaced()`. `OrderService.advance()` is the one place that moves the
-  status forward, so delivery staff updates can call it too.
+- 06 (delivery): the delivery is created inside `OrderDAOImpl.create()`. The admin's
+  `OrderService.advance()` only goes PAID → PROCESSING, and the later steps come from
+  `DeliveryService`.
 
 ### Module 05: Prescription Upload and Verification
 
@@ -390,6 +397,69 @@ paid (Kasuni: Losartan). Their files are in `src/main/webapp/WEB-INF/sample-uplo
 - 02 (orders): paying goes through `OrderService.placePrescriptionOrder()`, and the
   delivery details live on the order.
 - 06 (delivery): prescription orders are normal orders, so nothing extra is needed.
+
+### Module 06: Delivery Tracking and Notification
+
+Every paid order gets a delivery automatically. The admin gives it to a rider (a
+DELIVERY_STAFF account), the rider updates it at each step, and the customer follows it
+on a tracking page.
+
+```
+ order paid ──> PENDING ──rider picks it up──> DISPATCHED ──> OUT_FOR_DELIVERY ──> DELIVERED
+ ("Preparing")  (order must be packed)         (order: SHIPPED)       │  ▲          (order: DELIVERED)
+                                                                      ▼  │ try again
+                                                                     FAILED (reason required)
+ order cancelled while PENDING ──> CANCELLED
+```
+
+**Customer pages**
+- `/deliveries/track?orderId=`: a one-line answer ("Your parcel is on the way to you."),
+  the expected date with a "Running late" badge when it is overdue, a progress bar
+  (Preparing, Dispatched, Out for delivery, Delivered, or "Attempt failed"), the rider's
+  name and phone, the address, and the full tracking history (newest first). Opened from
+  My Orders (**Track**) and from the order page (**Track delivery**).
+- `/notifications`: every message the system sent, with **Delete** per message and
+  **Clear read**. Riders have the bell too.
+
+**Staff pages** (`/staff/*`: DELIVERY_STAFF and ADMIN)
+- `/staff/deliveries`: totals and tabs (Open, No rider yet (admin only), each status, All).
+  A rider sees **only their own** deliveries and gets quick buttons ("Picked up from the
+  pharmacy", "On the way to the customer", "Delivered"). The admin sees all of them and
+  picks the rider from a list on each row. The menu shows the number of deliveries
+  waiting for a rider (admin) or the rider's open deliveries (rider).
+- `/staff/deliveries/view?id=`: the address with a call link, the parcel contents, the
+  history, "Next step" with an optional note for the customer, "Could not deliver" with a
+  required reason, and (admin) Assign / Change rider.
+
+**Rules (all in `DeliveryService` / `DeliveryDAOImpl`)**
+- One delivery per order (`UNIQUE order_id`), created in the order's transaction, so a
+  paid order can never be missing its delivery. It is due 2 days after the order
+  (`DeliveryDAOImpl.DELIVERY_DAYS`).
+- Only the admin assigns riders, and only to active DELIVERY_STAFF accounts. The rider can
+  be changed while the parcel is at the pharmacy (PENDING) or after a failed attempt.
+- A parcel can't leave without a rider (checked in the service and by a `CHECK`
+  constraint), and it can't be picked up before the pharmacy has packed the order.
+- The status moves one allowed step at a time (`DeliveryStatus.nextSteps()`). The page
+  sends the status it showed, so a double click or two users at once can't skip a step.
+- "Could not deliver" needs a reason (5-300 characters). Each trip counts as an attempt.
+- The delivery update and the order's status change are saved in **one transaction**.
+- A rider gets 404 for someone else's delivery, and a customer gets 404 for someone else's
+  order. Notifications can only be deleted by their owner (`WHERE id = ? AND user_id = ?`).
+- The customer is notified at every step. The rider is notified when a delivery is given
+  to them. Everything is HTML-escaped on the page.
+
+**Tables:** `deliveries` (one row per order: rider, status, attempts, due date,
+delivered time) and `delivery_updates` (the tracking history).
+
+**Demo data:** ORD-000001 delivered by Kamal. ORD-000002 is out for delivery with Ruwan on
+a second attempt after "nobody at home", and is running late. ORD-000003 has no rider yet
+and isn't packed. ORD-000004 was cancelled. ORD-000005 is packed and assigned to Ruwan,
+ready to pick up.
+
+**Try it:** log in as `admin@medisys.lk`, open **Deliveries**, and give ORD-000003 to a
+rider. Then open **Orders** and mark it packed. Log in as `delivery@medisys.lk` and move it
+through the steps from **My Deliveries**. Finally, log in as `nimal@example.com` and open
+**Orders → Track**.
 
 ### File storage and moving to the cloud
 
