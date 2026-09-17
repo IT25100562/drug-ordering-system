@@ -1,0 +1,34 @@
+<%--
+    The "choose your prescription file" box, shared by upload.jsp and correct.jsp.
+    Needs an int called maxFileMb.
+
+    Works as a normal file input; prescription.js adds drag & drop, a preview
+    and instant type / size checks.
+
+    Module : 05 - Prescription Upload and Verification
+    Owner  : Perera D. A. A. N. S.
+--%>
+<div class="field">
+    <label for="file">Prescription file *</label>
+    <div class="drop-zone" data-file-drop data-max-bytes="<%= maxFileMb * 1024 * 1024 %>">
+        <input type="file" id="file" name="file" required
+               accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf">
+        <div class="drop-empty">
+            <svg viewBox="0 0 24 24" width="36" height="36" aria-hidden="true">
+                <path d="M12 3l5 5h-3v6h-4V8H7l5-5zM5 17h14v3H5z"/>
+            </svg>
+            <strong>Drag your file here, or <span class="link-look">browse</span></strong>
+            <span class="meta">JPG, PNG or PDF &middot; up to <%= maxFileMb %> MB</span>
+        </div>
+        <div class="drop-preview hidden" aria-live="polite">
+            <img alt="Preview of the chosen prescription" class="hidden">
+            <div class="pdf-icon hidden" aria-hidden="true">PDF</div>
+            <div class="drop-file-info">
+                <strong data-file-name></strong>
+                <span class="meta" data-file-size></span>
+                <button type="button" class="link-button" data-file-clear>Choose a different file</button>
+            </div>
+        </div>
+    </div>
+    <p class="field-error hidden" data-file-error role="alert"></p>
+</div>
