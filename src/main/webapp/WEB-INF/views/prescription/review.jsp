@@ -16,6 +16,9 @@
 <%@ include file="../common/header.jspf" %>
 <%
     Prescription p = (Prescription) request.getAttribute("prescription");
+    User customer = (User) request.getAttribute("customer");
+    @SuppressWarnings("unchecked")
+    java.util.Map<String, Integer> customerStats = (java.util.Map<String, Integer>) request.getAttribute("customerStats");
     String note = (String) request.getAttribute("note");
     @SuppressWarnings("unchecked")
     List<String> errors = (List<String>) request.getAttribute("errors");
@@ -52,6 +55,7 @@
             <% if (p.isExpired()) { %><span class="badge badge-expired">Expired</span><% } %>
             &nbsp;Uploaded <%= TextUtil.timeAgo(p.getUploadedAt()) %> (<%= TextUtil.dateTime(p.getUploadedAt()) %>)
             by <%= TextUtil.html(p.getCustomerName()) %>
+            <% if (customer.isFlagged()) { %><span class="badge flag-badge">&#9873; Flagged</span><% } %>
         </p>
     </div>
 </div>
@@ -86,18 +90,73 @@
 
     <%-- ------------------------------------------------ the details --%>
     <aside class="review-side">
-        <section class="card">
-            <h2>Customer</h2>
+        <%-- Who uploaded it (module 04): photo, identity, contact, history and the red flag. --%>
+        <section class="card customer-card <%= customer.isFlagged() ? "flagged" : "" %>">
+            <div class="customer-head">
+                <%= avatar(ctx, customer, "avatar large") %>
+                <div>
+                    <h2><%= TextUtil.html(customer.getFullName()) %></h2>
+                    <span class="meta">Customer since <%= TextUtil.date(customer.getCreatedAt().toLocalDate()) %></span>
+                </div>
+            </div>
+
+            <% if (customer.isFlagged()) { %>
+                <div class="flag-banner" role="note">
+                    <strong>&#9873; Flagged customer</strong>
+                    <p><%= TextUtil.html(customer.getFlagReason()) %></p>
+                    <span class="meta">by <%= TextUtil.html(customer.getFlaggedByName()) %>,
+                        <%= TextUtil.dateTime(customer.getFlaggedAt()) %></span>
+                </div>
+            <% } %>
+
             <dl class="info compact">
-                <dt>Name</dt><dd><%= TextUtil.html(p.getCustomerName()) %></dd>
-                <dt>Email</dt><dd><a href="mailto:<%= TextUtil.html(p.getCustomerEmail()) %>"><%= TextUtil.html(p.getCustomerEmail()) %></a></dd>
-                <dt>Phone</dt><dd><%= p.getCustomerPhone() == null ? "-" : TextUtil.html(p.getCustomerPhone()) %></dd>
-                <dt>Address</dt><dd><%= p.getCustomerAddress() == null ? "-" : TextUtil.html(p.getCustomerAddress()) %></dd>
+                <dt>NIC</dt><dd><%= TextUtil.html(customer.getNic()) %></dd>
+                <dt>Age</dt><dd><%= customer.getAge() == null ? "-" : customer.getAge() + " years" %>
+                    <span class="meta">(born <%= TextUtil.date(customer.getDateOfBirth()) %>)</span></dd>
+                <dt>Phone</dt><dd><% if (customer.getPhone() != null) { %>
+                    <a href="tel:<%= TextUtil.html(customer.getPhone()) %>"><%= TextUtil.html(customer.getPhone()) %></a><% } else { %>-<% } %></dd>
+                <dt>WhatsApp</dt><dd><% if (customer.getWhatsapp() != null) { %>
+                    <a href="https://wa.me/<%= customer.getWhatsappLinkNumber() %>" target="_blank" rel="noopener"><%= TextUtil.html(customer.getWhatsapp()) %></a><% } else { %>-<% } %></dd>
+                <dt>Email</dt><dd><a href="mailto:<%= TextUtil.html(customer.getEmail()) %>"><%= TextUtil.html(customer.getEmail()) %></a></dd>
+                <dt>Address</dt><dd><%= customer.getAddress() == null ? "-" : TextUtil.html(customer.getAddress()) %></dd>
                 <dt>Note</dt><dd><%= p.getCustomerNote() == null ? "-" : TextUtil.html(p.getCustomerNote()) %></dd>
                 <% if (p.getCorrectionCount() > 0) { %>
                     <dt>Copy</dt><dd>Corrected copy #<%= p.getCorrectionCount() %></dd>
                 <% } %>
             </dl>
+
+            <p class="customer-stats">
+                <span><strong><%= customerStats.get("prescriptions") %></strong> prescriptions</span>
+                <span class="<%= customerStats.get("rejected") > 0 ? "bad" : "" %>"><strong><%= customerStats.get("rejected") %></strong> rejected</span>
+                <span><strong><%= customerStats.get("orders") %></strong> orders</span>
+            </p>
+
+            <% if (customer.isFlagged()) { %>
+                <form method="post" action="<%= ctx %>/users/flag"
+                      data-confirm="Remove the red flag from <%= TextUtil.html(customer.getFullName()) %>?">
+                    <input type="hidden" name="id" value="<%= customer.getId() %>">
+                    <input type="hidden" name="action" value="unflag">
+                    <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
+                    <button class="btn plain block" type="submit">Remove the flag</button>
+                </form>
+            <% } else { %>
+                <details class="flag-box">
+                    <summary>&#9873; Flag this customer</summary>
+                    <p class="meta">For customers who misuse MediSys, e.g. sending unrelated photos.
+                        They are <strong>not</strong> blocked - the flag only warns the staff.</p>
+                    <form method="post" action="<%= ctx %>/users/flag">
+                        <input type="hidden" name="id" value="<%= customer.getId() %>">
+                        <input type="hidden" name="action" value="flag">
+                        <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
+                        <div class="field">
+                            <label for="flagReason">Reason (other staff will see it) *</label>
+                            <input type="text" id="flagReason" name="reason" minlength="5" maxlength="300" required
+                                   placeholder="e.g. Uploaded holiday photos instead of prescriptions">
+                        </div>
+                        <button class="btn reject block" type="submit">Flag in red</button>
+                    </form>
+                </details>
+            <% } %>
         </section>
 
         <% if (!canDecide) { %>

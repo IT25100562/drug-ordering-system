@@ -47,20 +47,44 @@ GO
 
 -- Everyone who can log in. role decides which pages they can open.
 -- password_hash is a salted PBKDF2 hash (see PasswordUtil) - never the password.
+-- Customers register themselves with NIC, date of birth, phone and WhatsApp.
+-- Staff accounts are added by the admin (NIC / date of birth may be empty).
+-- photo_key: the profile photo in the file storage (see com.medisys.storage), or NULL.
+-- is_flagged: a pharmacist marked the customer as a trouble maker (e.g. sends
+-- unrelated photos). A flag is only a warning for the staff: the customer can
+-- still use everything. is_active = 0 is only used for staff who left.
 CREATE TABLE users (
     id            INT IDENTITY(1,1) PRIMARY KEY,
     full_name     NVARCHAR(100) NOT NULL,
     email         NVARCHAR(150) NOT NULL,
     phone         NVARCHAR(20)  NULL,
+    whatsapp      NVARCHAR(20)  NULL,
+    nic           VARCHAR(12)   NULL,               -- 123456789V (old) or 200012345678 (new)
+    date_of_birth DATE          NULL,
     address       NVARCHAR(255) NULL,
+    photo_key     VARCHAR(200)  NULL,
     password_hash VARCHAR(255)  NOT NULL,
     role          VARCHAR(20)   NOT NULL DEFAULT 'CUSTOMER',
     is_active     BIT           NOT NULL DEFAULT 1,
+    is_flagged    BIT           NOT NULL DEFAULT 0,
+    flag_reason   NVARCHAR(300) NULL,
+    flagged_by    INT           NULL,
+    flagged_at    DATETIME2     NULL,
     created_at    DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+    updated_at    DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
 
-    CONSTRAINT uq_users_email UNIQUE (email),
-    CONSTRAINT ck_users_role  CHECK (role IN ('CUSTOMER', 'PHARMACIST', 'ADMIN', 'DELIVERY_STAFF'))
+    CONSTRAINT uq_users_email   UNIQUE (email),
+    CONSTRAINT ck_users_role    CHECK (role IN ('CUSTOMER', 'PHARMACIST', 'ADMIN', 'DELIVERY_STAFF')),
+    CONSTRAINT fk_users_flagger FOREIGN KEY (flagged_by) REFERENCES users (id),
+    -- a flag always has a reason
+    CONSTRAINT ck_users_flag    CHECK (is_flagged = 0 OR flag_reason IS NOT NULL),
+    -- a customer always has the registration details
+    CONSTRAINT ck_users_customer CHECK (role <> 'CUSTOMER'
+                                        OR (nic IS NOT NULL AND date_of_birth IS NOT NULL AND phone IS NOT NULL))
 );
+
+-- One account per NIC (staff without a NIC are allowed, so only non-empty values count).
+CREATE UNIQUE INDEX uq_users_nic ON users (nic) WHERE nic IS NOT NULL;
 GO
 
 

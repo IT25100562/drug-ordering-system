@@ -1,7 +1,9 @@
 package com.medisys.model;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Period;
 
 /**
  * A person who can log in: customer, pharmacist, admin or delivery staff.
@@ -21,10 +23,51 @@ public class User implements Serializable {
     private String fullName;
     private String email;
     private String phone;
+    private String whatsapp;
+    private String nic;
+    private LocalDate dateOfBirth;
     private String address;
+    private String photoKey;          // null = no profile photo
     private Role role;
     private boolean active;
     private LocalDateTime createdAt;
+
+    // Red flag set by a pharmacist (never shown to the customer).
+    private boolean flagged;
+    private String flagReason;
+    private String flaggedByName;
+    private LocalDateTime flaggedAt;
+
+    public boolean hasPhoto() {
+        return photoKey != null;
+    }
+
+    /** "NP" for Nimal Perera - shown when there is no photo. */
+    public String getInitials() {
+        if (fullName == null || fullName.isBlank()) {
+            return "?";
+        }
+        String[] words = fullName.trim().replaceAll("(?i)^(dr|mr|mrs|ms|miss|prof|rev)\\.?\\s+", "").split("\\s+");
+        String initials = words[0].substring(0, 1);
+        if (words.length > 1) {
+            initials += words[words.length - 1].substring(0, 1);
+        }
+        return initials.toUpperCase();
+    }
+
+    /** Age in full years, or null when the date of birth is not known. */
+    public Integer getAge() {
+        return dateOfBirth == null ? null : Period.between(dateOfBirth, LocalDate.now()).getYears();
+    }
+
+    /** The WhatsApp number as wa.me needs it: 0771234567 -> 94771234567. */
+    public String getWhatsappLinkNumber() {
+        if (whatsapp == null) {
+            return null;
+        }
+        String digits = whatsapp.replaceAll("\\D", "");
+        return digits.startsWith("0") ? "94" + digits.substring(1) : digits;
+    }
 
     public boolean isCustomer() {
         return role == Role.CUSTOMER;
@@ -117,5 +160,69 @@ public class User implements Serializable {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getWhatsapp() {
+        return whatsapp;
+    }
+
+    public void setWhatsapp(String whatsapp) {
+        this.whatsapp = whatsapp;
+    }
+
+    public String getNic() {
+        return nic;
+    }
+
+    public void setNic(String nic) {
+        this.nic = nic;
+    }
+
+    public LocalDate getDateOfBirth() {
+        return dateOfBirth;
+    }
+
+    public void setDateOfBirth(LocalDate dateOfBirth) {
+        this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getPhotoKey() {
+        return photoKey;
+    }
+
+    public void setPhotoKey(String photoKey) {
+        this.photoKey = photoKey;
+    }
+
+    public boolean isFlagged() {
+        return flagged;
+    }
+
+    public void setFlagged(boolean flagged) {
+        this.flagged = flagged;
+    }
+
+    public String getFlagReason() {
+        return flagReason;
+    }
+
+    public void setFlagReason(String flagReason) {
+        this.flagReason = flagReason;
+    }
+
+    public String getFlaggedByName() {
+        return flaggedByName;
+    }
+
+    public void setFlaggedByName(String flaggedByName) {
+        this.flaggedByName = flaggedByName;
+    }
+
+    public LocalDateTime getFlaggedAt() {
+        return flaggedAt;
+    }
+
+    public void setFlaggedAt(LocalDateTime flaggedAt) {
+        this.flaggedAt = flaggedAt;
     }
 }

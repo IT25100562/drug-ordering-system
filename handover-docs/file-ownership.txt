@@ -118,9 +118,8 @@ Files:
 
 Database tables: users
 
-Already done (early, so the cart could work): login, logout, password
-hashing, demo accounts, role checks. Still to build: register, profile,
-manage users (see the TODO comments in the files).
+Status: done (login, register, profile with photo and history, admin
+users page, staff accounts, red flags).
 
 Files:
   JAVA  model/User.java
@@ -133,11 +132,22 @@ Files:
   JAVA  servlet/user/LogoutServlet.java             /logout
   JAVA  servlet/user/RegisterServlet.java           /register
   JAVA  servlet/user/ProfileServlet.java            /account/profile
+  JAVA  servlet/user/ProfilePhotoServlet.java       /account/photo
+  JAVA  servlet/user/UserPhotoServlet.java          /users/photo
+  JAVA  servlet/user/FlagUserServlet.java           /users/flag
   JAVA  servlet/user/ManageUsersServlet.java        /admin/users
   VIEWS user/login.jsp
   VIEWS user/register.jsp
   VIEWS user/profile.jsp
   VIEWS user/manage-users.jsp
+  FILES WEB-INF/sample-uploads/avatar-*.png          demo profile photos
+
+Hooks in other modules' files (marked "module 04"):
+  PrescriptionDAOImpl / Prescription     customer's red flag and photo
+  ReviewPrescriptionServlet, review.jsp   customer card + Flag / Remove flag
+  dashboard.jsp                           photo and red flag per row
+  AuthFilter                              "register to upload" message, /users/*
+  header.jspf                             avatar(), Register link, Users link
 
 
 

@@ -2,6 +2,7 @@ package com.medisys.servlet.prescription;
 
 import com.medisys.model.Prescription;
 import com.medisys.service.PrescriptionService;
+import com.medisys.service.UserService;
 import com.medisys.service.ValidationException;
 import com.medisys.util.SessionUtil;
 import com.medisys.util.TextUtil;
@@ -33,6 +34,7 @@ public class ReviewPrescriptionServlet extends HttpServlet {
     private static final String VIEW = "/WEB-INF/views/prescription/review.jsp";
 
     private final PrescriptionService prescriptionService = new PrescriptionService();
+    private final UserService userService = new UserService();
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
@@ -93,6 +95,9 @@ public class ReviewPrescriptionServlet extends HttpServlet {
         request.setAttribute("rowQuantities", quantities == null ? new String[0] : quantities);
         request.setAttribute("rowDosages", dosages == null ? new String[0] : dosages);
         request.setAttribute("errors", errors);
+        // Who uploaded it: photo, NIC, age, contact, red flag and history (module 04).
+        request.setAttribute("customer", userService.getUser(p.getUserId()));
+        request.setAttribute("customerStats", userService.getCustomerStats(p.getUserId()));
         if (p.isAwaitingReview()) {
             request.setAttribute("medicines", prescriptionService.getMedicinesForPrescribing());
         }

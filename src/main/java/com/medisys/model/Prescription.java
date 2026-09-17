@@ -26,6 +26,8 @@ public class Prescription {
     private String customerEmail;
     private String customerPhone;
     private String customerAddress;
+    private boolean customerFlagged;     // red flag from a pharmacist (module 04)
+    private boolean customerHasPhoto;
 
     private String customerNote;
 
@@ -195,6 +197,22 @@ public class Prescription {
 
     public void setCustomerAddress(String customerAddress) {
         this.customerAddress = customerAddress;
+    }
+
+    public boolean isCustomerFlagged() {
+        return customerFlagged;
+    }
+
+    public void setCustomerFlagged(boolean customerFlagged) {
+        this.customerFlagged = customerFlagged;
+    }
+
+    public boolean isCustomerHasPhoto() {
+        return customerHasPhoto;
+    }
+
+    public void setCustomerHasPhoto(boolean customerHasPhoto) {
+        this.customerHasPhoto = customerHasPhoto;
     }
 
     public String getCustomerNote() {

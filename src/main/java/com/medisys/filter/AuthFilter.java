@@ -32,7 +32,7 @@ import java.util.Map;
  * Owner  : Whole team
  */
 @WebFilter(urlPatterns = {"/account/*", "/cart/*", "/wishlist/*", "/checkout/*", "/orders/*",
-        "/prescriptions/*", "/pharmacist/*", "/admin/*", "/staff/*", "/deliveries/*", "/notifications", "/notifications/*"})
+        "/prescriptions/*", "/pharmacist/*", "/admin/*", "/staff/*", "/deliveries/*", "/notifications", "/notifications/*", "/users/*"})
 public class AuthFilter implements Filter {
 
     @Override
@@ -63,7 +63,10 @@ public class AuthFilter implements Filter {
             if (!TextUtil.isSafeLocalPath(back)) {
                 back = "";
             }
-            SessionUtil.flash(request, "info", "Please log in to continue.");
+            // Guests who want to upload a prescription are told they need an account.
+            SessionUtil.flash(request, "info", path.startsWith("/prescriptions")
+                    ? "Only registered customers can upload prescriptions. Please log in, or create a free account."
+                    : "Please log in to continue.");
             response.sendRedirect(request.getContextPath() + "/login"
                     + (back.isEmpty() ? "" : "?returnTo=" + URLEncoder.encode(back, StandardCharsets.UTF_8)));
             return;
@@ -95,6 +98,9 @@ public class AuthFilter implements Filter {
         if (path.equals("/prescriptions/file")) {
             // The servlet itself checks that a customer only gets their own file.
             return new Role[]{Role.CUSTOMER, Role.PHARMACIST};
+        }
+        if (path.equals("/users/flag")) {
+            return new Role[]{Role.PHARMACIST, Role.ADMIN};
         }
         if (path.startsWith("/staff")) {
             return new Role[]{Role.DELIVERY_STAFF, Role.ADMIN};

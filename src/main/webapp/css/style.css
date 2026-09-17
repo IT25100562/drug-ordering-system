@@ -2574,3 +2574,258 @@ dl.info.compact dd {
         flex-wrap: wrap;
     }
 }
+
+/* ------------------ users, profiles and red flags (module 04) ------------------ */
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    background: #e3e9ee;
+}
+
+.avatar.small {
+    width: 30px;
+    height: 30px;
+}
+
+.avatar.large {
+    width: 64px;
+    height: 64px;
+}
+
+.avatar.xl {
+    width: 96px;
+    height: 96px;
+}
+
+.avatar.initials {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #dcefe9;
+    color: #0b6b5e;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.avatar.small.initials {
+    font-size: 12px;
+}
+
+.avatar.large.initials {
+    font-size: 24px;
+}
+
+.avatar.xl.initials {
+    font-size: 34px;
+}
+
+.topbar a.who {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #ffffff;
+    text-decoration: none;
+    opacity: 1;
+}
+
+.topbar a.who .avatar {
+    border: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+.topbar .nav-cta {
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 6px;
+}
+
+.person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.badge.flag-badge {
+    background: #b3261e;
+    color: #ffffff;
+}
+
+.row-flagged td {
+    background: #fff4f3;
+}
+
+.row-flagged td:first-child {
+    box-shadow: inset 4px 0 0 #b3261e;
+}
+
+.flag-reason {
+    display: inline-block;
+    max-width: 260px;
+}
+
+.customer-card.flagged {
+    border: 2px solid #b3261e;
+}
+
+.customer-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.customer-head h2 {
+    margin: 0 0 2px;
+}
+
+.flag-banner {
+    background: #fbe0de;
+    color: #7d1a15;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 12px;
+}
+
+.flag-banner p {
+    margin: 4px 0;
+}
+
+.customer-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 13px;
+    color: #4a5a68;
+}
+
+.customer-stats .bad strong {
+    color: #b3261e;
+}
+
+.flag-box summary {
+    cursor: pointer;
+    color: #b3261e;
+    font-weight: 600;
+    margin: 6px 0;
+}
+
+.auth-switch {
+    display: grid;
+    gap: 8px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #e3e9ee;
+    text-align: center;
+}
+
+.register-wrap {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+    gap: 18px;
+    align-items: start;
+    max-width: 980px;
+    margin: 0 auto;
+}
+
+.form-section {
+    border: none;
+    padding: 0;
+    margin: 0 0 14px;
+}
+
+.form-section legend {
+    font-weight: 700;
+    color: #0b6b5e;
+    margin-bottom: 8px;
+}
+
+.checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: normal;
+    margin-top: 6px;
+    font-size: 13px;
+}
+
+.profile-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.profile-name {
+    flex: 1;
+    min-width: 220px;
+}
+
+.profile-name h1 {
+    margin: 0;
+}
+
+.photo-form {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 12px 0 0;
+}
+
+.photo-form label.btn {
+    cursor: pointer;
+}
+
+.photo-form:focus-within label.btn {
+    outline: 2px solid #0b6b5e;
+}
+
+.profile-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+
+.history-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.history-list li {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #e3e9ee;
+}
+
+.history-list li:last-child {
+    border-bottom: none;
+}
+
+.history-list .grow {
+    flex: 1;
+}
+
+@media (max-width: 800px) {
+    .register-wrap,
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+}

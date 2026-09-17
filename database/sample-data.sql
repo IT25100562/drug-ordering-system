@@ -23,23 +23,51 @@ GO
 --   pharmacist@medisys.lk  / Pharma@123     PHARMACIST
 --   nimal@example.com      / Customer@123   CUSTOMER
 --   kasuni@example.com     / Customer@123   CUSTOMER
+--   tharindu@example.com   / Customer@123   CUSTOMER (red-flagged)
 --   delivery@medisys.lk    / Delivery@123   DELIVERY_STAFF
 --   rider2@medisys.lk      / Delivery@123   DELIVERY_STAFF
 -- The hashes were made with:  java com.medisys.util.PasswordUtil <password>
 
-INSERT INTO users (full_name, email, phone, address, password_hash, role) VALUES
-    (N'System Admin', N'admin@medisys.lk', N'0112345678', N'MediSys Pharmacy, Colombo 03',
+-- Customers must have a NIC, date of birth and phone (a CHECK in schema.sql),
+-- so they are added with those columns filled straight away.
+INSERT INTO users (full_name, email, phone, address, password_hash, role, nic, date_of_birth, whatsapp)
+SELECT full_name, email, phone, address, password_hash, role,
+       CASE email WHEN N'nimal@example.com'    THEN '901351234V'
+                  WHEN N'kasuni@example.com'   THEN '199673512345'
+                  WHEN N'tharindu@example.com' THEN '200106312345' END,
+       CASE email WHEN N'nimal@example.com'    THEN '1990-05-14'
+                  WHEN N'kasuni@example.com'   THEN '1996-08-22'
+                  WHEN N'tharindu@example.com' THEN '2001-03-03' END,
+       CASE WHEN role = 'CUSTOMER' THEN phone END
+FROM (VALUES
+    (1, N'System Admin', N'admin@medisys.lk', N'0112345678', N'MediSys Pharmacy, Colombo 03',
      'pbkdf2$120000$5lv47c8EzGChdL+BXd+AfQ==$t2Q4pjt1X50WSBXJXm5hR2NPDFd4VpwvIhj8bwqLNhU=', 'ADMIN'),
-    (N'Dr. Sunil Fernando', N'pharmacist@medisys.lk', N'0112345679', N'MediSys Pharmacy, Colombo 03',
+    (2, N'Dr. Sunil Fernando', N'pharmacist@medisys.lk', N'0112345679', N'MediSys Pharmacy, Colombo 03',
      'pbkdf2$120000$BbgedbippGnZMTbhF2Qt6w==$Fvyv9/EOMBDs5vjz50tVukVUSaJhUicpnY0Q0TfrTuY=', 'PHARMACIST'),
-    (N'Nimal Perera', N'nimal@example.com', N'0771234567', N'12 Temple Road, Maharagama',
+    (3, N'Nimal Perera', N'nimal@example.com', N'0771234567', N'12 Temple Road, Maharagama',
      'pbkdf2$120000$UAbhe9vXLT/vc3JkTryxAA==$eg07Xv88WmKfyx+tKFxuEoYQXOwL6Iow+YbKqHoympU=', 'CUSTOMER'),
-    (N'Kasuni Silva', N'kasuni@example.com', N'0719876543', N'45 Lake Drive, Kandy',
+    (4, N'Kasuni Silva', N'kasuni@example.com', N'0719876543', N'45 Lake Drive, Kandy',
      'pbkdf2$120000$UAbhe9vXLT/vc3JkTryxAA==$eg07Xv88WmKfyx+tKFxuEoYQXOwL6Iow+YbKqHoympU=', 'CUSTOMER'),
-    (N'Ruwan Jayasinghe', N'delivery@medisys.lk', N'0751112223', N'MediSys Pharmacy, Colombo 03',
+    (7, N'Tharindu Fernando', N'tharindu@example.com', N'0762223334', N'8 Station Road, Galle',
+     'pbkdf2$120000$UAbhe9vXLT/vc3JkTryxAA==$eg07Xv88WmKfyx+tKFxuEoYQXOwL6Iow+YbKqHoympU=', 'CUSTOMER'),
+    (5, N'Ruwan Jayasinghe', N'delivery@medisys.lk', N'0751112223', N'MediSys Pharmacy, Colombo 03',
      'pbkdf2$120000$Aar7NMzQshP8R5PoZgOAXw==$16sWh8jVxtRuD2juDgWJKOB9FZE7ow+C8bvn0o7jA2E=', 'DELIVERY_STAFF'),
-    (N'Kamal Perera', N'rider2@medisys.lk', N'0771234599', N'MediSys Pharmacy, Colombo 03',
-     'pbkdf2$120000$Aar7NMzQshP8R5PoZgOAXw==$16sWh8jVxtRuD2juDgWJKOB9FZE7ow+C8bvn0o7jA2E=', 'DELIVERY_STAFF');
+    (6, N'Kamal Perera', N'rider2@medisys.lk', N'0771234599', N'MediSys Pharmacy, Colombo 03',
+     'pbkdf2$120000$Aar7NMzQshP8R5PoZgOAXw==$16sWh8jVxtRuD2juDgWJKOB9FZE7ow+C8bvn0o7jA2E=', 'DELIVERY_STAFF')
+) AS v (sort_order, full_name, email, phone, address, password_hash, role)
+ORDER BY sort_order;          -- fixed ids: admin 1, pharmacist 2, Nimal 3, Kasuni 4, riders 5-6, Tharindu 7
+
+-- Profile photos (the files are in WEB-INF/sample-uploads, copied at startup).
+UPDATE users SET photo_key = 'samples/avatar-nimal.png'  WHERE email = N'nimal@example.com';
+UPDATE users SET photo_key = 'samples/avatar-kasuni.png' WHERE email = N'kasuni@example.com';
+
+-- Tharindu sent a holiday photo as a "prescription" (RX 7), so the pharmacist flagged him.
+UPDATE users
+SET is_flagged = 1,
+    flag_reason = N'Uploaded a holiday photo instead of a prescription. Check his uploads carefully.',
+    flagged_by = (SELECT id FROM users WHERE email = N'pharmacist@medisys.lk'),
+    flagged_at = DATEADD(hour, -20, SYSDATETIME())
+WHERE email = N'tharindu@example.com';
 GO
 
 -- =================================================================
@@ -202,6 +230,7 @@ GO
 --   RX 4  Nimal   APPROVED, not paid    Metformin x5 + Panadol x2 -> Nimal can pay
 --   RX 5  Kasuni  PENDING, 40 days old  expired - the pharmacist should delete it
 --   RX 6  Kasuni  APPROVED and PAID     Losartan x3, paid by order 2 -> shows the receipt
+--   RX 7  Tharindu REJECTED             a holiday photo -> Tharindu is flagged (module 04 section)
 
 INSERT INTO prescriptions
     (user_id, customer_note, file_key, original_file_name, content_type, file_size,
@@ -230,7 +259,10 @@ FROM (VALUES
      'PENDING', NULL, 40 * 24),
     (6, N'kasuni@example.com', NULL,
      'samples/rx-demo-6.png', N'blood-pressure-rx.png', 'image/png', 55096,
-     'APPROVED', NULL, 96)
+     'APPROVED', NULL, 96),
+    (7, N'tharindu@example.com', N'urgent pls',
+     'samples/rx-demo-7.png', N'IMG_beach_mirissa.png', 'image/png', 17333,
+     'REJECTED', N'This is a holiday photo, not a prescription. Please upload the prescription from your doctor.', 22)
 ) AS v (sort_order, email, customer_note, file_key, original_file_name, content_type, file_size,
         status, pharmacist_note, hours_ago)
 JOIN users u ON u.email = v.email

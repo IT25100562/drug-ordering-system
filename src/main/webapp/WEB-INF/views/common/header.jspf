@@ -74,6 +74,22 @@
     private String activeIf(String currentPath, String prefix) {
         return currentPath.equals(prefix) || currentPath.startsWith(prefix + "/") ? "active" : "";
     }
+
+    // A round profile picture, or the initials when there is no photo (module 04).
+    // cssClass: "avatar", "avatar small" or "avatar large".
+    private String avatar(String ctx, int userId, boolean hasPhoto, String name, String cssClass) {
+        if (hasPhoto) {
+            return "<img class=\"" + cssClass + "\" src=\"" + ctx + "/users/photo?id=" + userId
+                    + "\" alt=\"Photo of " + TextUtil.html(name) + "\">";
+        }
+        User temp = new User();
+        temp.setFullName(name);
+        return "<span class=\"" + cssClass + " initials\" aria-hidden=\"true\">" + TextUtil.html(temp.getInitials()) + "</span>";
+    }
+
+    private String avatar(String ctx, User user, String cssClass) {
+        return avatar(ctx, user.getId(), user.hasPhoto(), user.getFullName(), cssClass);
+    }
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -98,6 +114,7 @@
 
         <% if (currentUser == null) { %>
             <a class="<%= activeIf(currentPath, "/login") %>" href="<%= ctx %>/login">Log in</a>
+            <a class="nav-cta <%= activeIf(currentPath, "/register") %>" href="<%= ctx %>/register">Register</a>
 
         <% } else { %>
             <% if (currentUser.isCustomer()) { %>
@@ -114,6 +131,7 @@
                 <a class="<%= activeIf(currentPath, "/staff/deliveries") %>" href="<%= ctx %>/staff/deliveries">Deliveries<span
                    class="count <%= headerDeliveryCount == 0 ? "hidden" : "" %>" title="Waiting for a rider"><%= headerDeliveryCount %></span></a>
                 <a class="<%= activeIf(currentPath, "/admin/categories") %>" href="<%= ctx %>/admin/categories">Categories</a>
+                <a class="<%= activeIf(currentPath, "/admin/users") %>" href="<%= ctx %>/admin/users">Users</a>
             <% } else if (currentUser.isPharmacist()) { %>
                 <a class="<%= activeIf(currentPath, "/pharmacist") %>" href="<%= ctx %>/pharmacist/dashboard">Verification Dashboard<span
                    class="count <%= headerPendingCount == 0 ? "hidden" : "" %>"><%= headerPendingCount %></span></a>
@@ -128,10 +146,12 @@
                    class="count <%= headerUnreadCount == 0 ? "hidden" : "" %>"><%= headerUnreadCount %></span></a>
             <% } %>
 
-            <span class="who" title="<%= TextUtil.html(currentUser.getEmail()) %>">
-                <%= TextUtil.html(currentUser.getFirstName()) %>
-                <small><%= TextUtil.html(currentUser.getRole().getLabel()) %></small>
-            </span>
+            <a class="who <%= activeIf(currentPath, "/account") %>" href="<%= ctx %>/account/profile"
+               title="My profile (<%= TextUtil.html(currentUser.getEmail()) %>)">
+                <%= avatar(ctx, currentUser, "avatar small") %>
+                <span><%= TextUtil.html(currentUser.getFirstName()) %>
+                <small><%= TextUtil.html(currentUser.getRole().getLabel()) %></small></span>
+            </a>
             <form class="logout" method="post" action="<%= ctx %>/logout">
                 <button type="submit">Log out</button>
             </form>

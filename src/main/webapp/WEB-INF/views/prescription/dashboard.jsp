@@ -78,14 +78,18 @@
             <th><span class="sr-only">Actions</span></th>
         </tr>
         <% for (Prescription p : prescriptions) { %>
-        <tr class="<%= p.isExpired() ? "row-muted" : "" %>">
+        <tr class="<%= p.isExpired() ? "row-muted" : "" %> <%= p.isCustomerFlagged() ? "row-flagged" : "" %>">
             <td>
                 <strong><%= p.getReference() %></strong>
                 <br><span class="meta"><%= p.isPdf() ? "PDF" : "Image" %> &middot; <%= p.getFileSizeLabel() %></span>
             </td>
             <td>
-                <%= TextUtil.html(p.getCustomerName()) %>
-                <br><span class="meta"><%= TextUtil.html(p.getCustomerEmail()) %></span>
+                <div class="person">
+                    <%= avatar(ctx, p.getUserId(), p.isCustomerHasPhoto(), p.getCustomerName(), "avatar small") %>
+                    <span><%= TextUtil.html(p.getCustomerName()) %>
+                        <% if (p.isCustomerFlagged()) { %><span class="badge flag-badge" title="Flagged by a pharmacist">&#9873; Flagged</span><% } %>
+                        <br><span class="meta"><%= TextUtil.html(p.getCustomerEmail()) %></span></span>
+                </div>
             </td>
             <td>
                 <% if (p.getItems().isEmpty()) { %>

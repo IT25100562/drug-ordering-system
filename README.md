@@ -59,6 +59,7 @@ From the command line: `mvn package` builds `target/medisys.war`.
 |------|-------|----------|
 | Customer | nimal@example.com | Customer@123 |
 | Customer | kasuni@example.com | Customer@123 |
+| Customer (red-flagged) | tharindu@example.com | Customer@123 |
 | Admin | admin@medisys.lk | Admin@123 |
 | Senior Pharmacist | pharmacist@medisys.lk | Pharma@123 |
 | Delivery Staff (rider) | delivery@medisys.lk | Delivery@123 |
@@ -121,7 +122,7 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 01 | `CartItem`, `Cart`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartService`, `WishlistService` | `cart/` |
 | 02 | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` (+ `StockShortageException`) | `OrderService`, `PaymentService` | `order/` |
 | 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
-| 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` |
+| 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` (+ `avatar()` in `common/header.jspf`) |
 | 05 | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` (+ `PrescriptionRequiredException`) | `prescription/` |
 | 06 | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
 
@@ -134,7 +135,9 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | Module | URL | Who |
 |--------|-----|-----|
 | 04 | `/login`, `/logout`, `/register` | everyone |
-| 04 | `/account/profile` | logged in |
+| 04 | `/account/profile`, `/account/photo` | logged in |
+| 04 | `/users/photo?id=` | the user, pharmacists, admins |
+| 04 | `/users/flag` | pharmacist / admin |
 | 04 | `/admin/users` | admin |
 | 03 | `/medicines`, `/medicines/view?id=` | everyone |
 | 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/restock`, `/admin/medicines/discontinue`, `/admin/categories` | admin |
@@ -176,9 +179,63 @@ for DELIVERY_STAFF.
 | 01 | Shopping Cart and Wishlist | **done** (see below) |
 | 02 | Order Placement and Checkout | **done** (see below) |
 | 03 | Medicine Catalog and Inventory | **done** (see below) |
-| 04 | User and Role Management | login / logout / roles done early; register, profile, manage users still to do |
+| 04 | User and Role Management | **done** (see below) |
 | 05 | Prescription Upload and Verification | **done** (see below) |
 | 06 | Delivery Tracking and Notification | **done** (see below) |
+
+### Module 04: User and Role Management
+
+Anyone can browse the medicines. An account is needed to order and to
+**upload a prescription**. A guest who opens `/prescriptions/upload` is sent to the
+login page with the message "Only registered customers can upload prescriptions". The
+page has a **Create a free account** link, and after registering the customer is brought
+straight back to the upload page.
+
+**Pages**
+- `/register`: only what the pharmacy needs: full name, NIC, date of birth, phone,
+  WhatsApp (with a "same as my phone number" box), email and password. All errors are
+  shown together, and the typed values are kept (except the password).
+- `/account/profile`: profile photo (add / change / remove), name and role, the latest
+  5 **prescriptions** and **orders** (with Track), editable name / phone / WhatsApp /
+  delivery address, a read-only email, NIC and date of birth, and Change password. Staff
+  get the same page without the history.
+- `/admin/users` (admin): everyone with their **photo**, name, email, role, joined date
+  and red flag. There are tabs (Everyone, Customers, Flagged, Staff) and search. NIC, date
+  of birth and phone are **not** shown here. The admin can **add staff accounts**
+  (pharmacist, delivery staff, admin), switch staff accounts off or on, and remove a flag.
+- Pharmacist review page (`/pharmacist/review`): a customer card with the photo, NIC, age,
+  phone, WhatsApp (opens `wa.me`), email, address, and "N prescriptions / N rejected /
+  N orders", plus **Flag this customer** or **Remove the flag**. The dashboard shows each
+  customer's photo, and flagged customers' rows are red.
+
+**Red flag, not a ban.** A pharmacist (or admin) can flag a customer who misuses the
+system, for example by uploading holiday photos. A reason is required, and staff see it
+with who flagged the customer and when. The customer can still log in, order and upload,
+and never sees the flag. Customer accounts are never switched off. Only staff accounts
+can be switched off (for someone who left).
+
+**Rules (all in `UserService`)**
+- Email and NIC are unique (email is compared in lower case).
+- NIC: old `123456789V/X` or new 12 digits. The day-of-year part must be valid, and the
+  birth year inside the NIC must match the date of birth.
+- The customer must be at least 18. Names are 2-100 letters.
+- Phones are Sri Lankan numbers stored as `0771234567` (`+94 77 123 4567` is accepted).
+  WhatsApp must be a mobile number (07...).
+- Passwords need at least 8 characters, with a letter and a digit. They are saved as a
+  salted PBKDF2 hash. Login gives the same message for a wrong email or a wrong password.
+- Photos are JPG or PNG only (checked from the file's first bytes), up to 2 MB, and stored
+  through `FileStorage` under `profiles/`. `/users/photo` serves a photo only to its
+  owner, pharmacists and admins; everyone else gets 404.
+- Flag reasons are 5-300 characters. Only customers can be flagged, and only by a
+  pharmacist or admin. A reason is always stored (a `CHECK` in the table).
+- The admin can't switch off their own account.
+
+**Demo data:** Nimal and Kasuni have profile photos. Tharindu (`tharindu@example.com`)
+is flagged because his RX-000007 was a beach photo.
+
+**Try it:** log out and click Upload prescription on a prescription-only medicine, then
+register. Afterwards, log in as the pharmacist, open the new prescription, and flag the
+customer. Finally, log in as the admin and open **Users**.
 
 ### Module 03: Medicine Catalog and Inventory
 

@@ -41,6 +41,14 @@ public final class SessionUtil {
         request.getSession(true).setAttribute(USER_KEY, user);
     }
 
+    /** Replaces the stored user after a profile change (same session, still logged in). */
+    public static void refreshUser(HttpServletRequest request, User user) {
+        HttpSession session = request.getSession(false);
+        if (session != null && user != null) {
+            session.setAttribute(USER_KEY, user);
+        }
+    }
+
     public static void logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
         if (session != null) {
