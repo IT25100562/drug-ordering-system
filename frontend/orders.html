@@ -4,34 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PharmaCare - My Orders</title>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* Modern Clinical Theme Customizations */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f6;
+        }
+        .medical-nav {
+            background-color: #00695c !important;
+        }
+        .content-card {
+            border-radius: 12px;
+            border: none;
+            overflow: hidden;
+        }
+        .table > :not(caption) > * > * {
+            padding: 1rem 1.5rem;
+        }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
 <!-- Navbar -->
-<nav class="navbar navbar-dark bg-dark shadow-sm">
+<nav class="navbar navbar-expand-lg navbar-dark medical-nav shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="dashboard.html">⬅ Back to Dashboard</a>
+        <a class="navbar-brand fw-bold" href="dashboard.html">
+            <i class="bi bi-arrow-left-short me-1 fs-5 align-middle"></i>Back to Dashboard
+        </a>
     </div>
 </nav>
 
-<div class="container mt-4">
-    <div class="row">
+<div class="container mt-5">
+    <div class="row gap-4 justify-content-center">
 
         <!-- Left Side: Order History -->
-        <div class="col-md-8">
-            <div class="card shadow-sm border-0 mb-4">
-                <div class="card-header bg-white">
-                    <h4 class="mb-0">My Order History</h4>
+        <div class="col-lg-7 col-md-12">
+            <div class="card content-card shadow-sm mb-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h4 class="mb-0 fw-bold text-dark"><i class="bi bi-box-seam text-primary me-2"></i>My Order History</h4>
                 </div>
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0">
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
                         <thead class="table-light">
                         <tr>
-                            <th>Order #</th>
-                            <th>Date</th>
-                            <th>Total</th>
-                            <th>Status</th>
+                            <th class="text-secondary fw-semibold">Order #</th>
+                            <th class="text-secondary fw-semibold">Date</th>
+                            <th class="text-secondary fw-semibold">Total</th>
+                            <th class="text-secondary fw-semibold">Status</th>
                         </tr>
                         </thead>
                         <tbody id="ordersTable">
@@ -43,11 +69,13 @@
         </div>
 
         <!-- Right Side: Notifications -->
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">Notifications</h5>
-                    <button class="btn btn-sm btn-light" onclick="markAllRead()">Mark Read</button>
+        <div class="col-lg-4 col-md-12">
+            <div class="card content-card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold"><i class="bi bi-bell-fill text-warning me-2"></i>Notifications</h5>
+                    <button class="btn btn-sm btn-light rounded-pill fw-medium text-primary px-3 shadow-sm" onclick="markAllRead()">
+                        <i class="bi bi-check2-all me-1"></i>Mark Read
+                    </button>
                 </div>
                 <ul class="list-group list-group-flush" id="notificationsList">
                     <!-- Notifications injected here -->
@@ -74,7 +102,7 @@
         tbody.innerHTML = '';
 
         if (orders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No orders found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-5"><i class="bi bi-inbox fs-2 d-block mb-2"></i>No orders found.</td></tr>';
             return;
         }
 
@@ -89,10 +117,10 @@
 
             tbody.innerHTML += `
                     <tr>
-                        <td class="fw-bold">#${order.id}</td>
-                        <td>${date}</td>
-                        <td>$${order.total_amount.toFixed(2)}</td>
-                        <td><span class="badge ${statusBadge}">${order.status}</span></td>
+                        <td class="fw-bold text-muted">#${order.id}</td>
+                        <td class="text-muted">${date}</td>
+                        <td class="fw-medium text-dark">$${order.total_amount.toFixed(2)}</td>
+                        <td><span class="badge ${statusBadge} rounded-pill px-3 py-2 fw-medium shadow-sm">${order.status}</span></td>
                     </tr>
                 `;
         });
@@ -106,17 +134,17 @@
         list.innerHTML = '';
 
         if (notifications.length === 0) {
-            list.innerHTML = '<li class="list-group-item text-muted text-center py-3">No new notifications.</li>';
+            list.innerHTML = '<li class="list-group-item text-muted text-center py-5"><i class="bi bi-bell-slash fs-2 d-block mb-2 text-light"></i>No new notifications.</li>';
             return;
         }
 
         notifications.forEach(notif => {
-            const isUnread = notif.is_read ? '' : 'fw-bold bg-light';
-            const dot = notif.is_read ? '' : '<span class="badge bg-danger rounded-pill">New</span>';
+            const isUnread = notif.is_read ? 'text-muted' : 'fw-medium bg-light border-start border-4 border-primary';
+            const dot = notif.is_read ? '' : '<span class="badge bg-danger rounded-pill shadow-sm">New</span>';
 
             list.innerHTML += `
-                    <li class="list-group-item d-flex justify-content-between align-items-center ${isUnread}">
-                        <small>${notif.message}</small>
+                    <li class="list-group-item d-flex justify-content-between align-items-center py-3 ${isUnread}">
+                        <small class="pe-3"><i class="bi bi-info-circle text-primary me-2"></i>${notif.message}</small>
                         ${dot}
                     </li>
                 `;
