@@ -1,0 +1,119 @@
+<%--
+    Shared page top: <head>, the menu bar for the logged in role, and
+    success / error / info messages.
+    Shared file - agree with the team before changing it.
+
+    Every page declares a String called pageTitle first, then includes this:
+
+        <% String pageTitle = "My Prescriptions"; %>
+        <%@ include file="../common/header.jspf" %>
+--%>
+<%@ page import="com.medisys.model.User" %>
+<%@ page import="com.medisys.service.CartService" %>
+<%@ page import="com.medisys.service.WishlistService" %>
+<%@ page import="com.medisys.util.SessionUtil" %>
+<%@ page import="com.medisys.util.TextUtil" %>
+<%
+    String ctx = request.getContextPath();
+    User currentUser = SessionUtil.currentUser(request);
+
+    // Messages stored just before a redirect (see SessionUtil.flash).
+    String successMessage = SessionUtil.takeFlash(request, "success");
+    String errorMessage = SessionUtil.takeFlash(request, "error");
+    String infoMessage = SessionUtil.takeFlash(request, "info");
+
+    // Badges in the customer menu. A database problem must not break every page.
+    int headerCartCount = 0;
+    int headerWishlistCount = 0;
+    if (currentUser != null && currentUser.isCustomer()) {
+        try {
+            headerCartCount = new CartService().countItems(currentUser.getId());
+            headerWishlistCount = new WishlistService().count(currentUser.getId());
+        } catch (java.sql.SQLException e) {
+            log("Could not load the menu counts", e);
+        }
+    }
+
+    // Marks the menu link of the page we are on.
+    // Pages are reached through a servlet forward, so the browser's address is
+    // kept in the "forward" attributes.
+    String currentPath = request.getRequestURI().substring(ctx.length());
+    String currentQuery = request.getQueryString();
+    if (request.getAttribute("jakarta.servlet.forward.request_uri") != null) {
+        currentPath = ((String) request.getAttribute("jakarta.servlet.forward.request_uri")).substring(ctx.length());
+        currentQuery = (String) request.getAttribute("jakarta.servlet.forward.query_string");
+    }
+
+    // This page's address, sent as "returnTo" by forms so the user comes back here.
+    String currentUrl = currentQuery == null ? currentPath : currentPath + "?" + currentQuery;
+    if (!TextUtil.isSafeLocalPath(currentUrl)) {
+        currentUrl = currentPath;
+    }
+%>
+<%!
+    // "active" when the menu link belongs to the current page.
+    private String activeIf(String currentPath, String prefix) {
+        return currentPath.equals(prefix) || currentPath.startsWith(prefix + "/") ? "active" : "";
+    }
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= TextUtil.html(pageTitle) %> | MediSys</title>
+    <link rel="icon" type="image/svg+xml" href="<%= ctx %>/images/favicon.svg">
+    <link rel="stylesheet" href="<%= ctx %>/css/style.css">
+    <script src="<%= ctx %>/js/app.js" defer></script>
+</head>
+<body data-ctx="<%= ctx %>">
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+    <a class="brand" href="<%= ctx %>/">MediSys
+        <span>Online Medicine Ordering System</span>
+    </a>
+    <nav aria-label="Main menu">
+        <a class="<%= activeIf(currentPath, "/medicines") %>" href="<%= ctx %>/medicines">Medicines</a>
+
+        <% if (currentUser == null) { %>
+            <a class="<%= activeIf(currentPath, "/login") %>" href="<%= ctx %>/login">Log in</a>
+
+        <% } else { %>
+            <% if (currentUser.isCustomer()) { %>
+                <a class="<%= activeIf(currentPath, "/wishlist") %>" href="<%= ctx %>/wishlist">Wishlist<span
+                   class="count <%= headerWishlistCount == 0 ? "hidden" : "" %>" data-wishlist-count><%= headerWishlistCount %></span></a>
+                <a class="<%= activeIf(currentPath, "/cart") %>" href="<%= ctx %>/cart">Cart<span
+                   class="count <%= headerCartCount == 0 ? "hidden" : "" %>" data-cart-count><%= headerCartCount %></span></a>
+            <% } else if (currentUser.isAdmin()) { %>
+                <a class="<%= activeIf(currentPath, "/admin/medicines") %>" href="<%= ctx %>/admin/medicines">Inventory</a>
+                <a class="<%= activeIf(currentPath, "/admin/categories") %>" href="<%= ctx %>/admin/categories">Categories</a>
+            <% } else if (currentUser.isPharmacist()) { %>
+                <a class="<%= activeIf(currentPath, "/pharmacist") %>" href="<%= ctx %>/pharmacist/dashboard">Verification Dashboard</a>
+            <% } else if (currentUser.isDeliveryStaff()) { %>
+                <a class="<%= activeIf(currentPath, "/staff") %>" href="<%= ctx %>/staff/deliveries">Deliveries</a>
+            <% } %>
+
+            <span class="who" title="<%= TextUtil.html(currentUser.getEmail()) %>">
+                <%= TextUtil.html(currentUser.getFirstName()) %>
+                <small><%= TextUtil.html(currentUser.getRole().getLabel()) %></small>
+            </span>
+            <form class="logout" method="post" action="<%= ctx %>/logout">
+                <button type="submit">Log out</button>
+            </form>
+        <% } %>
+    </nav>
+</header>
+
+<main class="page" id="main">
+
+<% if (successMessage != null) { %>
+    <div class="message success" role="status" data-autohide><%= TextUtil.html(successMessage) %></div>
+<% } %>
+<% if (infoMessage != null) { %>
+    <div class="message info" role="status"><%= TextUtil.html(infoMessage) %></div>
+<% } %>
+<% if (errorMessage != null) { %>
+    <div class="message error" role="alert"><%= TextUtil.html(errorMessage) %></div>
+<% } %>
