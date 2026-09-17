@@ -1,0 +1,243 @@
+
+
+
+
+  JAVA  = src/main/java/com/medisys/
+  VIEWS = src/main/webapp/WEB-INF/views/
+
+
+
+---------------------------------------------------------------------
+ MODULE 01 - SHOPPING CART AND WISHLIST
+ Owner: Amadini G. G. A.
+---------------------------------------------------------------------
+
+Database tables: cart_items, wishlist_items
+
+Files:
+  JAVA  model/CartItem.java
+  JAVA  model/WishlistItem.java
+  JAVA  model/Cart.java
+  JAVA  dao/CartDAO.java
+  JAVA  dao/WishlistDAO.java
+  JAVA  dao/impl/CartDAOImpl.java
+  JAVA  dao/impl/WishlistDAOImpl.java
+  JAVA  service/CartService.java
+  JAVA  service/WishlistService.java
+  JAVA  service/PrescriptionRequiredException.java
+  JAVA  servlet/cart/CartReply.java                 (shared answer helper)
+  JAVA  servlet/cart/CartServlet.java               /cart
+  JAVA  servlet/cart/AddToCartServlet.java          /cart/add
+  JAVA  servlet/cart/UpdateCartServlet.java         /cart/update
+  JAVA  servlet/cart/RemoveFromCartServlet.java     /cart/remove
+  JAVA  servlet/cart/WishlistServlet.java           /wishlist
+  JAVA  servlet/cart/WishlistActionServlet.java     /wishlist/action
+  VIEWS cart/cart.jsp
+  VIEWS cart/wishlist.jsp
+  VIEWS common/heart-button.jspf            (wishlist heart, used on many pages)
+  src/main/webapp/js/cart.js
+  (+ the "Module 01" sections of database/schema.sql and sample-data.sql)
+
+
+
+---------------------------------------------------------------------
+ MODULE 02 - ORDER PLACEMENT AND CHECKOUT
+ Owner: Hewage B. H. A. S.
+---------------------------------------------------------------------
+
+Database tables: orders, order_items, payments
+
+Files:
+  JAVA  model/Order.java
+  JAVA  model/OrderItem.java
+  JAVA  model/OrderStatus.java
+  JAVA  model/Payment.java
+  JAVA  dao/OrderDAO.java
+  JAVA  dao/PaymentDAO.java
+  JAVA  dao/impl/OrderDAOImpl.java
+  JAVA  dao/impl/PaymentDAOImpl.java
+  JAVA  service/OrderService.java
+  JAVA  service/PaymentService.java          (test card check already used by module 05)
+  JAVA  servlet/order/CheckoutServlet.java          /checkout
+  JAVA  servlet/order/PaymentServlet.java           /checkout/payment
+  JAVA  servlet/order/MyOrdersServlet.java          /orders
+  JAVA  servlet/order/OrderDetailsServlet.java      /orders/view
+  JAVA  servlet/order/CancelOrderServlet.java       /orders/cancel
+  JAVA  servlet/order/ManageOrdersServlet.java      /admin/orders
+  VIEWS order/checkout.jsp
+  VIEWS order/payment.jsp
+  VIEWS order/order-confirmation.jsp
+  VIEWS order/my-orders.jsp
+  VIEWS order/order-details.jsp
+  VIEWS order/manage-orders.jsp
+
+
+
+---------------------------------------------------------------------
+ MODULE 03 - MEDICINE CATALOG AND INVENTORY
+ Owner: Divisekara A. W. D. M. D. M. B.
+---------------------------------------------------------------------
+
+
+Database tables: medicines, categories
+
+Files:
+  JAVA  model/Medicine.java
+  JAVA  model/Category.java
+  JAVA  model/InventorySummary.java
+  JAVA  dao/MedicineDAO.java
+  JAVA  dao/CategoryDAO.java
+  JAVA  dao/impl/MedicineDAOImpl.java
+  JAVA  dao/impl/CategoryDAOImpl.java
+  JAVA  service/MedicineService.java
+  JAVA  servlet/medicine/CatalogServlet.java             /medicines
+  JAVA  servlet/medicine/MedicineDetailsServlet.java     /medicines/view
+  JAVA  servlet/medicine/InventoryServlet.java           /admin/medicines
+  JAVA  servlet/medicine/MedicineFormServlet.java        /admin/medicines/edit
+  JAVA  servlet/medicine/RestockMedicineServlet.java     /admin/medicines/restock
+  JAVA  servlet/medicine/DiscontinueMedicineServlet.java /admin/medicines/discontinue
+  JAVA  servlet/medicine/CategoryServlet.java            /admin/categories
+  VIEWS medicine/catalog.jsp
+  VIEWS medicine/medicine-details.jsp
+  VIEWS medicine/inventory.jsp
+  VIEWS medicine/medicine-form.jsp
+  VIEWS medicine/categories.jsp
+  src/main/webapp/js/medicine.js
+  (+ the "Module 03" sections of database/schema.sql and sample-data.sql)
+
+
+
+---------------------------------------------------------------------
+ MODULE 04 - USER AND ROLE MANAGEMENT
+ Owner: Kaweesha P. M. G. S.
+---------------------------------------------------------------------
+
+Database tables: users
+
+Already done (early, so the cart could work): login, logout, password
+hashing, demo accounts, role checks. Still to build: register, profile,
+manage users (see the TODO comments in the files).
+
+Files:
+  JAVA  model/User.java
+  JAVA  model/Role.java
+  JAVA  dao/UserDAO.java
+  JAVA  dao/impl/UserDAOImpl.java
+  JAVA  service/UserService.java
+  JAVA  util/PasswordUtil.java
+  JAVA  servlet/user/LoginServlet.java              /login
+  JAVA  servlet/user/LogoutServlet.java             /logout
+  JAVA  servlet/user/RegisterServlet.java           /register
+  JAVA  servlet/user/ProfileServlet.java            /account/profile
+  JAVA  servlet/user/ManageUsersServlet.java        /admin/users
+  VIEWS user/login.jsp
+  VIEWS user/register.jsp
+  VIEWS user/profile.jsp
+  VIEWS user/manage-users.jsp
+
+
+
+---------------------------------------------------------------------
+ MODULE 05 - PRESCRIPTION UPLOAD AND VERIFICATION
+ Owner: Perera D. A. A. N. S.
+---------------------------------------------------------------------
+
+Database tables: prescriptions, prescription_items
+
+Files:
+  JAVA  model/Prescription.java
+  JAVA  model/PrescriptionItem.java
+  JAVA  model/PrescriptionStatus.java
+  JAVA  dao/PrescriptionDAO.java
+  JAVA  dao/impl/PrescriptionDAOImpl.java
+  JAVA  service/PrescriptionService.java
+  JAVA  servlet/prescription/UploadedFile.java                (reads the uploaded file)
+  JAVA  servlet/prescription/UploadPrescriptionServlet.java   /prescriptions/upload
+  JAVA  servlet/prescription/MyPrescriptionsServlet.java      /prescriptions
+  JAVA  servlet/prescription/ViewPrescriptionServlet.java     /prescriptions/view
+  JAVA  servlet/prescription/PrescriptionPaymentServlet.java  /prescriptions/pay
+  JAVA  servlet/prescription/CorrectionUploadServlet.java     /prescriptions/correct
+  JAVA  servlet/prescription/CancelPrescriptionServlet.java   /prescriptions/delete
+  JAVA  servlet/prescription/PrescriptionFileServlet.java     /prescriptions/file
+  JAVA  servlet/prescription/PharmacistDashboardServlet.java  /pharmacist/dashboard
+  JAVA  servlet/prescription/ReviewPrescriptionServlet.java   /pharmacist/review
+  JAVA  servlet/prescription/DeletePrescriptionServlet.java   /pharmacist/delete
+  VIEWS prescription/upload.jsp
+  VIEWS prescription/my-prescriptions.jsp
+  VIEWS prescription/correct.jsp
+  VIEWS prescription/dashboard.jsp
+  VIEWS prescription/review.jsp
+  VIEWS prescription/view.jsp
+  VIEWS prescription/pay.jsp
+  VIEWS prescription/items-table.jspf       (the medicines table)
+  VIEWS prescription/file-field.jspf        (the drag & drop file box)
+  src/main/webapp/js/prescription.js
+  src/main/webapp/WEB-INF/sample-uploads/   demo prescription files
+  (+ the "Module 05" sections of database/schema.sql and sample-data.sql)
+
+
+
+---------------------------------------------------------------------
+ MODULE 06 - DELIVERY TRACKING AND NOTIFICATION
+ Owner: Deshabhi R. G. S.
+---------------------------------------------------------------------
+
+
+Database tables: deliveries, notifications
+
+Already done (early, because module 05 needs it): notifications table,
+NotificationDAO, NotificationService.notify(), the Notifications page and
+the bell in the menu. Still to build: delivery tracking.
+
+Files:
+  JAVA  model/Delivery.java
+  JAVA  model/DeliveryStatus.java
+  JAVA  model/Notification.java
+  JAVA  dao/DeliveryDAO.java
+  JAVA  dao/NotificationDAO.java
+  JAVA  dao/impl/DeliveryDAOImpl.java
+  JAVA  dao/impl/NotificationDAOImpl.java
+  JAVA  service/DeliveryService.java
+  JAVA  service/NotificationService.java
+  JAVA  servlet/delivery/TrackDeliveryServlet.java          /deliveries/track
+  JAVA  servlet/delivery/ManageDeliveriesServlet.java       /staff/deliveries
+  JAVA  servlet/delivery/UpdateDeliveryStatusServlet.java   /staff/deliveries/update
+  JAVA  servlet/delivery/NotificationsServlet.java          /notifications
+  VIEWS delivery/track.jsp
+  VIEWS delivery/manage-deliveries.jsp
+  VIEWS delivery/notifications.jsp
+
+
+---------------------------------------------------------------------
+ SHARED FILES - WHOLE TEAM
+
+---------------------------------------------------------------------
+  pom.xml                                   Maven build and libraries
+  .gitignore
+  README.md                                 project guide
+  database/create-database.sql              creates MediSysDB + app login
+  database/schema.sql                       all database tables
+  database/sample-data.sql                  demo data
+  src/main/resources/db.properties.example  copy to db.properties
+  JAVA  config/DBConnection.java            opens database connections
+  JAVA  filter/AuthFilter.java              login and role checks
+  JAVA  service/ValidationException.java    error used by all services
+  JAVA  util/SessionUtil.java               logged in user + messages
+  JAVA  util/TextUtil.java                  HTML escaping and helpers
+  JAVA  util/AppInitListener.java           runs when the app starts
+  JAVA  util/JsonUtil.java                  small JSON answers for JavaScript
+  JAVA  storage/FileStorage.java            where uploaded files are kept (interface)
+  JAVA  storage/LocalFileStorage.java       ... in a local folder
+  JAVA  storage/StorageFactory.java         picks the storage from app.properties
+  src/main/resources/app.properties.example optional settings (storage)
+  src/main/webapp/WEB-INF/web.xml           app settings
+  src/main/webapp/index.jsp                 home page
+  src/main/webapp/css/style.css             one stylesheet for all pages
+  src/main/webapp/js/app.js                 shared JavaScript helpers
+  VIEWS common/header.jspf                  top of every page + menu
+  VIEWS common/footer.jspf                  bottom of every page
+  VIEWS common/error.jsp                    404 / 500 page
+  src/main/webapp/images/favicon.svg        browser tab icon
+
+
+  - Never commit db.properties (it holds your password).
