@@ -522,8 +522,37 @@ app.put('/api/notifications/:user_id/read', async (req, res) => {
 });
 
 // START SERVER
+// ==========================================
+// --- START SERVER ---
+// ==========================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
-    console.log(`[SERVER] Running on http://localhost:${PORT}`);
-    try { await getDbPool(); } catch (e) {}
+
+async function startServer() {
+    try {
+        // 1. Establish database connection first
+        await getDbPool();
+
+        // 2. Start the Express server only after DB is ready
+        const server = app.listen(PORT, () => {
+            console.log(`[SERVER] Running on http://localhost:${PORT}`);
+        });
+
+        // 3. Catch any hidden server errors
+        server.on('error', (err) => {
+            console.error('[FATAL] Server encountered an error:', err);
+        });
+
+    } catch (err) {
+        console.error('[FATAL] Failed to start application:', err);
+    }
+}
+
+// Global error handlers to prevent silent crashes
+process.on('uncaughtException', (err) => {
+    console.error('[FATAL] Uncaught Exception:', err);
 });
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('[FATAL] Unhandled Rejection:', reason);
+});
+
+startServer();
