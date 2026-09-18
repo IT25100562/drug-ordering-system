@@ -1,23 +1,53 @@
+=====================================================================
+ MediSys - who owns what, and what to know before the viva
+ SE2030 Software Engineering - group project
+=====================================================================
 
+How to use this file
+  1. Find YOUR module below. Open every file in its list and read it -
+     the comments at the top of each class explain what it does.
+  2. Run the app and do the "Demo" steps for your module yourself.
+  3. Read "Know this" and answer the "Viva questions" out loud without
+     looking. If you can't, open the file named in the answer.
+  4. Everyone must also know the "WHOLE TEAM" part at the end
+     (architecture, design patterns, security, login) - the examiners
+     can ask anyone about it.
 
+  The spec says: "Any work that cannot be adequately explained by the
+  student will be treated as unauthorised assistance." Know your code.
 
-
+Short names used below
   JAVA  = src/main/java/com/medisys/
   VIEWS = src/main/webapp/WEB-INF/views/
+  Demo logins: see README.md (all customers: Customer@123,
+  admin@medisys.lk / Admin@123, pharmacist@medisys.lk / Pharma@123,
+  delivery@medisys.lk and rider2@medisys.lk / Delivery@123)
+
+Every module is built the same way (be able to say this):
+  browser -> AuthFilter (login / role check) -> Servlet (reads the form)
+  -> Service (business rules + validation) -> DAO interface -> DAO impl
+  (SQL with PreparedStatement) -> SQL Server.
+  The servlet then forwards to a JSP in WEB-INF/views (or redirects
+  after a POST).
 
 
 
----------------------------------------------------------------------
+=====================================================================
  MODULE 01 - SHOPPING CART AND WISHLIST
  Owner: Amadini G. G. A.
----------------------------------------------------------------------
+=====================================================================
+
+What it does
+  Customers add medicines to a cart, change quantities, remove them,
+  and keep a wishlist ("save for later" / heart button). The cart is
+  what module 02 turns into an order.
 
 Database tables: cart_items, wishlist_items
 
 Files:
   JAVA  model/CartItem.java
   JAVA  model/WishlistItem.java
-  JAVA  model/Cart.java
+  JAVA  model/Cart.java                             (lines + subtotal + isReadyForCheckout)
   JAVA  dao/CartDAO.java
   JAVA  dao/WishlistDAO.java
   JAVA  dao/impl/CartDAOImpl.java
@@ -38,12 +68,68 @@ Files:
   src/main/webapp/js/cart.js
   (+ the "Module 01" sections of database/schema.sql and sample-data.sql)
 
+CRUD
+  Create  add to cart / add to wishlist
+  Read    cart page, wishlist page, menu badges
+  Update  change the quantity (- / + stepper), move wishlist -> cart
+  Delete  remove a line, empty the cart, remove from wishlist
+
+Know this
+  - CartService.addToCart(): asks module 03 for the medicine
+    (MedicineService.getAvailableMedicine) - it must be on sale (not
+    discontinued, not expired, in stock).
+  - A PRESCRIPTION-ONLY medicine never goes into the cart:
+    PrescriptionRequiredException sends the customer to
+    /prescriptions/upload (module 05) instead.
+  - Quantity per medicine: 1 .. min(stock, 10) (MAX_QUANTITY_PER_ITEM).
+    Adding the same medicine again raises the quantity (capped).
+  - The table has UNIQUE (user_id, medicine_id). If two clicks arrive at
+    the same moment, SQL Server error 2627/2601 (duplicate key) is caught
+    and turned into "increase the quantity" instead of a crash.
+  - The cart is checked again every time it is shown (price / stock may
+    have changed). Cart.isReadyForCheckout() is false if any line has a
+    problem, and checkout is blocked until it is fixed.
+  - Every query uses the logged-in user's id, so nobody can see or change
+    another customer's cart.
+  - Smooth updates: every button is a normal HTML form (works without
+    JavaScript). cart.js sends the form with fetch() in the background;
+    the servlet sees "wants JSON" (JsonUtil.wantsJson) and answers JSON
+    (CartReply) so the page updates without reloading.
+  - cart_items / wishlist_items use ON DELETE CASCADE on the user.
+
+Connections
+  01 -> 03 checks the medicine is available.
+  01 -> 05 prescription-only medicines go to the upload page.
+  01 -> 02 checkout reads the cart (getCart) and removes the bought lines.
+
+Demo (2 minutes)
+  Log in as nimal@example.com -> Medicines -> Add to Cart -> heart a
+  medicine -> Cart: + / -, Save for later, Remove -> Wishlist: Move to
+  cart. Try "Add" on Amoxicillin (prescription only) -> upload page.
+
+Viva questions
+  Q: Why can't prescription medicines go in the cart?
+     A: A pharmacist must check the prescription first (module 05); the
+        customer pays for the pharmacist's list instead.
+  Q: What stops quantity 50 of a medicine with 8 in stock?
+     A: CartService checks 1..min(stock, 10); checked again at checkout,
+        and module 02 reduces stock with "WHERE stock_quantity >= ?".
+  Q: How does the page update without reloading?
+     A: cart.js + fetch(); the servlet returns JSON when asked.
+  Q: What happens if the customer double-clicks "Add"?
+     A: The UNIQUE constraint + catching error 2627 = quantity goes up once.
 
 
----------------------------------------------------------------------
+
+=====================================================================
  MODULE 02 - ORDER PLACEMENT AND CHECKOUT
  Owner: Hewage B. H. A. S.
----------------------------------------------------------------------
+=====================================================================
+
+What it does
+  Turns the cart (or an approved prescription) into a paid order with a
+  test card payment, shows the customer's orders, and lets the pharmacy
+  pack or cancel them.
 
 Database tables: orders, order_items, payments, order_status_history
 
@@ -75,13 +161,73 @@ Files:
   VIEWS common/checkout-fields.jspf         (delivery + card form, also used by module 05)
   (+ the "Module 02" sections of database/schema.sql and sample-data.sql)
 
+CRUD
+  Create  place an order (checkout / pay a prescription)
+  Read    my orders, order page, admin list with search and tabs
+  Update  mark as packed, cancel (status changes)
+  Delete  cancel = soft delete (the order is kept for the records)
+
+Know this
+  - Status flow (OrderStatus enum):
+      PAID -> PROCESSING (packed) -> SHIPPED -> DELIVERED, or CANCELLED.
+    The admin only does PAID -> PROCESSING (nextForPharmacy()). SHIPPED
+    and DELIVERED are set by the rider through module 06.
+  - Delivery fee Rs. 300, FREE from Rs. 2,500 (OrderService.DELIVERY_FEE,
+    FREE_DELIVERY_FROM, deliveryFeeFor()).
+  - OrderDAOImpl.create() is ONE TRANSACTION (setAutoCommit(false) ...
+    commit / rollback):
+      1. (prescription order) lock the prescription, check it is payable
+      2. take stock:  UPDATE ... SET stock = stock - ? WHERE id = ?
+         AND stock_quantity >= ?   (0 rows -> StockShortageException)
+      3. insert the order, 4. its lines, 5. the payment,
+      6. the first history row, 6b. the delivery (module 06),
+      7. link the prescription OR remove the bought lines from the cart.
+    Anything fails -> rollback -> nothing is saved, card not "charged".
+  - expectedTotal: the page sends the total it showed. If a price changed
+    meanwhile, the order is refused and the new total shown.
+  - PaymentService: test card only - Luhn check, MM/YY in the future,
+    3-4 digit CVV. Only the LAST 4 DIGITS are stored, never the card.
+  - Cancel: customer only while PAID; pharmacy while PAID or PROCESSING
+    with a reason (5-300 chars). Cancel (one transaction) = stock back,
+    payment REFUNDED, prescription freed, delivery cancelled.
+  - Double click / two admins: the form sends the status it saw
+    ("current"); the UPDATE has "WHERE status = ?" so only one wins.
+  - A customer opening someone else's order gets 404 (getOwnOrder).
+  - Name and price are COPIED into order_items, so old orders stay right
+    when a medicine is renamed or its price changes.
+
+Connections
+  01 -> 02 cart; 05 -> 02 placePrescriptionOrder(); 02 -> 03 stock;
+  02 -> 06 creates / cancels the delivery; 06 -> 02 sets SHIPPED/DELIVERED.
+
+Demo (2 minutes)
+  nimal -> Cart -> Proceed to checkout -> card 4242 4242 4242 4242, any
+  future MM/YY, CVV 123 -> thank-you page -> Orders -> Cancel (while
+  "Order placed"). Admin -> Orders -> Mark: Being packed -> open order.
+
+Viva questions
+  Q: What is a transaction and where do you use one?
+     A: Several SQL statements that succeed or fail together; create()
+        and cancel() in OrderDAOImpl.
+  Q: How do you stop stock going below zero when two people order the
+     last box at the same time?
+     A: The conditional UPDATE "... AND stock_quantity >= ?" - the second
+        one updates 0 rows -> StockShortageException -> rollback.
+  Q: Do you store card numbers?  A: No, only the last 4 digits.
+  Q: Why copy the medicine name and price into order_items?
+     A: History must not change when the catalog changes.
 
 
----------------------------------------------------------------------
+
+=====================================================================
  MODULE 03 - MEDICINE CATALOG AND INVENTORY
  Owner: Divisekara A. W. D. M. D. M. B.
----------------------------------------------------------------------
+=====================================================================
 
+What it does
+  The public medicine catalog (search, categories, details) and the
+  admin inventory: add / edit medicines, restock, discontinue, and
+  manage categories.
 
 Database tables: medicines, categories
 
@@ -109,29 +255,79 @@ Files:
   src/main/webapp/js/medicine.js
   (+ the "Module 03" sections of database/schema.sql and sample-data.sql)
 
+CRUD
+  Create  add medicine, add category
+  Read    catalog + search + details, inventory table with totals
+  Update  edit medicine, restock, restore a discontinued one
+  Delete  discontinue (SOFT delete: is_discontinued = 1), delete category
+
+Know this
+  - Soft delete: a medicine is never really deleted, because old orders
+    and prescriptions point to it. is_discontinued = 1 hides it.
+  - The catalog hides discontinued and expired medicines; opening one
+    directly gives 404 (getCatalogMedicine).
+  - Validation (MedicineService.saveMedicine, repeated in medicine.js for
+    quick feedback): name 2-150, category and dosage form from the lists,
+    price > 0 and <= 1,000,000 with max 2 decimals, stock 0-100000,
+    reorder level 0-10000, expiry date not in the past, no two medicines
+    with the same name AND strength. All errors are shown together and
+    the typed values are kept.
+  - Restock 1-10000; a discontinued medicine must be restored first.
+  - Low stock = stock <= reorder level (shown in the inventory and in
+    the module 04 report).
+  - A category can only be deleted when no medicine uses it (foreign key
+    + a friendly message).
+  - reduceStock() never lets stock go below 0 (conditional UPDATE).
+  - requires_prescription = 1 marks prescription-only medicines
+    (module 01 sends those customers to module 05).
+
+Connections
+  03 -> 01 availability; 03 -> 02 stock; 03 -> 05 the pharmacist picks
+  medicines from the catalog; 03 -> 04 inventory report.
+
+Demo (2 minutes)
+  Guest: Medicines -> search "pan" -> category filter -> open a medicine.
+  Admin -> Inventory: tabs (low stock, out of stock, expired), add a
+  medicine with a wrong price (see the errors), restock Brufen,
+  discontinue + restore, Categories: add / try to delete a used one.
+
+Viva questions
+  Q: Why soft delete?  A: Orders and prescriptions reference the
+     medicine; deleting it would break them (foreign keys).
+  Q: Where is validation done - browser or server?
+     A: Both; the SERVER (MedicineService) is the one that counts,
+        JavaScript is only for quick feedback.
+  Q: How does search avoid SQL injection?
+     A: PreparedStatement with ? parameters; LIKE special characters
+        ([ % _) are escaped.
 
 
----------------------------------------------------------------------
+
+=====================================================================
  MODULE 04 - REPORTS AND ANALYTICS
  Owner: Kaweesha P. M. G. S.
----------------------------------------------------------------------
+=====================================================================
 
-Database tables: saved_reports (the reports themselves read the other
+What it does
+  The admin's view of how the pharmacy is doing for any period: sales,
+  best sellers, categories, prescriptions, deliveries, customers and
+  inventory - with charts, CSV downloads, printing, and saved reports.
+  (User management used to be module 04; it is now a minor function -
+  see below. Kaweesha built both.)
+
+Database tables: saved_reports (the reports themselves READ the other
 modules' tables: orders, order_items, prescriptions, deliveries,
-delivery_updates, medicines, categories, users)
-
-Status: done (dashboard for any period, charts, CSV downloads, print,
-saved reports with create / read / update / delete).
+delivery_updates, medicines, categories, users - nothing is copied)
 
 Files:
-  JAVA  model/Report.java
-  JAVA  model/ReportPeriod.java
-  JAVA  model/ReportSummary.java
-  JAVA  model/ReportRow.java
+  JAVA  model/Report.java                       (everything on the page)
+  JAVA  model/ReportPeriod.java                 (from / to dates)
+  JAVA  model/ReportSummary.java                (the headline numbers)
+  JAVA  model/ReportRow.java                    (one line of any table / chart)
   JAVA  model/SavedReport.java
   JAVA  dao/ReportDAO.java
   JAVA  dao/SavedReportDAO.java
-  JAVA  dao/impl/ReportDAOImpl.java
+  JAVA  dao/impl/ReportDAOImpl.java             (all the report SQL)
   JAVA  dao/impl/SavedReportDAOImpl.java
   JAVA  service/ReportService.java
   JAVA  servlet/report/ReportsServlet.java          /admin/reports
@@ -141,58 +337,79 @@ Files:
   VIEWS report/dashboard.jsp
   VIEWS report/saved-reports.jsp
   VIEWS report/saved-report.jsp
+  (+ the "Module 04" sections of database/schema.sql and sample-data.sql:
+     3 demo customers with 30 orders over 75 days)
 
-Demo data: the "Module 04" section at the end of database/sample-data.sql
-(3 customers, 30 orders over 75 days).
+CRUD
+  Create  "Save this report" (a snapshot of the period's numbers)
+  Read    dashboard, saved reports list, one saved report
+  Update  edit the title and notes of a saved report
+  Delete  delete a saved report
+  (the live report itself is read-only on purpose)
+
+Know this
+  - Periods: Last 7 / 30 / 90 days, This month, Last month, This year, or
+    custom From / To (ReportService.resolvePeriod). Custom dates must be
+    real dates, from <= to, to not in the future, from >= 2020, at most
+    366 days. Bad dates -> message + back to the last 30 days.
+  - SQL does the adding up (ReportDAOImpl): COUNT, SUM, AVG, GROUP BY,
+    CASE WHEN inside SUM, sub-queries (riderPerformance), TOP (?).
+  - Date range = "created_at >= from AND created_at < the day after to",
+    so the whole last day is included whatever the time.
+  - "Sales" = orders NOT cancelled, counted on the day they were placed.
+    Cancelled orders are shown separately with the refunded amount.
+  - Approval rate = approved / (approved + rejected); on time = delivered
+    on or before the expected day (CAST(delivered_at AS DATE) <=
+    estimated_date).
+  - fillMissingDays(): the database only returns days with sales; Java
+    adds the empty days with 0 so the chart has every day.
+  - Charts are plain HTML + CSS bars (no library): bar size = value as a
+    % of the biggest value (size() in dashboard.jsp). Every bar has a
+    tooltip (mouse AND keyboard: tabindex + data-tip) and every chart has
+    a table view - accessibility.
+  - CSV export (exportCsv): values quoted, quotes doubled, UTF-8 "BOM"
+    so Excel shows names right, and "CSV injection" protection: a value
+    starting with = + - @ gets a ' in front so Excel won't run it as a
+    formula.
+  - Saved report = the headline numbers FROZEN on the day it was saved.
+    Its page shows "when saved" next to "today" for the same period, so a
+    late cancellation shows up as a change.
+  - Only ADMIN can open /admin/* (AuthFilter).
+
+Connections
+  Reads 01/02/03/05/06 data; nothing else depends on it.
+
+Demo (3 minutes)
+  Admin -> Reports -> switch 7 / 30 / 90 days -> hover the bars -> Show
+  as table -> Download CSV (open in Excel) -> Save this report ->
+  place an order as nimal -> open the saved report: "Today" changed.
+
+Viva questions
+  Q: Why is reports a major function and user management a minor one?
+     A: Every system needs login/accounts; reports are specific value for
+        the pharmacy owner (decisions: what sells, stock, rider speed).
+  Q: Why calculate in SQL and not in Java?
+     A: The database is built for it - GROUP BY/SUM on the server is
+        faster and sends only the totals over the network.
+  Q: What is CSV injection?  A: A cell starting with = runs as an Excel
+     formula; we prefix it with '.
+  Q: Why does a saved report keep its own numbers?
+     A: To compare periods later; live numbers can change afterwards.
+  Q: Why "< the day after" instead of "<= to"?
+     A: created_at has a time; "<= 2026-09-17" would miss 17 Sep 10:00.
 
 
 
----------------------------------------------------------------------
- MINOR FUNCTIONS - USER ACCOUNTS AND ROLES
- (was module 04; every module uses it. Built by Kaweesha P. M. G. S.)
----------------------------------------------------------------------
-
-Database tables: users
-
-Status: done (login, register, forgot password, profile with photo and
-history, admin users page, staff accounts, red flags).
-
-Files:
-  JAVA  model/User.java
-  JAVA  model/Role.java
-  JAVA  dao/UserDAO.java
-  JAVA  dao/impl/UserDAOImpl.java
-  JAVA  service/UserService.java
-  JAVA  util/PasswordUtil.java
-  JAVA  servlet/user/LoginServlet.java              /login
-  JAVA  servlet/user/LogoutServlet.java             /logout
-  JAVA  servlet/user/RegisterServlet.java           /register
-  JAVA  servlet/user/ForgotPasswordServlet.java     /forgot-password
-  JAVA  servlet/user/ProfileServlet.java            /account/profile
-  JAVA  servlet/user/ProfilePhotoServlet.java       /account/photo
-  JAVA  servlet/user/UserPhotoServlet.java          /users/photo
-  JAVA  servlet/user/FlagUserServlet.java           /users/flag
-  JAVA  servlet/user/ManageUsersServlet.java        /admin/users
-  VIEWS user/login.jsp
-  VIEWS user/register.jsp
-  VIEWS user/forgot-password.jsp
-  VIEWS user/profile.jsp
-  VIEWS user/manage-users.jsp
-  FILES WEB-INF/sample-uploads/avatar-*.png          demo profile photos
-
-Hooks in other modules' files:
-  PrescriptionDAOImpl / Prescription     customer's red flag and photo
-  ReviewPrescriptionServlet, review.jsp   customer card + Flag / Remove flag
-  dashboard.jsp                           photo and red flag per row
-  AuthFilter                              "register to upload" message, /users/*
-  header.jspf                             avatar(), Register link, Users link
-
-
-
----------------------------------------------------------------------
+=====================================================================
  MODULE 05 - PRESCRIPTION UPLOAD AND VERIFICATION
  Owner: Perera D. A. A. N. S.
----------------------------------------------------------------------
+=====================================================================
+
+What it does
+  Keeps restricted medicines behind a pharmacist's check. The customer
+  uploads a photo/PDF; the senior pharmacist reads it, lists the
+  medicines with "how to use", and approves / rejects / asks for a
+  correction; the customer then pays that prescription.
 
 Database tables: prescriptions, prescription_items
 
@@ -230,17 +447,74 @@ Files:
   src/main/webapp/WEB-INF/sample-uploads/   demo prescription files
   (+ the "Module 05" sections of database/schema.sql and sample-data.sql)
 
+CRUD
+  Create  upload, send a corrected copy
+  Read    my prescriptions, dashboard (filter by status), review page
+  Update  approve (with medicines) / reject / request correction
+  Delete  customer deletes an unpaid one; pharmacist deletes invalid or
+          expired ones (the stored file is deleted too)
+
+Know this
+  - Status (PrescriptionStatus): PENDING ("Verification Pending") ->
+    APPROVED ("Approved for Checkout") / REJECTED / CORRECTION_REQUESTED
+    -> (new copy) -> PENDING.  Paid = APPROVED + order_id set.
+  - Only REGISTERED customers can upload (AuthFilter sends guests to
+    login / register and back afterwards).
+  - File rules (PrescriptionService.checkFile / detectType): JPG, PNG or
+    PDF only, max 5 MB. The REAL type is read from the first bytes
+    ("magic numbers"), not trusted from the file name.
+  - The stored file gets a random name (UUID) made by the server, so a
+    name like "..\..\x" can't write outside the uploads folder.
+  - Files are NOT in the web folder. PrescriptionFileServlet serves them
+    only to the owner or a pharmacist; anyone else gets 404.
+  - Reject / correction need a note (min 5 chars). A prescription can
+    only be decided once, while PENDING (conditional UPDATE).
+  - Approve needs 1-20 medicines, quantity 1-100, "how to use" 3-300
+    chars, and the price is copied at approval.
+  - At most 5 prescriptions waiting per customer (MAX_OPEN).
+  - Expired = uploaded more than 30 days ago and not paid. A paid
+    prescription can never be deleted; payment only after approval.
+  - Everything shown is escaped (TextUtil.html) - a note with <script>
+    does not run.
+  - Storage is behind the FileStorage interface (Strategy pattern), so
+    moving to Cloudinary only needs a new class.
+  - The review page also shows the customer card (photo, NIC, age,
+    WhatsApp, history) and the red flag (minor function).
+
+Connections
+  01 -> 05 (prescription-only medicines), 05 -> 02 (payment = order),
+  05 -> 06 notifications, 03 medicines listed by the pharmacist.
+
+Demo (3 minutes)
+  nimal -> Upload prescription (try a .txt: refused) -> pharmacist ->
+  Verification Dashboard -> review: Request correction (note required)
+  -> nimal sends a new copy -> pharmacist lists 2 medicines + dosage ->
+  Approve -> nimal -> Pay -> order created.
+
+Viva questions
+  Q: How do you know a file is really a PNG?
+     A: detectType() checks the first bytes (89 50 4E 47 ...), not the
+        extension.
+  Q: Can customer A open customer B's prescription file?
+     A: No - the servlet checks ownership; 404 for everyone else.
+  Q: Why can't the pharmacist approve twice?
+     A: The UPDATE has "WHERE status = 'PENDING'".
+  Q: Why a random stored file name?  A: Path traversal protection and
+     no name clashes.
 
 
----------------------------------------------------------------------
+
+=====================================================================
  MODULE 06 - DELIVERY TRACKING AND NOTIFICATION
  Owner: Deshabhi R. G. S.
----------------------------------------------------------------------
+=====================================================================
 
+What it does
+  Every paid order gets a delivery. The admin assigns a rider, the rider
+  moves it step by step, and the customer tracks it and gets a
+  notification at every step.
 
 Database tables: deliveries, delivery_updates, notifications
-
-Status: done (delivery tracking, rider assignment, notifications with delete).
 
 Files:
   JAVA  model/Delivery.java
@@ -264,25 +538,146 @@ Files:
   VIEWS delivery/delivery-details.jsp
   VIEWS delivery/delivery-parts.jspf        (progress bar + history, used by both pages)
   VIEWS delivery/notifications.jsp
+  (+ the "Module 06" sections of database/schema.sql and sample-data.sql)
 
 Hooks in other modules' files (marked "module 06"):
   OrderDAOImpl.create / cancel   creates / cancels the delivery in the order's transaction
   OrderStatus.nextForPharmacy    the admin only marks orders as packed
   order pages                    delivery card and Track buttons
 
+CRUD
+  Create  delivery (automatically with the order), notifications
+  Read    tracking page, rider / admin lists, notifications page
+  Update  assign rider, status steps, mark notifications read
+  Delete  delete a notification, clear read notifications
 
----------------------------------------------------------------------
- SHARED FILES - WHOLE TEAM
+Know this
+  - Status (DeliveryStatus.nextSteps()): PENDING ("Preparing") ->
+    DISPATCHED -> OUT_FOR_DELIVERY -> DELIVERED; OUT_FOR_DELIVERY ->
+    FAILED (reason required) -> OUT_FOR_DELIVERY again; PENDING ->
+    CANCELLED only when the order is cancelled.
+  - The delivery is created INSIDE the order's transaction
+    (DeliveryDAO.createForOrder(con, orderId)), so a paid order can never
+    be missing its delivery. Due 2 days later (DELIVERY_DAYS).
+  - updateStatus() is one transaction: DISPATCHED also moves the order
+    PROCESSING -> SHIPPED; DELIVERED moves it SHIPPED -> DELIVERED, and a
+    history row is added for both.
+  - Only the admin assigns riders, only to active DELIVERY_STAFF. A
+    parcel can't leave without a rider (service check + CHECK constraint
+    ck_delivery_rider) or before the order is packed.
+  - A rider sees and changes ONLY their own deliveries (404 otherwise);
+    a customer tracks only their own orders.
+  - Double click: the form sends the status it saw ("current") and the
+    UPDATE has "WHERE status = ?".
+  - NotificationService.notify() is used by every module. A failed
+    notification is only logged - it must not undo the action.
+  - Deleting a notification uses "WHERE id = ? AND user_id = ?" so
+    nobody can delete someone else's.
 
----------------------------------------------------------------------
+Connections
+  02 -> 06 create/cancel with the order; 06 -> 02 SHIPPED/DELIVERED;
+  05/02/06 -> notifications; 06 -> 04 delivery report.
+
+Demo (3 minutes)
+  Admin -> Orders: mark ORD-000003 packed -> Deliveries: give it to
+  Ruwan -> log in delivery@medisys.lk -> Picked up -> On the way ->
+  Could not deliver (reason) -> On the way -> Delivered -> nimal ->
+  Orders -> Track + the bell.
+
+Viva questions
+  Q: Why create the delivery in the order's transaction?
+     A: So there is never a paid order without a delivery.
+  Q: How do order status and delivery status stay in step?
+     A: They change in the same transaction in DeliveryDAOImpl.
+  Q: What happens if two riders click at the same time?
+     A: "WHERE status = ?" - the second update changes 0 rows -> message.
+
+
+
+=====================================================================
+ MINOR FUNCTIONS - USER ACCOUNTS AND ROLES (whole team uses these)
+ (was module 04 - built by Kaweesha P. M. G. S.;
+  everyone must be able to explain login, roles and the session)
+=====================================================================
+
+Database tables: users
+
+Status: done (login, register, forgot password, profile with photo and
+history, admin users page, staff accounts, red flags).
+
+Files:
+  JAVA  model/User.java
+  JAVA  model/Role.java
+  JAVA  dao/UserDAO.java
+  JAVA  dao/impl/UserDAOImpl.java
+  JAVA  service/UserService.java
+  JAVA  util/PasswordUtil.java
+  JAVA  servlet/user/LoginServlet.java              /login
+  JAVA  servlet/user/LogoutServlet.java             /logout
+  JAVA  servlet/user/RegisterServlet.java           /register
+  JAVA  servlet/user/ForgotPasswordServlet.java     /forgot-password
+  JAVA  servlet/user/ProfileServlet.java            /account/profile
+  JAVA  servlet/user/ProfilePhotoServlet.java       /account/photo
+  JAVA  servlet/user/UserPhotoServlet.java          /users/photo
+  JAVA  servlet/user/FlagUserServlet.java           /users/flag
+  JAVA  servlet/user/ManageUsersServlet.java        /admin/users
+  VIEWS user/login.jsp
+  VIEWS user/register.jsp
+  VIEWS user/forgot-password.jsp
+  VIEWS user/profile.jsp
+  VIEWS user/manage-users.jsp
+  FILES WEB-INF/sample-uploads/avatar-*.png          demo profile photos
+
+Hooks in other modules' files:
+  PrescriptionDAOImpl / Prescription     customer's red flag and photo
+  ReviewPrescriptionServlet, review.jsp   customer card + Flag / Remove flag
+  dashboard.jsp                           photo and red flag per row
+  AuthFilter                              "register to upload" message, /users/*
+  header.jspf                             avatar(), Register link, Users link
+
+Know this
+  - Roles (Role enum): CUSTOMER, PHARMACIST, ADMIN, DELIVERY_STAFF.
+    AuthFilter.allowedRoles() decides who may open which path
+    (/admin/* admin, /pharmacist/* pharmacist, /staff/* rider + admin,
+    /cart /orders /prescriptions ... customer).
+  - Passwords: PasswordUtil = PBKDF2 (120,000 rounds) with a random salt
+    per user. Never stored in plain text; compared in constant time.
+  - Login gives the SAME message for "no such email" and "wrong password"
+    and checks a dummy hash for unknown emails (same time) - attackers
+    can't find out which emails exist.
+  - Login makes a NEW session (SessionUtil.login) - session fixation
+    protection. The User object in the session never holds the hash.
+  - returnTo only accepts paths inside the app (TextUtil.isSafeLocalPath)
+    - no "open redirect" to other sites.
+  - Register: name, NIC, date of birth, phone, WhatsApp, email, password.
+    Email and NIC unique; NIC old (9 digits + V/X) or new (12 digits) and
+    its birth year must match the date of birth; 18+; password 8+ with a
+    letter and a number; phones stored as 0771234567.
+  - Forgot password: customer proves who they are with email + NIC +
+    date of birth (no e-mail server); staff are reset by the admin.
+  - Profile photo: JPG/PNG, max 2 MB, real type checked; only the owner,
+    pharmacists and admins can see it (/users/photo).
+  - Red flag: a pharmacist/admin flags a misbehaving customer with a
+    reason. NOT a ban - the customer can still use everything and never
+    sees it. Customers are never switched off; only staff accounts can be.
+
+
+
+=====================================================================
+ WHOLE TEAM - everyone must be able to explain this
+=====================================================================
+
+Shared files (agree with the team before changing them)
   pom.xml                                   Maven build and libraries
   .gitignore
   README.md                                 project guide
+  SETUP.md                                  install + run guide
   database/create-database.sql              creates MediSysDB + app login
   database/schema.sql                       all database tables
   database/sample-data.sql                  demo data
   src/main/resources/db.properties.example  copy to db.properties
-  JAVA  config/DBConnection.java            opens database connections
+  src/main/resources/app.properties.example optional settings (storage)
+  JAVA  config/DBConnection.java            database connections (pool)
   JAVA  filter/AuthFilter.java              login and role checks
   JAVA  service/ValidationException.java    error used by all services
   JAVA  util/SessionUtil.java               logged in user + messages
@@ -292,8 +687,7 @@ Hooks in other modules' files (marked "module 06"):
   JAVA  storage/FileStorage.java            where uploaded files are kept (interface)
   JAVA  storage/LocalFileStorage.java       ... in a local folder
   JAVA  storage/StorageFactory.java         picks the storage from app.properties
-  src/main/resources/app.properties.example optional settings (storage)
-  src/main/webapp/WEB-INF/web.xml           app settings
+  src/main/webapp/WEB-INF/web.xml           app settings (UTF-8, error pages, session)
   src/main/webapp/index.jsp                 home page
   src/main/webapp/css/style.css             one stylesheet for all pages
   src/main/webapp/js/app.js                 shared JavaScript helpers
@@ -302,5 +696,76 @@ Hooks in other modules' files (marked "module 06"):
   VIEWS common/error.jsp                    404 / 500 page
   src/main/webapp/images/favicon.svg        browser tab icon
 
+Technologies
+  Java 17+, Jakarta Servlets + JSP (jakarta.*, Tomcat 11), SQL Server
+  with plain JDBC (mssql-jdbc driver), Maven, HTML + one CSS file +
+  plain JavaScript. No frameworks (no Spring, no Hibernate).
+
+Design patterns (the spec gives marks for at least 2 - we have 4)
+  1. SINGLETON - DBConnection.getInstance(): one object holds the
+     connection POOL for the whole app (Tomcat DBCP; opening a SQL Server
+     connection takes ~250 ms, the pool reuses them).
+  2. DAO - every table group has an interface (dao/) and a JDBC class
+     (dao/impl/). Services only know the interface, so the SQL can change
+     (or the database) without touching the rules.
+  3. STRATEGY - FileStorage interface with LocalFileStorage; a cloud
+     storage (e.g. Cloudinary) would be another class.
+  4. FACTORY - StorageFactory.getStorage() picks the FileStorage class
+     from app.properties.
+  (Also: MVC-style layers - servlet = controller, JSP = view,
+   model/service/dao = model.)
+
+Security - be ready for "how do you protect against ...?"
+  SQL injection      PreparedStatement with ? everywhere, never string +
+  XSS                TextUtil.html() escapes every value printed in a JSP
+  Passwords          PBKDF2 + salt (PasswordUtil), never plain text
+  Access control     AuthFilter checks login + role for protected paths;
+                     services check ownership (other people's data = 404)
+  Session fixation   new session id at login
+  Uploads            type from magic bytes, size limit, random names,
+                     files outside the web folder, served by a servlet
+  Double submits     "WHERE status = ?" conditional updates
+  Open redirect      only local "returnTo" paths accepted
+  CSV injection      ' prefix in exports (module 04)
+  Payment data       only the last 4 card digits are stored
+  Secrets            db.properties / app.properties are git-ignored
+
+Ideas every member should be able to explain
+  - GET shows a page, POST changes data. After a POST we REDIRECT
+    (Post/Redirect/Get) so refreshing doesn't submit twice; a "flash"
+    message (SessionUtil.flash) survives the redirect.
+  - @WebServlet("/path") maps a servlet to a URL (no web.xml needed).
+  - JSPs live in WEB-INF so they can't be opened directly - only through
+    their servlet.
+  - A JSP is compiled into a servlet by Tomcat the first time it runs.
+  - Business rules are in the SERVICE (one place to explain and test);
+    servlets only read the form and choose the page.
+  - ValidationException carries all the error messages of a form, so
+    the user sees every problem at once.
+  - Transactions: setAutoCommit(false) ... commit(), rollback() on error.
+  - Foreign keys, UNIQUE and CHECK constraints in schema.sql protect the
+    data even if the Java code had a bug.
+  - Validation happens on the server; HTML/JavaScript checks are only
+    for comfort.
+
+Ethical considerations (asked in the report and viva)
+  - Privacy: NIC / date of birth / phone only visible to pharmacy staff,
+    not listed on the admin users page; files only for owner/pharmacist.
+  - Fairness: a red flag is a warning, not a ban - customers can still
+    get their medicines.
+  - Safety: prescription medicines only after a pharmacist's approval.
+  - Accessibility: labels on every field, keyboard-usable charts and
+    tooltips, table views, works on phones.
+  - Honesty: the payment page says clearly it is a TEST card.
+
+Before the viva - checklist for each member
+  [ ] I can run the project (SETUP.md) and do my demo without help.
+  [ ] I opened every file in my list and can say what each one does.
+  [ ] I can draw my part of the request flow on paper
+      (form -> servlet -> service -> DAO -> table -> JSP).
+  [ ] I can explain my tables and their relationships (schema.sql).
+  [ ] I can answer my "Viva questions" without looking.
+  [ ] I can explain the design patterns and the security list above.
+  [ ] I know how my module connects to the others.
 
   - Never commit db.properties (it holds your password).
