@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * JDBC implementation of UserDAO (SQL Server).
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public class UserDAOImpl implements UserDAO {

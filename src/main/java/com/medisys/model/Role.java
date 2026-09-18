@@ -4,7 +4,7 @@ package com.medisys.model;
  * The roles a user can have. AuthFilter uses these to protect pages.
  * The names match the "role" column of the users table.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public enum Role {

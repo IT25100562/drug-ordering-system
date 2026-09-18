@@ -90,7 +90,7 @@
 
     <%-- ------------------------------------------------ the details --%>
     <aside class="review-side">
-        <%-- Who uploaded it (module 04): photo, identity, contact, history and the red flag. --%>
+        <%-- Who uploaded it (user accounts): photo, identity, contact, history and the red flag. --%>
         <section class="card customer-card <%= customer.isFlagged() ? "flagged" : "" %>">
             <div class="customer-head">
                 <%= avatar(ctx, customer, "avatar large") %>

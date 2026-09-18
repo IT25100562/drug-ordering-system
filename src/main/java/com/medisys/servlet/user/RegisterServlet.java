@@ -28,7 +28,7 @@ import java.util.Map;
  * After registering, the customer is logged in and sent back to returnTo
  * (e.g. the prescription upload page they wanted to open).
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/register")

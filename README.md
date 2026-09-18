@@ -4,9 +4,8 @@ SE2030 Software Engineering group project. MediSys is a Java web app where custo
 medicines online. Prescription-only medicines are checked by a senior pharmacist before
 the order is released.
 
-> **Status:** modules 01 (cart and wishlist), 03 (catalog and inventory) and
-> 05 (prescription upload and verification) are done, and login and notifications work. The other classes and pages are stubs with their owner and a TODO list.
-> See [Module status](#module-status).
+> **Status:** all six major functions and the minor functions (accounts, login, profile,
+> forgot password, notifications) are done. See [Module status](#module-status).
 
 ## Tech stack
 
@@ -64,6 +63,7 @@ From the command line: `mvn package` builds `target/medisys.war`.
 | Customer | nimal@example.com | Customer@123 |
 | Customer | kasuni@example.com | Customer@123 |
 | Customer (red-flagged) | tharindu@example.com | Customer@123 |
+| Customers with order history (reports) | amaya@, dilan@, ishara@example.com | Customer@123 |
 | Admin | admin@medisys.lk | Admin@123 |
 | Senior Pharmacist | pharmacist@medisys.lk | Pharma@123 |
 | Delivery Staff (rider) | delivery@medisys.lk | Delivery@123 |
@@ -85,7 +85,8 @@ drug-ordering-system/
     │   │   └── impl/              JDBC code (how it is done in SQL Server)
     │   ├── service/               business rules, one class per feature
     │   ├── servlet/               controllers, one folder per module
-    │   │   ├── user/        (04)
+    │   │   ├── user/        (minor functions: accounts, login, profile)
+    │   │   ├── report/      (04)
     │   │   ├── medicine/    (03)
     │   │   ├── cart/        (01)
     │   │   ├── order/       (02)
@@ -115,9 +116,14 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 01 | Shopping Cart and Wishlist | Amadini G. G. A. |
 | 02 | Order Placement and Checkout | Hewage B. H. A. S. |
 | 03 | Medicine Catalog and Inventory | Divisekara A. W. D. M. D. M. B. |
-| 04 | User and Role Management | Kaweesha P. M. G. S. |
+| 04 | Reports and Analytics | Kaweesha P. M. G. S. |
 | 05 | Prescription Upload and Verification | Perera D. A. A. N. S. |
 | 06 | Delivery Tracking and Notification | Deshabhi R. G. S. |
+
+**Minor functions** (supporting features every module uses): register, login / logout,
+forgot password, profile with photo and history, roles and page protection, staff accounts,
+red flags on customers, notifications. User management used to be module 04; it became a
+minor function because every platform needs it, and Reports and Analytics took its place.
 
 ### Files per module
 
@@ -126,7 +132,8 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 | 01 | `CartItem`, `Cart`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartService`, `WishlistService` | `cart/` |
 | 02 | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` (+ `StockShortageException`) | `OrderService`, `PaymentService` | `order/` |
 | 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
-| 04 | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` (+ `avatar()` in `common/header.jspf`) |
+| 04 | `Report`, `ReportPeriod`, `ReportSummary`, `ReportRow`, `SavedReport` | `ReportDAO`, `SavedReportDAO` | `ReportService` | `report/` |
+| minor | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` (+ `avatar()` in `common/header.jspf`) |
 | 05 | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` (+ `PrescriptionRequiredException`) | `prescription/` |
 | 06 | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
 
@@ -138,11 +145,12 @@ The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened di
 
 | Module | URL | Who |
 |--------|-----|-----|
-| 04 | `/login`, `/logout`, `/register`, `/forgot-password` | everyone |
-| 04 | `/account/profile`, `/account/photo` | logged in |
-| 04 | `/users/photo?id=` | the user, pharmacists, admins |
-| 04 | `/users/flag` | pharmacist / admin |
-| 04 | `/admin/users` | admin |
+| minor | `/login`, `/logout`, `/register`, `/forgot-password` | everyone |
+| minor | `/account/profile`, `/account/photo` | logged in |
+| minor | `/users/photo?id=` | the user, pharmacists, admins |
+| minor | `/users/flag` | pharmacist / admin |
+| minor | `/admin/users` | admin |
+| 04 | `/admin/reports`, `/admin/reports/export?type=`, `/admin/reports/saved`, `/admin/reports/saved/view?id=` | admin |
 | 03 | `/medicines`, `/medicines/view?id=` | everyone |
 | 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/restock`, `/admin/medicines/discontinue`, `/admin/categories` | admin |
 | 01 | `/cart`, `/cart/add`, `/cart/update`, `/cart/remove` | customer |
@@ -175,6 +183,8 @@ for DELIVERY_STAFF.
   delivered, the order becomes DELIVERED (`DeliveryDAOImpl.updateStatus`, one transaction).
 - **05, 02, 06 → 06:** anything that needs to tell a user something calls
   `NotificationService.notify(...)`.
+- **01, 02, 03, 05, 06 → 04:** the reports only read the other modules' tables
+  (`ReportDAOImpl`). Nothing is copied, so the numbers always match the rest of the app.
 
 ## Module status
 
@@ -183,11 +193,72 @@ for DELIVERY_STAFF.
 | 01 | Shopping Cart and Wishlist | **done** (see below) |
 | 02 | Order Placement and Checkout | **done** (see below) |
 | 03 | Medicine Catalog and Inventory | **done** (see below) |
-| 04 | User and Role Management | **done** (see below) |
+| 04 | Reports and Analytics | **done** (see below) |
 | 05 | Prescription Upload and Verification | **done** (see below) |
 | 06 | Delivery Tracking and Notification | **done** (see below) |
+| minor | User accounts and roles, notifications | **done** (see below) |
 
-### Module 04: User and Role Management
+### Module 04: Reports and Analytics
+
+The admin's view of how the pharmacy is doing, for any period.
+
+**Pages** (admin only: **Reports** in the menu)
+- `/admin/reports`: pick **Last 7 / 30 / 90 days, This month, Last month, This year**, or
+  your own **From / To** dates. The page shows:
+  - **Headline tiles:** revenue and paid orders, average order (with delivery fees),
+    customers who ordered and new accounts, cancelled orders and the amount refunded.
+  - **Revenue per day:** a bar for every day of the period (0 on quiet days), with a
+    tooltip per bar (mouse or keyboard), the shop vs prescription split, and
+    **Show as table**.
+  - **Top 10 medicines** and **Sales by category:** bars scaled to the biggest value,
+    with packs sold.
+  - **Prescriptions:** uploaded, approval rate, average time to the pharmacist's decision,
+    share paid after approval, and a bar per status.
+  - **Deliveries:** delivered, on time (on or before the expected day), failed attempts,
+    and a table per rider.
+  - **Top 5 customers** by money spent.
+  - **Inventory today:** stock value, low stock (at or below the reorder level), out of
+    stock, and expiring within 60 days or already expired.
+  - Every section has **Download CSV** (opens in Excel), and **Print** gives a clean printout.
+- **Save this report** stores the headline numbers of the period with a title and notes.
+- `/admin/reports/saved`: every saved report (period, revenue, orders, prescriptions,
+  on-time rate), with **Open** and **Delete**.
+- `/admin/reports/saved/view?id=`: the numbers **when saved** next to the **same period
+  today**, with the change. A later cancellation or a late delivery shows up here. The
+  title and notes can be edited.
+
+**CRUD:** Create (save a report), Read (dashboard, list, view), Update (title and notes),
+Delete (saved report). The live report itself is read-only by design.
+
+**Rules (all in `ReportService`)**
+- Custom dates must both be real dates, the start can't be after the end, the end can't
+  be in the future, the start can't be before 2020, and a period is at most 366 days.
+  Bad dates show a message and fall back to the last 30 days.
+- "Sales" means orders that were **not cancelled**, counted on the day they were placed.
+  Cancelled orders are reported separately with the refunded amount.
+- The approval rate is approved ÷ (approved + rejected). Prescriptions still pending or
+  waiting for a correction are not counted as either.
+- On time means delivered on or before the delivery's expected day.
+- A saved report's numbers never change. Only the title (3-100 characters) and notes
+  (up to 500) can be edited.
+- **CSV safety:** values are quoted, and a value that starts with `= + - @` gets a `'` in
+  front so Excel doesn't run it as a formula ("CSV injection"). The file starts with a
+  UTF-8 mark so Excel shows names correctly.
+- All the adding up happens in SQL (`GROUP BY`, `SUM`, `COUNT`, `CASE`) in
+  `ReportDAOImpl`, with dates as `>= from AND < the day after to`, so the last day is
+  fully included.
+- The charts are plain HTML + CSS bars, with no chart library. Each bar's size is its value
+  as a percentage of the largest one.
+
+**Demo data:** three more customers (Amaya, Dilan, Ishara) with 30 orders spread over the
+last 75 days: some late, some after a failed delivery attempt, three cancelled. Their
+password is `Customer@123` like the other demo customers.
+
+**Try it:** log in as `admin@medisys.lk`, open **Reports**, switch between 7 / 30 / 90 days,
+download a CSV, then **Save this report**. Place an order as a customer and open the
+saved report again. **Today** now differs from **When saved**.
+
+### Minor functions: user accounts and roles
 
 Anyone can browse the medicines. An account is needed to order and to
 **upload a prescription**. A guest who opens `/prescriptions/upload` is sent to the

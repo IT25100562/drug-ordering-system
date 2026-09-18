@@ -14,7 +14,7 @@ import java.io.IOException;
  *
  *   POST /logout
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/logout")

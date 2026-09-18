@@ -36,7 +36,7 @@ public class PrescriptionDAOImpl implements PrescriptionDAO {
     private static final String SELECT_PRESCRIPTION =
             "SELECT p.*, u.full_name AS customer_name, u.email AS customer_email, "
             + "u.phone AS customer_phone, u.address AS customer_address, r.full_name AS reviewer_name, "
-            // the red flag and photo (module 04), for the pharmacist's list
+            // the red flag and photo (user accounts), for the pharmacist's list
             + "u.is_flagged AS customer_flagged, u.photo_key AS customer_photo_key, "
             // the payment comes from the order that paid for it (module 02)
             + "o.created_at AS paid_at, o.total AS amount_paid, o.status AS order_status, "

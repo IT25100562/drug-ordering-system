@@ -12,7 +12,7 @@ import java.time.Period;
  * It is kept in the HTTP session after login, so it is Serializable and does
  * NOT hold the password hash.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public class User implements Serializable {

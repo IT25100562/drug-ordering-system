@@ -112,14 +112,50 @@ Files:
 
 
 ---------------------------------------------------------------------
- MODULE 04 - USER AND ROLE MANAGEMENT
+ MODULE 04 - REPORTS AND ANALYTICS
  Owner: Kaweesha P. M. G. S.
+---------------------------------------------------------------------
+
+Database tables: saved_reports (the reports themselves read the other
+modules' tables: orders, order_items, prescriptions, deliveries,
+delivery_updates, medicines, categories, users)
+
+Status: done (dashboard for any period, charts, CSV downloads, print,
+saved reports with create / read / update / delete).
+
+Files:
+  JAVA  model/Report.java
+  JAVA  model/ReportPeriod.java
+  JAVA  model/ReportSummary.java
+  JAVA  model/ReportRow.java
+  JAVA  model/SavedReport.java
+  JAVA  dao/ReportDAO.java
+  JAVA  dao/SavedReportDAO.java
+  JAVA  dao/impl/ReportDAOImpl.java
+  JAVA  dao/impl/SavedReportDAOImpl.java
+  JAVA  service/ReportService.java
+  JAVA  servlet/report/ReportsServlet.java          /admin/reports
+  JAVA  servlet/report/ExportReportServlet.java     /admin/reports/export
+  JAVA  servlet/report/SavedReportsServlet.java     /admin/reports/saved
+  JAVA  servlet/report/SavedReportServlet.java      /admin/reports/saved/view
+  VIEWS report/dashboard.jsp
+  VIEWS report/saved-reports.jsp
+  VIEWS report/saved-report.jsp
+
+Demo data: the "Module 04" section at the end of database/sample-data.sql
+(3 customers, 30 orders over 75 days).
+
+
+
+---------------------------------------------------------------------
+ MINOR FUNCTIONS - USER ACCOUNTS AND ROLES
+ (was module 04; every module uses it. Built by Kaweesha P. M. G. S.)
 ---------------------------------------------------------------------
 
 Database tables: users
 
-Status: done (login, register, profile with photo and history, admin
-users page, staff accounts, red flags).
+Status: done (login, register, forgot password, profile with photo and
+history, admin users page, staff accounts, red flags).
 
 Files:
   JAVA  model/User.java
@@ -144,7 +180,7 @@ Files:
   VIEWS user/manage-users.jsp
   FILES WEB-INF/sample-uploads/avatar-*.png          demo profile photos
 
-Hooks in other modules' files (marked "module 04"):
+Hooks in other modules' files:
   PrescriptionDAOImpl / Prescription     customer's red flag and photo
   ReviewPrescriptionServlet, review.jsp   customer card + Flag / Remove flag
   dashboard.jsp                           photo and red flag per row

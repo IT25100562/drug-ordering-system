@@ -24,7 +24,7 @@ import java.sql.SQLException;
  * Users get their own photo; pharmacists and admins get anyone's.
  * Everyone else (and a user without a photo) gets 404.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/users/photo")

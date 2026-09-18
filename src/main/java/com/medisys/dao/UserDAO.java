@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * Database operations for users.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public interface UserDAO {

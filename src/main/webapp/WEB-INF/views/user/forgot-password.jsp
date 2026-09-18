@@ -3,7 +3,7 @@
     choose a new password.
     Filled by ForgotPasswordServlet (/forgot-password).
 
-    Module : 04 - User and Role Management
+    Module : Minor functions - User accounts and roles
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>

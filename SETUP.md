@@ -214,6 +214,7 @@ After code changes: stop, run `mvn package` and copy the war again, then start.
 | Customer | nimal@example.com | Customer@123 | Medicines |
 | Customer | kasuni@example.com | Customer@123 | Medicines |
 | Customer (red-flagged) | tharindu@example.com | Customer@123 | Medicines |
+| Customers with order history (for the reports) | amaya@ / dilan@ / ishara@example.com | Customer@123 | Medicines |
 | Admin | admin@medisys.lk | Admin@123 | Orders |
 | Senior Pharmacist | pharmacist@medisys.lk | Pharma@123 | Verification Dashboard |
 | Delivery rider | delivery@medisys.lk | Delivery@123 | My Deliveries |
@@ -230,7 +231,8 @@ Test card for payments: **4242 4242 4242 4242**, any future expiry (MM/YY), any 
 | 02 | Order Placement & Checkout | Nimal: **Cart → Proceed to checkout**, pay with the test card, then **Orders**. |
 | 05 | Prescription Upload & Verification | Log out, click **Upload a prescription** → you must log in or **register**. Upload a JPG/PNG/PDF. As **pharmacist**: open it, list medicines, approve (or reject / ask for a correction). As the customer: **Prescriptions → Pay**. |
 | 06 | Delivery Tracking & Notification | **Admin → Orders**: mark the order *Being packed*; **Admin → Deliveries**: pick a rider. As **delivery@**: *Picked up → On the way → Delivered*. As the customer: **Orders → Track**, and the 🔔 bell. |
-| 04 | User & Role Management | **Register** a new customer, open the **profile** (photo, history). Pharmacist: **Flag** a customer on the review page. **Admin → Users**: staff accounts, flags. **Forgot password** on the login page. |
+| 04 | Reports & Analytics | **Admin → Reports**: switch between 7 / 30 / 90 days, hover the bars, **Download CSV**, **Save this report**, then **Saved reports** (edit the notes, delete). |
+| minor | Accounts, login, profile | **Register** a new customer, open the **profile** (photo, history). Pharmacist: **Flag** a customer on the review page. **Admin → Users**: staff accounts, flags. **Forgot password** on the login page. |
 
 To get the demo data back at any time, run `schema.sql` and `sample-data.sql` again (Part B2).
 

@@ -23,7 +23,7 @@ import java.util.List;
  *   GET  /forgot-password
  *   POST /forgot-password   email, nic, dateOfBirth, password, confirmPassword
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/forgot-password")

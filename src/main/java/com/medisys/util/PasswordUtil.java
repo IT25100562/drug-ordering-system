@@ -15,7 +15,7 @@ import javax.crypto.spec.PBEKeySpec;
  * Uses PBKDF2 (built into Java) with a random salt per password. The stored
  * text looks like:   pbkdf2$120000$<salt in base64>$<hash in base64>
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public final class PasswordUtil {

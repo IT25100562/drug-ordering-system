@@ -31,7 +31,7 @@ import java.util.Map;
  *   POST /admin/users   action=activate    id
  *   POST /admin/users   action=reset       id, password   (staff only)
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/admin/users")

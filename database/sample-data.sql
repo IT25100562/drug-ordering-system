@@ -16,7 +16,7 @@ SET QUOTED_IDENTIFIER ON;
 GO
 
 -- =================================================================
--- Module 04 - User and Role Management
+-- Minor functions - User accounts and roles
 -- =================================================================
 -- Demo logins (email / password):
 --   admin@medisys.lk       / Admin@123      ADMIN
@@ -368,4 +368,139 @@ FROM (VALUES
      N'/staff/deliveries/view?id=2', 1, 90 * 60 - 120)
 ) AS v (email, message, link, is_read, minutes_ago)
 JOIN users u ON u.email = v.email;
+GO
+
+-- =================================================================
+-- Module 04 - Reports and Analytics
+-- =================================================================
+-- The reports read the other modules' tables, so what they need is history.
+-- Three more customers placed 30 shop orders over the last 75 days: 27 were
+-- delivered (4 late, 4 after a failed first attempt) and 3 were cancelled.
+-- They are new customers so the demo accounts above keep their own orders.
+-- Order ids 6-35 belong to these rows (5 + n), and delivery N belongs to order N.
+
+INSERT INTO users (full_name, email, phone, whatsapp, nic, date_of_birth, address, password_hash, role, created_at)
+SELECT v.full_name, v.email, v.phone, v.phone, v.nic, v.dob, v.address,
+       'pbkdf2$120000$UAbhe9vXLT/vc3JkTryxAA==$eg07Xv88WmKfyx+tKFxuEoYQXOwL6Iow+YbKqHoympU=', 'CUSTOMER',
+       DATEADD(day, -80, SYSDATETIME())
+FROM (VALUES
+    (1, N'Amaya Rodrigo',     N'amaya@example.com',  N'0772345678', '199256712345', '1992-03-07', N'17 Galle Road, Dehiwala'),
+    (2, N'Dilan Kumara',      N'dilan@example.com',  N'0713456789', '880234567V',   '1988-01-23', N'5 Hill Street, Kurunegala'),
+    (3, N'Ishara Senanayake', N'ishara@example.com', N'0764567890', '199581234567', '1995-11-04', N'92 Lake Road, Nugegoda')
+) AS v (sort_order, full_name, email, phone, nic, dob, address)
+ORDER BY v.sort_order;
+
+-- One row per historical order. late = delivered after the expected day,
+-- failed = the first delivery attempt failed.
+CREATE TABLE #hist (
+    n INT, email NVARCHAR(150), days_ago INT, hour_of_day INT, status VARCHAR(15),
+    med1 NVARCHAR(150), q1 INT, med2 NVARCHAR(150) NULL, q2 INT NULL, late BIT, failed BIT,
+    placed_at DATETIME2 NULL, delivered_at DATETIME2 NULL
+);
+
+INSERT INTO #hist (n, email, days_ago, hour_of_day, status, med1, q1, med2, q2, late, failed) VALUES
+    ( 1, N'amaya@example.com',  75, 10, 'DELIVERED', N'Panadol',              4, N'Vitamin C',            2,    0, 0),
+    ( 2, N'dilan@example.com',  73, 15, 'DELIVERED', N'Benadryl Cough Syrup', 1, N'Piriton',              3,    0, 0),
+    ( 3, N'ishara@example.com', 70, 11, 'DELIVERED', N'Dettol Antiseptic',    1, NULL,                    NULL, 0, 0),
+    ( 4, N'amaya@example.com',  68, 18, 'CANCELLED', N'Brufen',               2, NULL,                    NULL, 0, 0),
+    ( 5, N'dilan@example.com',  66,  9, 'DELIVERED', N'Hydrocortisone Cream', 1, N'Panadol',              2,    1, 0),
+    ( 6, N'ishara@example.com', 63, 14, 'DELIVERED', N'Vitamin C',            5, NULL,                    NULL, 0, 0),
+    ( 7, N'amaya@example.com',  60, 16, 'DELIVERED', N'Benadryl Cough Syrup', 2, N'Dettol Antiseptic',    1,    0, 1),
+    ( 8, N'dilan@example.com',  57, 12, 'DELIVERED', N'Panadol',              6, N'Piriton',              2,    0, 0),
+    ( 9, N'ishara@example.com', 54, 19, 'DELIVERED', N'Dettol Antiseptic',    2, N'Vitamin C',            3,    0, 0),
+    (10, N'amaya@example.com',  51, 10, 'DELIVERED', N'Piriton',              4, NULL,                    NULL, 0, 0),
+    (11, N'dilan@example.com',  48, 13, 'CANCELLED', N'Hydrocortisone Cream', 2, NULL,                    NULL, 0, 0),
+    (12, N'ishara@example.com', 45, 17, 'DELIVERED', N'Benadryl Cough Syrup', 1, N'Panadol',              2,    1, 1),
+    (13, N'amaya@example.com',  42, 11, 'DELIVERED', N'Vitamin C',            4, N'Brufen',               1,    0, 0),
+    (14, N'dilan@example.com',  39, 15, 'DELIVERED', N'Dettol Antiseptic',    1, N'Hydrocortisone Cream', 1,    0, 0),
+    (15, N'ishara@example.com', 36,  9, 'DELIVERED', N'Panadol',              3, NULL,                    NULL, 0, 0),
+    (16, N'amaya@example.com',  33, 20, 'DELIVERED', N'Benadryl Cough Syrup', 3, NULL,                    NULL, 0, 0),
+    (17, N'dilan@example.com',  30, 12, 'DELIVERED', N'Piriton',              5, N'Vitamin C',            2,    0, 0),
+    (18, N'ishara@example.com', 27, 14, 'DELIVERED', N'Dettol Antiseptic',    4, NULL,                    NULL, 0, 0),
+    (19, N'amaya@example.com',  25, 10, 'DELIVERED', N'Panadol',              2, N'Hydrocortisone Cream', 1,    1, 0),
+    (20, N'dilan@example.com',  22, 16, 'CANCELLED', N'Benadryl Cough Syrup', 1, NULL,                    NULL, 0, 0),
+    (21, N'ishara@example.com', 20, 11, 'DELIVERED', N'Vitamin C',            6, N'Piriton',              2,    0, 0),
+    (22, N'amaya@example.com',  18, 18, 'DELIVERED', N'Dettol Antiseptic',    1, N'Panadol',              4,    0, 0),
+    (23, N'dilan@example.com',  15, 13, 'DELIVERED', N'Benadryl Cough Syrup', 2, N'Hydrocortisone Cream', 1,    0, 1),
+    (24, N'ishara@example.com', 13,  9, 'DELIVERED', N'Brufen',               2, N'Vitamin C',            1,    0, 0),
+    (25, N'amaya@example.com',  11, 15, 'DELIVERED', N'Panadol',              5, NULL,                    NULL, 0, 0),
+    (26, N'dilan@example.com',   9, 17, 'DELIVERED', N'Dettol Antiseptic',    2, N'Benadryl Cough Syrup', 1,    1, 0),
+    (27, N'ishara@example.com',  7, 12, 'DELIVERED', N'Hydrocortisone Cream', 2, NULL,                    NULL, 0, 0),
+    (28, N'amaya@example.com',   6, 10, 'DELIVERED', N'Vitamin C',            3, N'Piriton',              3,    0, 0),
+    (29, N'dilan@example.com',   4, 14, 'DELIVERED', N'Panadol',              3, N'Dettol Antiseptic',    1,    0, 0),
+    (30, N'ishara@example.com',  3, 19, 'DELIVERED', N'Benadryl Cough Syrup', 1, N'Vitamin C',            2,    0, 0);
+
+-- Placed at hour_of_day on that day; delivered the next day, or 3 days later when late.
+UPDATE #hist SET placed_at = DATEADD(hour, hour_of_day, CAST(CAST(DATEADD(day, -days_ago, SYSDATETIME()) AS DATE) AS DATETIME2));
+UPDATE #hist SET delivered_at = DATEADD(hour, CASE WHEN late = 1 THEN 76 ELSE 26 END, placed_at) WHERE status = 'DELIVERED';
+
+-- The orders (subtotal from the catalog prices; delivery Rs. 300, free from Rs. 2,500).
+INSERT INTO orders (user_id, source, status, subtotal, delivery_fee, total, delivery_name, delivery_address,
+                    delivery_phone, cancel_reason, created_at, updated_at)
+SELECT u.id, 'CART', h.status, t.subtotal, f.fee, t.subtotal + f.fee, u.full_name, u.address, u.phone,
+       CASE WHEN h.status = 'CANCELLED' THEN N'Cancelled by the customer: Ordered by mistake' END,
+       h.placed_at, COALESCE(h.delivered_at, DATEADD(minute, 30, h.placed_at))
+FROM #hist h
+JOIN users u ON u.email = h.email
+JOIN medicines m1 ON m1.name = h.med1
+LEFT JOIN medicines m2 ON m2.name = h.med2
+CROSS APPLY (SELECT m1.price * h.q1 + ISNULL(m2.price * h.q2, 0) AS subtotal) t
+CROSS APPLY (SELECT CASE WHEN t.subtotal >= 2500 THEN 0.00 ELSE 300.00 END AS fee) f
+ORDER BY h.n;
+
+INSERT INTO order_items (order_id, medicine_id, medicine_name, dosage_form, unit_price, quantity, dosage_instructions)
+SELECT 5 + h.n, m.id, CONCAT(m.name, ' ', m.strength), m.dosage_form, m.price, l.qty, NULL
+FROM #hist h
+CROSS APPLY (VALUES (h.med1, h.q1), (h.med2, h.q2)) AS l (med, qty)
+JOIN medicines m ON m.name = l.med;
+
+INSERT INTO payments (order_id, amount, card_last4, reference, status, paid_at, refunded_at)
+SELECT o.id, o.total, '4242', CONCAT('PAY-HIST-', RIGHT(CONCAT('000', h.n), 3)),
+       CASE WHEN h.status = 'CANCELLED' THEN 'REFUNDED' ELSE 'PAID' END, h.placed_at,
+       CASE WHEN h.status = 'CANCELLED' THEN DATEADD(minute, 30, h.placed_at) END
+FROM #hist h JOIN orders o ON o.id = 5 + h.n;
+
+-- Order history (the module 02 timeline).
+DECLARE @admin INT = (SELECT id FROM users WHERE email = N'admin@medisys.lk');
+
+INSERT INTO order_status_history (order_id, status, note, changed_by, changed_at)
+SELECT 5 + h.n, s.status, s.note, s.by_id, s.at
+FROM #hist h
+CROSS APPLY (VALUES
+    ('PAID',       N'Order placed and paid',                         NULL,   h.placed_at,                      1),
+    ('PROCESSING', NULL,                                             @admin, DATEADD(minute, 60, h.placed_at),  CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('SHIPPED',    N'Picked up by the rider',                        @admin, DATEADD(minute, 180, h.placed_at), CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('DELIVERED',  NULL,                                             @admin, h.delivered_at,                    CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('CANCELLED',  N'Cancelled by the customer: Ordered by mistake', NULL,   DATEADD(minute, 30, h.placed_at),  CASE WHEN h.status = 'CANCELLED' THEN 1 ELSE 0 END)
+) AS s (status, note, by_id, at, wanted)
+WHERE s.wanted = 1;
+
+-- Deliveries (module 06): odd orders went with Ruwan, even ones with Kamal.
+INSERT INTO deliveries (order_id, staff_id, status, attempts, estimated_date, delivered_at, created_at, updated_at)
+SELECT 5 + h.n,
+       CASE WHEN h.status = 'CANCELLED' THEN NULL
+            WHEN h.n % 2 = 1 THEN (SELECT id FROM users WHERE email = N'delivery@medisys.lk')
+            ELSE (SELECT id FROM users WHERE email = N'rider2@medisys.lk') END,
+       h.status, CASE WHEN h.status = 'CANCELLED' THEN 0 WHEN h.failed = 1 THEN 2 ELSE 1 END,
+       CAST(DATEADD(day, 2, h.placed_at) AS DATE), h.delivered_at,
+       h.placed_at, COALESCE(h.delivered_at, DATEADD(minute, 30, h.placed_at))
+FROM #hist h
+ORDER BY h.n;
+
+INSERT INTO delivery_updates (delivery_id, status, note, updated_by, created_at)
+SELECT d.id, s.status, s.note, CASE WHEN s.by_rider = 1 THEN d.staff_id END, s.at
+FROM #hist h
+JOIN deliveries d ON d.order_id = 5 + h.n
+CROSS APPLY (VALUES
+    ('PENDING',          N'Order received. We are preparing your parcel.', 0, h.placed_at,                      1),
+    ('DISPATCHED',       NULL,                                             1, DATEADD(minute, 180, h.placed_at), CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('OUT_FOR_DELIVERY', NULL,                                             1, DATEADD(minute, 200, h.placed_at), CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('FAILED',           N'Nobody at home',                                1, DATEADD(minute, 260, h.placed_at), CASE WHEN h.failed = 1 THEN 1 ELSE 0 END),
+    ('OUT_FOR_DELIVERY', N'Trying again',                                  1, DATEADD(minute, -60, h.delivered_at), CASE WHEN h.failed = 1 THEN 1 ELSE 0 END),
+    ('DELIVERED',        N'Handed to the customer',                        1, h.delivered_at,                    CASE WHEN h.status = 'DELIVERED' THEN 1 ELSE 0 END),
+    ('CANCELLED',        N'Cancelled by the customer: Ordered by mistake', 0, DATEADD(minute, 30, h.placed_at), CASE WHEN h.status = 'CANCELLED' THEN 1 ELSE 0 END)
+) AS s (status, note, by_rider, at, wanted)
+WHERE s.wanted = 1;
+
+DROP TABLE #hist;
 GO

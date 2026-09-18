@@ -95,7 +95,7 @@ public class ReviewPrescriptionServlet extends HttpServlet {
         request.setAttribute("rowQuantities", quantities == null ? new String[0] : quantities);
         request.setAttribute("rowDosages", dosages == null ? new String[0] : dosages);
         request.setAttribute("errors", errors);
-        // Who uploaded it: photo, NIC, age, contact, red flag and history (module 04).
+        // Who uploaded it: photo, NIC, age, contact, red flag and history (user accounts).
         request.setAttribute("customer", userService.getUser(p.getUserId()));
         request.setAttribute("customerStats", userService.getCustomerStats(p.getUserId()));
         if (p.isAwaitingReview()) {

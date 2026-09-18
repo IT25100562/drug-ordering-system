@@ -30,7 +30,7 @@ import java.util.Map;
  *
  * The photo is changed by ProfilePhotoServlet (/account/photo).
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/account/profile")

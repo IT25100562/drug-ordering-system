@@ -2,7 +2,7 @@
     Log in page, with a link to create an account.
     Filled by LoginServlet (/login).
 
-    Module : 04 - User and Role Management
+    Module : Minor functions - User accounts and roles
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>

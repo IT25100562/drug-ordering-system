@@ -18,7 +18,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * All business rules of User and Role Management.
+ * All business rules of user accounts and roles (a minor function shared by
+ * every module: register, login, profile, forgot password, staff accounts, red flags).
  *
  * Registration (customers)
  *  - name, email, password, NIC, date of birth, phone, WhatsApp - nothing more
@@ -44,7 +45,7 @@ import java.util.Map;
  *    system (a reason is required). The customer can still use everything and
  *    never sees the flag.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 public class UserService {

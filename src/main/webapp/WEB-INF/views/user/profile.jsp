@@ -4,7 +4,7 @@
     Filled by ProfileServlet (/account/profile). The photo form posts to
     ProfilePhotoServlet (/account/photo).
 
-    Module : 04 - User and Role Management
+    Module : Minor functions - User accounts and roles
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>

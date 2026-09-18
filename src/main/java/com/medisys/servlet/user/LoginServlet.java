@@ -23,7 +23,7 @@ import java.sql.SQLException;
  *
  * Basic version added early so the cart (module 01) can work.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/login")

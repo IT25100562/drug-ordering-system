@@ -26,7 +26,7 @@ import java.sql.SQLException;
  * The Tomcat limit is above 2 MB so UserService can give a friendly
  * "too large" message.
  *
- * Module : 04 - User and Role Management
+ * Module : Minor functions - User accounts and roles
  * Owner  : Kaweesha P. M. G. S.
  */
 @WebServlet("/account/photo")

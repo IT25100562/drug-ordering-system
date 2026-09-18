@@ -24,6 +24,7 @@ GO
 
 -- ------------------------------------------------------------------ drop
 -- (child tables first, parent tables last)
+DROP TABLE IF EXISTS saved_reports;
 DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS delivery_updates;
 DROP TABLE IF EXISTS deliveries;
@@ -42,7 +43,7 @@ GO
 
 
 -- =================================================================
--- Module 04 - User and Role Management (Kaweesha P. M. G. S.)
+-- Minor functions - User accounts and roles (shared by all modules)
 -- =================================================================
 
 -- Everyone who can log in. role decides which pages they can open.
@@ -376,4 +377,41 @@ CREATE TABLE delivery_updates (
 );
 
 CREATE INDEX ix_delivery_updates ON delivery_updates (delivery_id, created_at);
+GO
+
+
+-- =================================================================
+-- Module 04 - Reports and Analytics (Kaweesha P. M. G. S.)
+-- =================================================================
+-- The reports themselves are calculated live from the other tables (orders,
+-- order_items, prescriptions, deliveries, medicines, users) - nothing is copied.
+-- A saved report is a snapshot: the admin saves the headline numbers of a
+-- period with a title and notes, so months can be compared later even if
+-- old orders change (e.g. a late cancellation).
+CREATE TABLE saved_reports (
+    id                 INT IDENTITY(1,1) PRIMARY KEY,
+    title              NVARCHAR(100) NOT NULL,
+    notes              NVARCHAR(500) NULL,
+    period_from        DATE          NOT NULL,
+    period_to          DATE          NOT NULL,
+    revenue            DECIMAL(12,2) NOT NULL,
+    order_count        INT           NOT NULL,
+    average_order      DECIMAL(10,2) NOT NULL,
+    cancelled_count    INT           NOT NULL,
+    refunded_amount    DECIMAL(12,2) NOT NULL,
+    prescription_count INT           NOT NULL,
+    approval_rate      DECIMAL(5,2)  NULL,         -- percent, NULL when nothing was decided
+    delivered_count    INT           NOT NULL,
+    on_time_rate       DECIMAL(5,2)  NULL,         -- percent, NULL when nothing was delivered
+    new_customers      INT           NOT NULL,
+    created_by         INT           NOT NULL,
+    created_at         DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+    updated_at         DATETIME2     NOT NULL DEFAULT SYSDATETIME(),
+
+    CONSTRAINT fk_saved_report_user FOREIGN KEY (created_by) REFERENCES users (id),
+    CONSTRAINT ck_saved_report_period CHECK (period_from <= period_to),
+    CONSTRAINT ck_saved_report_counts CHECK (revenue >= 0 AND order_count >= 0 AND cancelled_count >= 0
+                                             AND prescription_count >= 0 AND delivered_count >= 0
+                                             AND new_customers >= 0)
+);
 GO

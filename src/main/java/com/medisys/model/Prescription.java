@@ -26,7 +26,7 @@ public class Prescription {
     private String customerEmail;
     private String customerPhone;
     private String customerAddress;
-    private boolean customerFlagged;     // red flag from a pharmacist (module 04)
+    private boolean customerFlagged;     // red flag from a pharmacist (user accounts)
     private boolean customerHasPhoto;
 
     private String customerNote;
