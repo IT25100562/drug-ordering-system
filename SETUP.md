@@ -230,7 +230,7 @@ Test card for payments: **4242 4242 4242 4242**, any future expiry (MM/YY), any 
 | 01 | Cart & Wishlist | As **nimal**: add medicines to the cart, change quantities, save one for later (heart). |
 | 02 | Order Placement & Checkout | Nimal: **Cart → Proceed to checkout**, pay with the test card, then **Orders**. |
 | 05 | Prescription Upload & Verification | Log out, click **Upload a prescription** → you must log in or **register**. Upload a JPG/PNG/PDF. As **pharmacist**: open it, list medicines, approve (or reject / ask for a correction). As the customer: **Prescriptions → Pay**. |
-| 06 | Delivery Tracking & Notification | **Admin → Orders**: mark the order *Being packed*; **Admin → Deliveries**: pick a rider. As **delivery@**: *Picked up → On the way → Delivered*. As the customer: **Orders → Track**, and the 🔔 bell. |
+| 06 | Delivery Tracking & Notification | As **delivery@**: **My Deliveries → New deliveries → Got the package**, then **On the way → Delivered**. As the customer: **Orders → Track**, and the 🔔 bell. |
 | 04 | Reports & Analytics | **Admin → Reports**: switch between 7 / 30 / 90 days, hover the bars, **Download CSV**, **Save this report**, then **Saved reports** (edit the notes, delete). |
 | minor | Accounts, login, profile | **Register** a new customer, open the **profile** (photo, history). Pharmacist: **Flag** a customer on the review page. **Admin → Users**: staff accounts, flags. **Forgot password** on the login page. |
 

@@ -4,7 +4,6 @@ import com.medisys.dao.DeliveryDAO;
 import com.medisys.dao.impl.DeliveryDAOImpl;
 import com.medisys.model.Delivery;
 import com.medisys.model.DeliveryStatus;
-import com.medisys.model.OrderStatus;
 import com.medisys.model.User;
 import com.medisys.util.TextUtil;
 
@@ -17,14 +16,16 @@ import java.util.Map;
  *
  *  - every paid order gets a delivery automatically (in the order's transaction,
  *    see OrderDAOImpl.create); cancelling the order cancels it
- *  - the admin assigns a rider (delivery staff) while the parcel is at the pharmacy
- *  - the rider moves it on one step at a time:
- *      picked up (order must be packed) -> on the way -> delivered / could not deliver
- *    and tries again after a failed attempt
+ *  - the staff page has three tabs: New (at the pharmacy), On the way, Completed
+ *  - riders work directly with new parcels, with no admin step in between:
+ *    any rider takes a new parcel with "Got the package". It becomes theirs and
+ *    goes straight to "Out for delivery" (the order is marked packed and shipped).
+ *  - on the way: delivered / could not deliver, and try again after a failed attempt
  *  - "could not deliver" needs a reason for the customer
- *  - a rider only sees and changes the deliveries given to them; the admin sees all
+ *  - only riders change deliveries. A rider sees their own deliveries plus the
+ *    new ones nobody has taken yet; the admin can see all of them.
  *  - a customer can only track their own orders
- *  - the customer is notified at every step, the rider when a delivery is given to them
+ *  - the customer is notified at every step
  *
  * Module : 06 - Delivery Tracking and Notification
  * Owner  : Deshabhi R. G. S.
@@ -60,7 +61,7 @@ public class DeliveryService {
         return user.isAdmin() ? null : user.getId();
     }
 
-    /** @param filter a status name or one of the DeliveryDAO.FILTER_ values */
+    /** @param filter DeliveryDAO.FILTER_NEW, FILTER_ON_THE_WAY or FILTER_COMPLETED */
     public List<Delivery> getDeliveries(User user, String filter) throws SQLException {
         return deliveryDAO.findForStaff(onlyFor(user), filter);
     }
@@ -69,67 +70,60 @@ public class DeliveryService {
         return deliveryDAO.countByStatus(onlyFor(user));
     }
 
-    /** A delivery the user may work on (with its updates), or null. */
+    /**
+     * A delivery the user may work on (with its updates), or null.
+     * A rider may open their own deliveries and new ones nobody has taken yet.
+     */
     public Delivery getForStaff(User user, int id) throws SQLException {
         Delivery delivery = deliveryDAO.findById(id);
         if (delivery == null) {
             return null;
         }
-        if (!user.isAdmin() && !Integer.valueOf(user.getId()).equals(delivery.getStaffId())) {
+        boolean free = !delivery.hasRider() && delivery.getStatus() == DeliveryStatus.PENDING;
+        if (!user.isAdmin() && !free && !Integer.valueOf(user.getId()).equals(delivery.getStaffId())) {
             return null;
         }
         return delivery;
     }
 
-    public List<User> getRiders() throws SQLException {
-        return deliveryDAO.findRiders();
-    }
-
-    /** The admin gives a delivery to a rider. */
-    public String assign(User admin, int id, String riderText) throws SQLException, ValidationException {
-        if (!admin.isAdmin()) {
-            throw new ValidationException("Only an administrator can assign riders.");
+    /** Deliveries are the riders' job: the admin can look, but not change them. */
+    private void ridersOnly(User user) throws ValidationException {
+        if (user.isAdmin()) {
+            throw new ValidationException("Only the rider can update a delivery.");
         }
-        Delivery delivery = deliveryDAO.findById(id);
-        if (delivery == null) {
-            throw new ValidationException("That delivery no longer exists.");
-        }
-        if (!delivery.getStatus().canAssignRider()) {
-            throw new ValidationException(delivery.getOrderReference() + " is \"" + delivery.getStatus().getLabel()
-                    + "\", so the rider can no longer be changed.");
-        }
-
-        Integer riderId = TextUtil.parseInt(riderText);
-        User rider = null;
-        for (User r : deliveryDAO.findRiders()) {
-            if (riderId != null && r.getId() == riderId) {
-                rider = r;
-            }
-        }
-        if (rider == null) {
-            throw new ValidationException("Please choose a rider from the list.");
-        }
-        if (riderId.equals(delivery.getStaffId())) {
-            throw new ValidationException(delivery.getOrderReference() + " is already given to "
-                    + rider.getFullName() + ".");
-        }
-
-        String note = "Rider: " + rider.getFullName() + (rider.getPhone() == null ? "" : ", " + rider.getPhone());
-        if (!deliveryDAO.assignStaff(id, rider.getId(), admin.getId(), note)) {
-            throw new ValidationException(delivery.getOrderReference() + " was just changed by someone else.");
-        }
-
-        notificationService.notify(rider.getId(), "New delivery for you: " + delivery.getOrderReference()
-                + " to " + delivery.getDeliveryAddress() + ". Expected by "
-                + TextUtil.date(delivery.getEstimatedDate()) + ".", "/staff/deliveries/view?id=" + id);
-        notificationService.notify(delivery.getCustomerId(), rider.getFullName()
-                + " will deliver your order " + delivery.getOrderReference() + ".",
-                "/deliveries/track?orderId=" + delivery.getOrderId());
-        return delivery.getOrderReference() + " was given to " + rider.getFullName() + ". The rider has been notified.";
     }
 
     /**
-     * The rider (or the admin) moves a delivery to its next status.
+     * "Got the package": a rider takes a new parcel from the pharmacy.
+     * It becomes theirs and is out for delivery straight away.
+     *
+     * @param currentText the status the rider saw on the page (stops double clicks)
+     */
+    public String pickUp(User rider, int id, String currentText) throws SQLException, ValidationException {
+        ridersOnly(rider);
+        Delivery delivery = getForStaff(rider, id);
+        if (delivery == null) {
+            throw new ValidationException("That delivery was not found, or another rider has taken it.");
+        }
+        String ref = delivery.getOrderReference();
+        if (DeliveryStatus.fromText(currentText) != delivery.getStatus()
+                || delivery.getStatus() != DeliveryStatus.PENDING) {
+            throw new ValidationException(ref + " is already \"" + delivery.getStatus().getLabel()
+                    + "\". Please check it again.");
+        }
+
+        if (!deliveryDAO.pickUp(delivery, rider.getId(), rider.getFullName(), rider.getId())) {
+            throw new ValidationException(ref + " was just taken by another rider or cancelled. Please check it again.");
+        }
+
+        notificationService.notify(delivery.getCustomerId(), rider.getFullName() + " picked up your order " + ref
+                + " from the pharmacy and is on the way to you. Please keep your phone nearby.",
+                "/deliveries/track?orderId=" + delivery.getOrderId());
+        return ref + " is now on the way. The customer has been notified.";
+    }
+
+    /**
+     * The rider moves a delivery that is on the way to its next status.
      *
      * @param currentText the status the user saw on the page - stops a double
      *                    click from moving the delivery two steps
@@ -138,6 +132,7 @@ public class DeliveryService {
      */
     public String updateStatus(User user, int id, String currentText, String nextText, String noteText)
             throws SQLException, ValidationException {
+        ridersOnly(user);
         Delivery delivery = getForStaff(user, id);
         if (delivery == null) {
             throw new ValidationException("That delivery was not found.");
@@ -154,12 +149,9 @@ public class DeliveryService {
             throw new ValidationException(ref + " is \"" + delivery.getStatus().getLabel()
                     + "\" and cannot be moved to that step.");
         }
-        if (!delivery.hasRider()) {
-            throw new ValidationException("Please assign a rider to " + ref + " first.");
-        }
-        if (next == DeliveryStatus.DISPATCHED && delivery.getOrderStatus() != OrderStatus.PROCESSING) {
-            throw new ValidationException(ref + " is not packed yet (the order is \""
-                    + delivery.getOrderStatus().getLabel() + "\"). Please wait for the pharmacy.");
+        if (delivery.getStatus() == DeliveryStatus.PENDING || !delivery.hasRider()) {
+            // Leaving the pharmacy always goes through pickUp ("Got the package").
+            throw new ValidationException("Please press \"Got the package\" for " + ref + " first.");
         }
 
         String note = TextUtil.clean(noteText);

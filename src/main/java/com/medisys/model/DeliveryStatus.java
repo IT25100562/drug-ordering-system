@@ -60,11 +60,6 @@ public enum DeliveryStatus {
         return this == DELIVERED || this == CANCELLED;
     }
 
-    /** The rider can still be changed while the parcel is at the pharmacy (or came back). */
-    public boolean canAssignRider() {
-        return this == PENDING || this == FAILED;
-    }
-
     /** The button text for moving a delivery to this status. */
     public String getActionLabel() {
         switch (this) {

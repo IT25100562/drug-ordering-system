@@ -1,6 +1,6 @@
 <%--
-    One delivery for the rider or the admin: next step buttons, rider picker
-    (admin), address, the medicines to hand over, and the tracking history.
+    One delivery for the rider (next step buttons) or the admin (read only):
+    address, the medicines to hand over, and the tracking history.
     Filled by DeliveryDetailsServlet (/staff/deliveries/view?id=).
 
     Module : 06 - Delivery Tracking and Notification
@@ -11,22 +11,17 @@
 <%@ page import="com.medisys.model.DeliveryStatus" %>
 <%@ page import="com.medisys.model.Order" %>
 <%@ page import="com.medisys.model.OrderItem" %>
-<%@ page import="com.medisys.model.OrderStatus" %>
-<%@ page import="java.util.List" %>
 <% String pageTitle = "Delivery"; %>
 <%@ include file="../common/header.jspf" %>
 <%
     Delivery delivery = (Delivery) request.getAttribute("delivery");
     Order order = (Order) request.getAttribute("order");
-    @SuppressWarnings("unchecked")
-    List<User> riders = (List<User>) request.getAttribute("riders");   // admin only
-    boolean admin = currentUser.isAdmin();
+    boolean admin = currentUser.isAdmin();   // the admin can look, only riders change deliveries
     DeliveryStatus status = delivery.getStatus();
-    boolean packed = delivery.getOrderStatus() == OrderStatus.PROCESSING;
 %>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">
-    <a href="<%= ctx %>/staff/deliveries"><%= admin ? "Deliveries" : "My Deliveries" %></a> <span aria-hidden="true">/</span>
+    <a href="<%= ctx %>/staff/deliveries?tab=<%= status == DeliveryStatus.PENDING ? "NEW" : status.isFinished() ? "COMPLETED" : "ON_THE_WAY" %>"><%= admin ? "Deliveries" : "My Deliveries" %></a> <span aria-hidden="true">/</span>
     <span aria-current="page"><%= delivery.getOrderReference() %></span>
 </nav>
 
@@ -77,14 +72,24 @@
     </div>
 
     <aside>
-        <% if (!status.nextSteps().isEmpty()) { %>
+        <% if (admin && !status.isFinished()) { %>
+        <section class="card">
+            <h2>Next step</h2>
+            <p class="meta"><%= status == DeliveryStatus.PENDING
+                    ? "Waiting for a rider. Any rider can pick this parcel up from their New deliveries list."
+                    : "The rider updates this delivery until it is delivered." %></p>
+        </section>
+        <% } else if (!status.nextSteps().isEmpty()) { %>
         <section class="card next-step">
             <h2>Next step</h2>
-            <% if (!delivery.hasRider()) { %>
-                <p class="meta">A rider must be assigned before the parcel can leave.</p>
-            <% } else if (status == DeliveryStatus.PENDING && !packed) { %>
-                <p class="meta">The pharmacy has not packed this order yet
-                    (it is &ldquo;<%= delivery.getOrderStatus().getLabel() %>&rdquo;). You can pick it up once it is packed.</p>
+            <% if (status == DeliveryStatus.PENDING) { %>
+                <form method="post" action="<%= ctx %>/staff/deliveries/update" class="step-form">
+                    <input type="hidden" name="id" value="<%= delivery.getId() %>">
+                    <input type="hidden" name="action" value="pickup">
+                    <input type="hidden" name="current" value="<%= status.name() %>">
+                    <p class="meta">Press this when you have the parcel in your hands. The customer is told it is on the way.</p>
+                    <button class="btn block approve" type="submit">Got the package</button>
+                </form>
             <% } else { %>
                 <% for (DeliveryStatus next : status.nextSteps()) {
                        boolean failing = next == DeliveryStatus.FAILED;
@@ -105,37 +110,15 @@
                                        placeholder="<%= next == DeliveryStatus.DELIVERED ? "e.g. Handed to the security guard" : "e.g. Arriving in about 30 minutes" %>">
                             <% } %>
                         </div>
-                        <button class="btn block <%= failing ? "reject" : "approve" %>" type="submit"><%= next.getActionLabel() %></button>
+                        <button class="btn block <%= failing ? "reject" : "approve" %>" type="submit">
+                            <%= status == DeliveryStatus.FAILED ? "Try again" : next.getActionLabel() %></button>
                     </form>
                 <% } %>
             <% } %>
         </section>
         <% } %>
 
-        <% if (admin && status.canAssignRider()) { %>
-        <section class="card">
-            <h2><%= delivery.hasRider() ? "Change rider" : "Assign a rider" %></h2>
-            <% if (riders.isEmpty()) { %>
-                <p class="meta">There are no active delivery staff accounts.</p>
-            <% } else { %>
-            <form method="post" action="<%= ctx %>/staff/deliveries/update">
-                <input type="hidden" name="id" value="<%= delivery.getId() %>">
-                <input type="hidden" name="action" value="assign">
-                <div class="field">
-                    <label for="riderId">Rider</label>
-                    <select id="riderId" name="riderId" required>
-                        <option value="">-- choose --</option>
-                        <% for (User r : riders) { %>
-                            <option value="<%= r.getId() %>" <%= Integer.valueOf(r.getId()).equals(delivery.getStaffId()) ? "selected" : "" %>>
-                                <%= TextUtil.html(r.getFullName()) %><%= r.getPhone() == null ? "" : " (" + TextUtil.html(r.getPhone()) + ")" %></option>
-                        <% } %>
-                    </select>
-                </div>
-                <button class="btn block" type="submit">Save rider</button>
-            </form>
-            <% } %>
-        </section>
-        <% } else if (delivery.hasRider()) { %>
+        <% if (delivery.hasRider()) { %>
         <section class="card">
             <h2>Rider</h2>
             <p><strong><%= TextUtil.html(delivery.getStaffName()) %></strong>

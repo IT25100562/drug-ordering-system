@@ -6,8 +6,6 @@ import com.medisys.model.Delivery;
 import com.medisys.model.DeliveryStatus;
 import com.medisys.model.DeliveryUpdate;
 import com.medisys.model.OrderStatus;
-import com.medisys.model.Role;
-import com.medisys.model.User;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -46,6 +44,11 @@ public class DeliveryDAOImpl implements DeliveryDAO {
             + "JOIN orders o ON o.id = d.order_id "
             + "JOIN users c ON c.id = o.user_id "
             + "LEFT JOIN users s ON s.id = d.staff_id ";
+
+    // What a rider sees: their own deliveries, plus the new ones at the
+    // pharmacy that nobody has picked up yet (any rider may take those).
+    private static final String RIDER_SEES =
+            "AND (d.staff_id = ? OR (d.staff_id IS NULL AND d.status = 'PENDING')) ";
 
     // ======================================================= create / cancel
 
@@ -127,18 +130,16 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         List<Object> params = new ArrayList<>();
 
         if (staffId != null) {
-            sql.append("AND d.staff_id = ? ");
+            sql.append(RIDER_SEES);
             params.add(staffId);
         }
 
-        DeliveryStatus status = DeliveryStatus.fromText(filter);
-        if (status != null) {
-            sql.append("AND d.status = ? ");
-            params.add(status.name());
-        } else if (FILTER_ACTIVE.equals(filter)) {
-            sql.append("AND d.status NOT IN ('DELIVERED', 'CANCELLED') ");
-        } else if (FILTER_UNASSIGNED.equals(filter)) {
-            sql.append("AND d.staff_id IS NULL AND d.status = 'PENDING' ");
+        if (FILTER_NEW.equals(filter)) {
+            sql.append("AND d.status = 'PENDING' ");
+        } else if (FILTER_ON_THE_WAY.equals(filter)) {
+            sql.append("AND d.status IN ('DISPATCHED', 'OUT_FOR_DELIVERY', 'FAILED') ");
+        } else if (FILTER_COMPLETED.equals(filter)) {
+            sql.append("AND d.status IN ('DELIVERED', 'CANCELLED') ");
         }
 
         // Open deliveries first, the ones due soonest on top.
@@ -162,9 +163,9 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         int unassigned = 0;
         int all = 0;
 
-        String sql = "SELECT status, CASE WHEN staff_id IS NULL THEN 1 ELSE 0 END AS no_rider, COUNT(*) AS n "
-                   + "FROM deliveries " + (staffId == null ? "" : "WHERE staff_id = ? ")
-                   + "GROUP BY status, CASE WHEN staff_id IS NULL THEN 1 ELSE 0 END";
+        String sql = "SELECT d.status, CASE WHEN d.staff_id IS NULL THEN 1 ELSE 0 END AS no_rider, COUNT(*) AS n "
+                   + "FROM deliveries d WHERE 1 = 1 " + (staffId == null ? "" : RIDER_SEES)
+                   + "GROUP BY d.status, CASE WHEN d.staff_id IS NULL THEN 1 ELSE 0 END";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             if (staffId != null) {
@@ -188,57 +189,52 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         counts.put(FILTER_ACTIVE, active);
         counts.put(FILTER_UNASSIGNED, unassigned);
         counts.put(FILTER_ALL, all);
+        counts.put(FILTER_NEW, counts.get("PENDING"));
+        counts.put(FILTER_ON_THE_WAY, counts.get("DISPATCHED") + counts.get("OUT_FOR_DELIVERY") + counts.get("FAILED"));
+        counts.put(FILTER_COMPLETED, counts.get("DELIVERED") + counts.get("CANCELLED"));
         return counts;
-    }
-
-    @Override
-    public List<User> findRiders() throws SQLException {
-        String sql = "SELECT id, full_name, email, phone FROM users "
-                   + "WHERE role = 'DELIVERY_STAFF' AND is_active = 1 ORDER BY full_name";
-        List<User> riders = new ArrayList<>();
-        try (Connection con = DBConnection.getInstance().getConnection();
-             PreparedStatement ps = con.prepareStatement(sql);
-             ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                User u = new User();
-                u.setId(rs.getInt("id"));
-                u.setFullName(rs.getString("full_name"));
-                u.setEmail(rs.getString("email"));
-                u.setPhone(rs.getString("phone"));
-                u.setRole(Role.DELIVERY_STAFF);
-                u.setActive(true);
-                riders.add(u);
-            }
-        }
-        return riders;
     }
 
     // =============================================================== update
 
     @Override
-    public boolean assignStaff(int id, int staffId, int changedBy, String note) throws SQLException {
+    public boolean pickUp(Delivery delivery, int riderId, String riderName, int changedBy) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection()) {
             con.setAutoCommit(false);
             try {
-                String sql = "UPDATE deliveries SET staff_id = ?, updated_at = SYSDATETIME() "
-                           + "WHERE id = ? AND status IN ('PENDING', 'FAILED')";
+                // 1. The delivery: still at the pharmacy, and free or already this rider's.
+                //    If two riders press the button together, only one gets it.
+                String sql = "UPDATE deliveries SET staff_id = ?, status = 'OUT_FOR_DELIVERY', "
+                           + "attempts = attempts + 1, updated_at = SYSDATETIME() "
+                           + "WHERE id = ? AND status = 'PENDING' AND (staff_id IS NULL OR staff_id = ?)";
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
-                    ps.setInt(1, staffId);
-                    ps.setInt(2, id);
+                    ps.setInt(1, riderId);
+                    ps.setInt(2, delivery.getId());
+                    ps.setInt(3, riderId);
                     if (ps.executeUpdate() != 1) {
                         con.rollback();
                         return false;
                     }
                 }
-                // The update row keeps the delivery's current status.
-                String log = "INSERT INTO delivery_updates (delivery_id, status, note, updated_by) "
-                           + "SELECT id, status, ?, ? FROM deliveries WHERE id = ?";
-                try (PreparedStatement ps = con.prepareStatement(log)) {
-                    ps.setString(1, note);
-                    ps.setInt(2, changedBy);
-                    ps.setInt(3, id);
-                    ps.executeUpdate();
+
+                // 2. The order leaves the pharmacy. The rider packs it up when
+                //    collecting it, so a PAID order passes PROCESSING first; one the
+                //    pharmacy already marked packed is PROCESSING already (moveOrder
+                //    then returns false, which is fine). This keeps every step in the
+                //    customer's order timeline.
+                moveOrder(con, delivery.getOrderId(), OrderStatus.PAID, OrderStatus.PROCESSING,
+                          "Packed and collected by " + riderName, changedBy);
+                if (!moveOrder(con, delivery.getOrderId(), OrderStatus.PROCESSING, OrderStatus.SHIPPED,
+                               "Picked up by " + riderName, changedBy)) {
+                    con.rollback();
+                    return false;
                 }
+
+                // 3. The tracking history keeps both steps, so the customer's
+                //    progress bar shows the time of each one.
+                addUpdate(con, delivery.getId(), DeliveryStatus.DISPATCHED, "Picked up by " + riderName, changedBy);
+                addUpdate(con, delivery.getId(), DeliveryStatus.OUT_FOR_DELIVERY, null, changedBy);
+
                 con.commit();
                 return true;
             } catch (SQLException e) {

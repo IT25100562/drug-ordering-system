@@ -1,7 +1,6 @@
 package com.medisys.servlet.delivery;
 
 import com.medisys.dao.DeliveryDAO;
-import com.medisys.model.DeliveryStatus;
 import com.medisys.model.User;
 import com.medisys.service.DeliveryService;
 import com.medisys.util.SessionUtil;
@@ -15,15 +14,16 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.List;
 
 /**
- * List of deliveries with status tabs.
+ * List of deliveries in three tabs.
  *
- *   GET /staff/deliveries?status=ACTIVE
- *   (status: ACTIVE (default), UNASSIGNED, a DeliveryStatus name, or ALL)
+ *   GET /staff/deliveries?tab=NEW
+ *   (tab: NEW (default), ON_THE_WAY or COMPLETED)
  *
- * A rider (DELIVERY_STAFF) sees only the deliveries given to them.
- * The admin sees all of them and can assign riders.
+ * A rider (DELIVERY_STAFF) sees their own deliveries plus the new ones nobody
+ * has taken yet. The admin can see all of them (read only).
  *
  * Module : 06 - Delivery Tracking and Notification
  * Owner  : Deshabhi R. G. S.
@@ -37,20 +37,14 @@ public class ManageDeliveriesServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         User user = SessionUtil.currentUser(request);
-        String filter = TextUtil.clean(request.getParameter("status")).toUpperCase();
-        boolean known = DeliveryStatus.fromText(filter) != null
-                || DeliveryDAO.FILTER_ALL.equals(filter)
-                || (DeliveryDAO.FILTER_UNASSIGNED.equals(filter) && user.isAdmin());
-        if (!known) {
-            filter = DeliveryDAO.FILTER_ACTIVE;
+        String filter = TextUtil.clean(request.getParameter("tab")).toUpperCase();
+        if (!List.of(DeliveryDAO.FILTER_ON_THE_WAY, DeliveryDAO.FILTER_COMPLETED).contains(filter)) {
+            filter = DeliveryDAO.FILTER_NEW;
         }
 
         try {
             request.setAttribute("deliveries", deliveryService.getDeliveries(user, filter));
             request.setAttribute("counts", deliveryService.getCounts(user));
-            if (user.isAdmin()) {
-                request.setAttribute("riders", deliveryService.getRiders());
-            }
         } catch (SQLException e) {
             throw new ServletException("Could not load the deliveries", e);
         }

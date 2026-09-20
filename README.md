@@ -417,8 +417,9 @@ Labels shown to people: Order placed, Being packed, Out for delivery, Delivered,
   note for the customer, the delivery card (status, rider, due date) with a link to the
   delivery, the full history, a packing slip to print, and Cancel and refund with a
   required reason.
-- The admin only moves an order to "Being packed". "Out for delivery" and "Delivered"
-  are set by the rider through module 06.
+- Marking an order "Being packed" is optional for the admin: a rider can pick up a new
+  order straight away. "Out for delivery" and "Delivered" are set by the rider through
+  module 06.
 
 **Rules (all in `OrderService` / `OrderDAOImpl`)**
 - Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`OrderService.DELIVERY_FEE`,
@@ -537,15 +538,15 @@ paid (Kasuni: Losartan). Their files are in `src/main/webapp/WEB-INF/sample-uplo
 
 ### Module 06: Delivery Tracking and Notification
 
-Every paid order gets a delivery automatically. The admin gives it to a rider (a
-DELIVERY_STAFF account), the rider updates it at each step, and the customer follows it
-on a tracking page.
+Every paid order gets a delivery automatically. Riders (DELIVERY_STAFF accounts) take
+new parcels themselves, with no admin step in between, update them until they are
+delivered, and the customer follows each parcel on a tracking page.
 
 ```
- order paid ──> PENDING ──rider picks it up──> DISPATCHED ──> OUT_FOR_DELIVERY ──> DELIVERED
- ("Preparing")  (order must be packed)         (order: SHIPPED)       │  ▲          (order: DELIVERED)
-                                                                      ▼  │ try again
-                                                                     FAILED (reason required)
+ order paid ──> PENDING ──"Got the package"──> OUT_FOR_DELIVERY ──> DELIVERED
+ ("New")        (any rider; the order          (order: SHIPPED)  │  ▲    (order: DELIVERED)
+                 becomes packed + shipped)                       ▼  │ try again
+                                                                FAILED (reason required)
  order cancelled while PENDING ──> CANCELLED
 ```
 
@@ -559,31 +560,37 @@ on a tracking page.
   **Clear read**. Riders have the bell too.
 
 **Staff pages** (`/staff/*`: DELIVERY_STAFF and ADMIN)
-- `/staff/deliveries`: totals and tabs (Open, No rider yet (admin only), each status, All).
-  A rider sees **only their own** deliveries and gets quick buttons ("Picked up from the
-  pharmacy", "On the way to the customer", "Delivered"). The admin sees all of them and
-  picks the rider from a list on each row. The menu shows the number of deliveries
-  waiting for a rider (admin) or the rider's open deliveries (rider).
+- `/staff/deliveries`: three tabs.
+  - **New deliveries:** every new parcel that no rider has taken yet. A rider presses
+    **Got the package**. The parcel becomes theirs and goes straight to *Out for delivery*.
+  - **On the way:** **Delivered**, **Could not deliver** (asks for a reason), and
+    **Try again** after a failed attempt.
+  - **Completed:** delivered and cancelled.
+
+  The admin sees every delivery in the same tabs, **read only**. The menu shows the number
+  of parcels waiting for a rider (admin) or the rider's open deliveries (rider).
 - `/staff/deliveries/view?id=`: the address with a call link, the parcel contents, the
-  history, "Next step" with an optional note for the customer, "Could not deliver" with a
-  required reason, and (admin) Assign / Change rider.
+  history, and for the rider "Got the package" or "Next step" with an optional note for
+  the customer, and "Could not deliver" with a required reason.
 
 **Rules (all in `DeliveryService` / `DeliveryDAOImpl`)**
 - One delivery per order (`UNIQUE order_id`), created in the order's transaction, so a
   paid order can never be missing its delivery. It is due 2 days after the order
   (`DeliveryDAOImpl.DELIVERY_DAYS`).
-- Only the admin assigns riders, and only to active DELIVERY_STAFF accounts. The rider can
-  be changed while the parcel is at the pharmacy (PENDING) or after a failed attempt.
+- Only riders change deliveries; the admin can only look. Any rider takes a new parcel
+  with **Got the package**. If two riders press it together, only the first one gets it
+  (`DeliveryDAOImpl.pickUp`, one transaction). The order moves Order placed → Being
+  packed → Out for delivery in the same transaction, so the customer's timeline shows
+  every step.
 - A parcel can't leave without a rider (checked in the service and by a `CHECK`
-  constraint), and it can't be picked up before the pharmacy has packed the order.
+  constraint).
 - The status moves one allowed step at a time (`DeliveryStatus.nextSteps()`). The page
   sends the status it showed, so a double click or two users at once can't skip a step.
 - "Could not deliver" needs a reason (5-300 characters). Each trip counts as an attempt.
 - The delivery update and the order's status change are saved in **one transaction**.
 - A rider gets 404 for someone else's delivery, and a customer gets 404 for someone else's
   order. Notifications can only be deleted by their owner (`WHERE id = ? AND user_id = ?`).
-- The customer is notified at every step. The rider is notified when a delivery is given
-  to them. Everything is HTML-escaped on the page.
+- The customer is notified at every step. Everything is HTML-escaped on the page.
 
 **Tables:** `deliveries` (one row per order: rider, status, attempts, due date,
 delivered time) and `delivery_updates` (the tracking history).
@@ -593,10 +600,9 @@ a second attempt after "nobody at home", and is running late. ORD-000003 has no 
 and isn't packed. ORD-000004 was cancelled. ORD-000005 is packed and assigned to Ruwan,
 ready to pick up.
 
-**Try it:** log in as `admin@medisys.lk`, open **Deliveries**, and give ORD-000003 to a
-rider. Then open **Orders** and mark it packed. Log in as `delivery@medisys.lk` and move it
-through the steps from **My Deliveries**. Finally, log in as `nimal@example.com` and open
-**Orders → Track**.
+**Try it:** log in as `delivery@medisys.lk`, open **My Deliveries → New deliveries**, and
+press **Got the package** on ORD-000003. Then press **Delivered** in **On the way**.
+Finally, log in as `nimal@example.com` and open **Orders → Track**.
 
 ### File storage and moving to the cloud
 

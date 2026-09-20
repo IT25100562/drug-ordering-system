@@ -2,7 +2,6 @@ package com.medisys.dao;
 
 import com.medisys.model.Delivery;
 import com.medisys.model.DeliveryStatus;
-import com.medisys.model.User;
 
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -17,9 +16,14 @@ import java.util.Map;
  */
 public interface DeliveryDAO {
 
-    /** List filters, besides the status names. */
+    /** The three tabs of the deliveries page. */
+    String FILTER_NEW = "NEW";                  // at the pharmacy (PENDING), waiting to be picked up
+    String FILTER_ON_THE_WAY = "ON_THE_WAY";    // picked up, not delivered yet (incl. failed attempts)
+    String FILTER_COMPLETED = "COMPLETED";      // delivered or cancelled
+
+    /** Extra counts (the menu badge in header.jspf uses them). */
     String FILTER_ACTIVE = "ACTIVE";            // everything not delivered or cancelled
-    String FILTER_UNASSIGNED = "UNASSIGNED";    // waiting for the admin to pick a rider
+    String FILTER_UNASSIGNED = "UNASSIGNED";    // at the pharmacy, no rider has taken it yet
     String FILTER_ALL = "ALL";
 
     /**
@@ -44,22 +48,29 @@ public interface DeliveryDAO {
     /**
      * Deliveries for the staff page (without their updates).
      *
-     * @param staffId only this rider's deliveries, or null for all (admin)
-     * @param filter  a status name, FILTER_ACTIVE, FILTER_UNASSIGNED or FILTER_ALL
+     * @param staffId a rider: their own deliveries plus the new ones nobody has
+     *                picked up yet; null for all (admin)
+     * @param filter  FILTER_NEW, FILTER_ON_THE_WAY or FILTER_COMPLETED
      */
     List<Delivery> findForStaff(Integer staffId, String filter) throws SQLException;
 
-    /** Number of deliveries per status name, plus the three FILTER_ values. */
+    /**
+     * Number of deliveries per status name and per FILTER_ value, counting the
+     * same deliveries findForStaff shows.
+     */
     Map<String, Integer> countByStatus(Integer staffId) throws SQLException;
 
-    /** Active delivery staff accounts, for the "assign rider" list. */
-    List<User> findRiders() throws SQLException;
-
     /**
-     * Gives the delivery to a rider, only while it may still be assigned
-     * (PENDING or FAILED). Also saves an update row.
+     * The rider takes the parcel from the pharmacy, in ONE transaction:
+     *  - the delivery gets this rider (only if nobody else took it first)
+     *    and goes PENDING -> OUT_FOR_DELIVERY (the first attempt)
+     *  - the order goes (PAID ->) PROCESSING -> SHIPPED (with order history rows)
+     *  - two update rows for the tracking page (Dispatched, Out for delivery)
+     *
+     * @return false if the delivery or the order was not in the expected state,
+     *         or another rider took it first
      */
-    boolean assignStaff(int id, int staffId, int changedBy, String note) throws SQLException;
+    boolean pickUp(Delivery delivery, int riderId, String riderName, int changedBy) throws SQLException;
 
     /**
      * Moves a delivery from "from" to "to" in ONE transaction:

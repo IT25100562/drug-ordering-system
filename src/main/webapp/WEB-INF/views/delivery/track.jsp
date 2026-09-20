@@ -96,7 +96,7 @@
             <% } else if (status == DeliveryStatus.CANCELLED) { %>
                 <p class="meta">No rider - the order was cancelled.</p>
             <% } else { %>
-                <p class="meta">A rider will be assigned when your parcel is ready.</p>
+                <p class="meta">A rider will pick up your parcel soon.</p>
             <% } %>
         </section>
 

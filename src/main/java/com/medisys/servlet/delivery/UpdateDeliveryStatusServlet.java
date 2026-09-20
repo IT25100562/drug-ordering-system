@@ -18,8 +18,8 @@ import java.sql.SQLException;
 /**
  * Changes a delivery.
  *
- *   POST /staff/deliveries/update   id=3&action=status&current=DISPATCHED&next=OUT_FOR_DELIVERY&note=...
- *   POST /staff/deliveries/update   id=3&action=assign&riderId=7          (admin only)
+ *   POST /staff/deliveries/update   id=3&action=pickup&current=PENDING            ("Got the package")
+ *   POST /staff/deliveries/update   id=3&action=status&current=OUT_FOR_DELIVERY&next=DELIVERED&note=...
  *
  * Goes back to the page the form was on (returnTo), or the delivery page.
  *
@@ -42,11 +42,11 @@ public class UpdateDeliveryStatusServlet extends HttpServlet {
                 throw new ValidationException("No delivery was selected.");
             }
             String message;
-            if ("status".equals(action)) {
+            if ("pickup".equals(action)) {
+                message = deliveryService.pickUp(user, id, request.getParameter("current"));
+            } else if ("status".equals(action)) {
                 message = deliveryService.updateStatus(user, id, request.getParameter("current"),
                         request.getParameter("next"), request.getParameter("note"));
-            } else if ("assign".equals(action)) {
-                message = deliveryService.assign(user, id, request.getParameter("riderId"));
             } else {
                 throw new ValidationException("Unknown action.");
             }

@@ -47,9 +47,6 @@ public class DeliveryDetailsServlet extends HttpServlet {
             request.setAttribute("delivery", delivery);
             // The medicines to hand over (from module 02's order).
             request.setAttribute("order", orderService.getOrder(delivery.getOrderId()));
-            if (user.isAdmin()) {
-                request.setAttribute("riders", deliveryService.getRiders());
-            }
             request.getRequestDispatcher("/WEB-INF/views/delivery/delivery-details.jsp").forward(request, response);
         } catch (SQLException e) {
             throw new ServletException("Could not load the delivery", e);

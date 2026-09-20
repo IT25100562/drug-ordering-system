@@ -66,17 +66,16 @@
             <h2>Delivery</h2>
             <dl class="info compact">
                 <dt>Status</dt><dd><span class="badge <%= delivery.getStatus().getCssClass() %>"><%= delivery.getStatus().getLabel() %></span></dd>
-                <dt>Rider</dt><dd><%= delivery.hasRider() ? TextUtil.html(delivery.getStaffName()) : "Not assigned yet" %></dd>
+                <dt>Rider</dt><dd><%= delivery.hasRider() ? TextUtil.html(delivery.getStaffName()) : "Not picked up yet" %></dd>
                 <% if (!delivery.getStatus().isFinished()) { %>
                     <dt>Due</dt><dd><%= TextUtil.date(delivery.getEstimatedDate()) %>
                         <% if (delivery.isLate()) { %><span class="badge badge-rejected">Late</span><% } %></dd>
                 <% } %>
             </dl>
-            <% if (order.getStatus() == OrderStatus.PROCESSING || order.getStatus() == OrderStatus.SHIPPED) { %>
-                <p class="meta">Once packed, the rider marks the parcel as picked up and delivered.</p>
+            <% if (!delivery.getStatus().isFinished()) { %>
+                <p class="meta">A rider picks the parcel up and marks it delivered.</p>
             <% } %>
-            <a class="btn plain block" href="<%= ctx %>/staff/deliveries/view?id=<%= delivery.getId() %>">
-                <%= delivery.getStatus().canAssignRider() ? "Assign rider / track" : "Track delivery" %></a>
+            <a class="btn plain block" href="<%= ctx %>/staff/deliveries/view?id=<%= delivery.getId() %>">Track delivery</a>
         </section>
         <% } %>
 
