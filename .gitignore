@@ -18,3 +18,6 @@ medisys-uploads/
 
 # Local app settings (will hold cloud storage keys later)
 src/main/resources/app.properties
+
+# Local Tomcat process ID and startup log for the convenience scripts
+.local-run/

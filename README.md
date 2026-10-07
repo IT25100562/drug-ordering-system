@@ -31,21 +31,26 @@ Design patterns used:
 > **New to the project?** Follow the step-by-step [SETUP.md](SETUP.md). It covers installing IntelliJ,
 > SQL Server and Tomcat, creating the database, running the app, a tour of all six modules, and troubleshooting.
 > The short version is below.
+> For Ubuntu start/stop scripts that leave your Docker container under your control, see [LOCAL-RUN.md](LOCAL-RUN.md).
+> To browse the SQL Server data in IntelliJ IDEA or DBeaver, see [database client setup](LOCAL-RUN.md#browse-the-database-in-intellij-and-dbeaver).
 
 1. Clone the repo and open the folder in IntelliJ IDEA. When IntelliJ asks, load it as a
    Maven project. It downloads the dependencies itself.
-2. **Database** (SQL Server must be running, with TCP port 1433 enabled). From the project
-   folder, run the three scripts in order:
+2. **Database** (SQL Server must be running and reachable on host port 1433). If SQL Server
+   is in Docker, publish its port to the host (for example, `-p 1433:1433`). From the project
+   folder on Linux, run the three scripts in order (the `sqlcmd` client must be installed):
 
-   ```
-   sqlcmd -S localhost -E -C -i database\create-database.sql
-   sqlcmd -S localhost -E -C -d MediSysDB -i database\schema.sql
-   sqlcmd -S localhost -E -C -d MediSysDB -i database\sample-data.sql
+   ```bash
+   sqlcmd -S localhost,1433 -U sa -C -i database/create-database.sql
+   sqlcmd -S localhost,1433 -U sa -C -d MediSysDB -i database/schema.sql
+   sqlcmd -S localhost,1433 -U sa -C -d MediSysDB -i database/sample-data.sql
    ```
 
-   The first script creates the `MediSysDB` database and a `medisys_app` login.
+   Enter the SQL Server `sa` password when prompted. The first script creates the
+   `MediSysDB` database and a `medisys_app` login.
    `schema.sql` **drops and recreates** every table, so run it again (followed by
-   `sample-data.sql`) whenever the tables change or you want fresh demo data.
+   `sample-data.sql`) whenever the tables change or you want fresh demo data; this deletes
+   existing data.
    You can also open the scripts in IntelliJ's Database tool and run them there.
 3. Copy `src/main/resources/db.properties.example` to `db.properties` in the same folder.
    It already has the `medisys_app` login. `db.properties` is git-ignored.
@@ -56,6 +61,7 @@ Design patterns used:
 5. Run it and open <http://localhost:8080/medisys/>.
 
 From the command line: `mvn package` builds `target/medisys.war`.
+For Ubuntu/Docker commands, Java and Tomcat setup, see [Ubuntu Docker setup](SETUP.md#ubuntu-docker-setup-sql-server).
 
 ### Demo accounts (from `sample-data.sql`)
 

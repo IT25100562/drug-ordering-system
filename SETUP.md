@@ -1,7 +1,82 @@
-# MediSys: setup guide (Windows)
+# MediSys: setup guide
 
 This guide takes you from a new computer to MediSys running in your browser.
 Plan about **45-60 minutes** the first time; most of that is downloads.
+
+## Ubuntu Docker setup (SQL Server)
+
+These steps are for running the app on Ubuntu while SQL Server runs in a Docker
+container on the same machine. The JDBC connection is made by the Java app on the
+host, so Docker must publish SQL Server's port to the host.
+For repeat runs after the one-time database setup, use the project scripts in
+[LOCAL-RUN.md](LOCAL-RUN.md) to start and stop Tomcat; they leave Docker under your control.
+
+### 1. Check the SQL Server port
+
+```bash
+docker ps --format 'table {{.Names}}\t{{.Ports}}'
+```
+
+The SQL Server container should show a mapping such as `127.0.0.1:1433->1433/tcp`
+or `0.0.0.0:1433->1433/tcp`. If Docker reports a permission error, use `sudo docker ps`.
+If no host port is published, the app cannot connect through `localhost`; configure
+port publishing when creating the container. Preserve its existing data volume if the
+container needs to be recreated. If the host port is not `1433`, change the port in
+`src/main/resources/db.properties` to match.
+
+### 2. Install Java and Maven
+
+```bash
+sudo apt update
+sudo apt install -y openjdk-17-jdk maven
+java -version
+mvn -version
+```
+
+Tomcat 11 is also required. Download and extract the Tomcat 11 Linux `.tar.gz` from
+<https://tomcat.apache.org/download-11.cgi>, for example to `$HOME/apache-tomcat-11`.
+
+### 3. Create the database and demo data
+
+Install the Microsoft [`sqlcmd` command-line tool](https://learn.microsoft.com/sql/tools/sqlcmd/sqlcmd-download-install?view=sql-server-ver16)
+if it is not already available.
+From the project root, run each command; enter your SQL Server `sa` password when
+prompted:
+
+```bash
+sqlcmd -S localhost,1433 -U sa -C -i database/create-database.sql
+sqlcmd -S localhost,1433 -U sa -C -d MediSysDB -i database/schema.sql
+sqlcmd -S localhost,1433 -U sa -C -d MediSysDB -i database/sample-data.sql
+```
+
+`schema.sql` drops and recreates the tables, so it deletes existing data. The first
+script creates the app's local `medisys_app` login, which is used by the JDBC profile.
+
+### 4. Configure and run the app
+
+Copy `db.properties.example` to `db.properties` once and set the SQL Server login
+if needed. For repeat starts and stops, use the scripts in
+[LOCAL-RUN.md](LOCAL-RUN.md#start-the-website); they build and deploy the app and
+leave the Docker container under your control.
+
+```bash
+cp src/main/resources/db.properties.example src/main/resources/db.properties
+```
+
+After setting the Java, Maven, and Tomcat paths as described in LOCAL-RUN.md,
+run `./scripts/start-local.sh`; then browse to <http://localhost:8080/medisys/>.
+Stop it using `./scripts/stop-local.sh`. The profile defaults to `localhost:1433`
+and the `medisys_app` account created by the SQL script. `db.properties` is local
+and git-ignored. To use a different host port or SQL login, edit its `db.url`,
+`db.user`, and `db.password` values.
+
+If the app log says `DATABASE NOT CONNECTED`, first check that the container is running,
+that its port is published to the host, and that the database scripts completed. The
+following Windows instructions are for Windows installations of SQL Server and Tomcat.
+
+---
+
+## Windows setup
 
 What you will install:
 
