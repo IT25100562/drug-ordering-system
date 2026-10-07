@@ -21,3 +21,8 @@ src/main/resources/app.properties
 
 # Local Tomcat process ID and startup log for the convenience scripts
 .local-run/
+
+# Legacy / external node modules or mock backends
+node_modules/
+backend/
+
