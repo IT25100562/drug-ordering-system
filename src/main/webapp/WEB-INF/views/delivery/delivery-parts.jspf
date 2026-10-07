@@ -1,0 +1,66 @@
+<%--
+    Parts shared by the customer's tracking page and the staff delivery page:
+      - the progress bar (Preparing -> Dispatched -> Out for delivery -> Delivered)
+      - the tracking history, newest first
+    Needs a Delivery called "delivery" (with its updates loaded).
+
+    Module : 06 - Delivery Tracking and Notification
+    Owner  : Deshabhi R. G. S.
+--%>
+<%
+    com.medisys.model.DeliveryStatus[] deliverySteps = {
+            com.medisys.model.DeliveryStatus.PENDING, com.medisys.model.DeliveryStatus.DISPATCHED,
+            com.medisys.model.DeliveryStatus.OUT_FOR_DELIVERY, com.medisys.model.DeliveryStatus.DELIVERED };
+    com.medisys.model.DeliveryStatus shownStatus = delivery.getStatus();
+    boolean failedNow = shownStatus == com.medisys.model.DeliveryStatus.FAILED;
+    // A failed attempt is shown on the "Out for delivery" step.
+    if (failedNow) {
+        shownStatus = com.medisys.model.DeliveryStatus.OUT_FOR_DELIVERY;
+    }
+%>
+<section class="card">
+    <% if (delivery.getStatus() == com.medisys.model.DeliveryStatus.CANCELLED) { %>
+        <div class="cancelled-banner">
+            <strong>This delivery was cancelled</strong> because the order was cancelled.
+        </div>
+    <% } else { %>
+        <ol class="order-timeline" aria-label="Delivery progress">
+            <% for (com.medisys.model.DeliveryStatus step : deliverySteps) {
+                   java.time.LocalDateTime at = delivery.getTimeOf(step);
+                   boolean current = step == shownStatus;
+                   boolean done = at != null || step.ordinal() < shownStatus.ordinal();
+            %>
+                <li class="<%= current ? (failedNow ? "current failed" : "current") : done ? "done" : "" %>"
+                    <%= current ? "aria-current=\"step\"" : "" %>>
+                    <span class="dot" aria-hidden="true"></span>
+                    <strong><%= current && failedNow ? "Attempt failed" : step.getLabel() %></strong>
+                    <span class="meta"><%= at != null ? TextUtil.dateTime(at) : "" %></span>
+                </li>
+            <% } %>
+        </ol>
+    <% } %>
+</section>
+
+<section class="card">
+    <h2>Tracking history</h2>
+    <% if (delivery.getUpdates().isEmpty()) { %>
+        <p class="meta">No updates yet.</p>
+    <% } else { %>
+    <ol class="tracking-log">
+        <% for (int i = delivery.getUpdates().size() - 1; i >= 0; i--) {
+               com.medisys.model.DeliveryUpdate update = delivery.getUpdates().get(i);
+        %>
+            <li class="<%= i == delivery.getUpdates().size() - 1 ? "latest" : "" %>">
+                <span class="badge <%= update.getStatus().getCssClass() %>"><%= update.getStatus().getLabel() %></span>
+                <span class="meta nowrap"><%= TextUtil.dateTime(update.getCreatedAt()) %></span>
+                <% if (update.getNote() != null) { %>
+                    <p><%= TextUtil.html(update.getNote()) %></p>
+                <% } %>
+                <% if (update.getUpdatedByName() != null) { %>
+                    <span class="meta">by <%= TextUtil.html(update.getUpdatedByName()) %></span>
+                <% } %>
+            </li>
+        <% } %>
+    </ol>
+    <% } %>
+</section>

@@ -1,0 +1,40 @@
+<%--
+    The medicines the pharmacist listed: medicine, how to use it, quantity and
+    price. Needs a Prescription called "p". Shared by view.jsp and review.jsp.
+
+    Module : 05 - Prescription Upload and Verification
+    Owner  : Perera D. A. A. N. S.
+--%>
+<div class="table-wrap">
+<table class="items-table">
+    <tr>
+        <th>Medicine</th>
+        <th>How to use</th>
+        <th class="num">Qty</th>
+        <th class="num">Price</th>
+        <th class="num">Total</th>
+    </tr>
+    <% for (com.medisys.model.PrescriptionItem item : p.getItems()) {
+           com.medisys.model.Medicine med = item.getMedicine();
+    %>
+    <tr>
+        <td>
+            <div class="item-medicine">
+                <span class="<%= med.getThumbCssClass() %>" aria-hidden="true"><%= med.getThumbText() %></span>
+                <span><strong><%= TextUtil.html(med.getDisplayName()) %></strong>
+                    <br><span class="meta"><%= TextUtil.html(med.getDosageForm()) %>
+                    <% if (med.getManufacturer() != null) { %>&middot; <%= TextUtil.html(med.getManufacturer()) %><% } %></span></span>
+            </div>
+        </td>
+        <td class="dosage"><%= TextUtil.html(item.getDosageInstructions()) %></td>
+        <td class="num"><%= item.getQuantity() %></td>
+        <td class="num nowrap"><%= TextUtil.money(item.getUnitPrice()) %></td>
+        <td class="num nowrap"><strong><%= TextUtil.money(item.getLineTotal()) %></strong></td>
+    </tr>
+    <% } %>
+    <tr class="total-row">
+        <td colspan="4">Total (<%= p.getPackCount() %> pack<%= p.getPackCount() == 1 ? "" : "s" %>)</td>
+        <td class="num nowrap"><%= TextUtil.money(p.getTotal()) %></td>
+    </tr>
+</table>
+</div>

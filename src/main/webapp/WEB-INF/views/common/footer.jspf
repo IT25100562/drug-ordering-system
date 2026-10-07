@@ -1,0 +1,12 @@
+<%-- Shared page bottom. Shared file - agree with the team before changing it. --%>
+</main><!-- /page -->
+
+<%-- Pop-up messages from JavaScript (see showToast in app.js) appear here. --%>
+<div class="toast-area" aria-live="polite"></div>
+
+<footer class="site">
+    MediSys &middot; SE2030 Group Project
+</footer>
+
+</body>
+</html>
