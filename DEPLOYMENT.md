@@ -13,9 +13,13 @@ as the SE2030 spec requires. All four services have free plans.
 
 ## 1. Supabase (database)
 
-1. <https://supabase.com> → New project (region **South Asia (Mumbai)**). Save the database password.
-2. **SQL Editor** → paste `database/schema.sql` → Run, then `database/sample-data.sql` → Run.
-3. **Connect** → *Session pooler* → note the host, port 5432 and user `postgres.<ref>`.
+**Already done:** project `medisys` (ref `duzpvyrcxqyneatmpnfc`, Mumbai), with the tables and
+demo data loaded. Connection (Session pooler): host `aws-0-ap-south-1.pooler.supabase.com`,
+port `5432`, database `postgres`, user `postgres.duzpvyrcxqyneatmpnfc`. The team lead keeps
+the password.
+
+To rebuild it from nothing: <https://supabase.com> → New project → **SQL Editor** → run
+`database/schema.sql`, then `database/sample-data.sql` → **Connect** → *Session pooler*.
 
 `schema.sql` turns on Row Level Security for every table, so Supabase's public REST API
 can't read anything. Only our app (the table owner) can.
@@ -32,7 +36,8 @@ files; product photos are public and are served from Cloudinary's CDN.
 
 ## 3. Render (runs the Java app)
 
-1. <https://render.com> → sign in with GitHub → **New → Blueprint** → pick this repo.
+1. Open <https://render.com/deploy?repo=https://github.com/IT25100562/drug-ordering-system>
+   (or Render → **New → Blueprint** → pick this repo) and sign in with GitHub.
    Render reads `render.yaml` and creates the `medisys` web service (Docker, free plan).
 2. Fill in the secret settings it asks for:
 
