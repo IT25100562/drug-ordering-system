@@ -12,11 +12,11 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Report" %>
-<%@ page import="com.medisys.model.ReportPeriod" %>
-<%@ page import="com.medisys.model.ReportRow" %>
-<%@ page import="com.medisys.model.ReportSummary" %>
-<%@ page import="com.medisys.service.ReportService" %>
+<%@ page import="com.medisys.report.Report" %>
+<%@ page import="com.medisys.report.ReportPeriod" %>
+<%@ page import="com.medisys.report.ReportRow" %>
+<%@ page import="com.medisys.report.ReportSummary" %>
+<%@ page import="com.medisys.report.SavedReport" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <% String pageTitle = "Reports & Analytics"; %>
@@ -75,7 +75,7 @@
 <%-- -------------------------------------------------------------- period filter --%>
 <section class="card report-filter no-print">
     <nav class="filters" aria-label="Report period">
-        <% for (Map.Entry<String, String> preset : ReportService.PRESETS.entrySet()) {
+        <% for (Map.Entry<String, String> preset : ReportPeriod.PRESETS.entrySet()) {
                boolean active = preset.getKey().equals(period.getPreset());
         %>
             <a class="<%= active ? "active" : "" %>" href="<%= ctx %>/admin/reports?range=<%= preset.getKey() %>"
@@ -98,12 +98,12 @@
             <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
             <div class="field">
                 <label for="title">Title *</label>
-                <input type="text" id="title" name="title" minlength="<%= ReportService.TITLE_MIN %>"
-                       maxlength="<%= ReportService.TITLE_MAX %>" required placeholder="e.g. September 2026 sales">
+                <input type="text" id="title" name="title" minlength="<%= SavedReport.TITLE_MIN %>"
+                       maxlength="<%= SavedReport.TITLE_MAX %>" required placeholder="e.g. September 2026 sales">
             </div>
             <div class="field">
                 <label for="notes">Notes <span class="meta">(optional)</span></label>
-                <textarea id="notes" name="notes" rows="2" maxlength="<%= ReportService.NOTES_MAX %>"
+                <textarea id="notes" name="notes" rows="2" maxlength="<%= SavedReport.NOTES_MAX %>"
                           placeholder="e.g. Dengue season - Panadol sold out twice"></textarea>
             </div>
             <button class="btn small" type="submit">Save</button>
@@ -195,7 +195,7 @@
 <div class="report-two">
     <section class="card">
         <div class="section-head">
-            <h2>Top <%= ReportService.TOP_MEDICINES %> medicines</h2>
+            <h2>Top <%= Report.TOP_MEDICINES %> medicines</h2>
             <a class="no-print" href="<%= exportBase %>medicines">Download CSV</a>
         </div>
         <% if (report.getTopMedicines().isEmpty()) { %>
@@ -346,7 +346,7 @@
             <span class="meta">at or below reorder level</span></div>
         <div class="kpi"><span class="kpi-label">Out of stock</span><span class="kpi-value"><%= report.getOutOfStockCount() %></span></div>
         <div class="kpi"><span class="kpi-label">Expiring soon</span><span class="kpi-value"><%= report.getExpiringSoon().size() %></span>
-            <span class="meta">within <%= ReportService.EXPIRY_WARNING_DAYS %> days (or expired)</span></div>
+            <span class="meta">within <%= Report.EXPIRY_WARNING_DAYS %> days (or expired)</span></div>
     </div>
     <div class="report-two">
         <div>
@@ -373,7 +373,7 @@
                 <a class="no-print" href="<%= exportBase %>expiring">Download CSV</a>
             </div>
             <% if (report.getExpiringSoon().isEmpty()) { %>
-                <p class="meta">Nothing expires in the next <%= ReportService.EXPIRY_WARNING_DAYS %> days.</p>
+                <p class="meta">Nothing expires in the next <%= Report.EXPIRY_WARNING_DAYS %> days.</p>
             <% } else { %>
             <table class="report-table">
                 <tr><th>Medicine</th><th>Expires</th><th class="num">In stock</th></tr>

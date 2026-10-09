@@ -6,10 +6,10 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Delivery" %>
-<%@ page import="com.medisys.model.Order" %>
-<%@ page import="com.medisys.model.OrderStatus" %>
-<%@ page import="com.medisys.model.Payment" %>
+<%@ page import="com.medisys.delivery.Delivery" %>
+<%@ page import="com.medisys.order.Order" %>
+<%@ page import="com.medisys.order.OrderStatus" %>
+<%@ page import="com.medisys.order.Payment" %>
 <% String pageTitle = "Order"; %>
 <%@ include file="../common/header.jspf" %>
 <%

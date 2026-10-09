@@ -26,7 +26,7 @@ GO
 --   tharindu@example.com   / Customer@123   CUSTOMER (red-flagged)
 --   delivery@medisys.lk    / Delivery@123   DELIVERY_STAFF
 --   rider2@medisys.lk      / Delivery@123   DELIVERY_STAFF
--- The hashes were made with:  java com.medisys.util.PasswordUtil <password>
+-- The hashes were made with:  java com.medisys.common.PasswordUtil <password>
 
 -- Customers must have a NIC, date of birth and phone (a CHECK in schema.sql),
 -- so they are added with those columns filled straight away.
@@ -312,7 +312,7 @@ GO
 --   ORD 3  PENDING            no rider yet, not packed   -> admin assigns a rider
 --   ORD 4  CANCELLED          the order was cancelled
 --   ORD 5  PENDING            Ruwan, order packed         -> Ruwan can pick it up
--- A new order is expected 2 days after it was placed (DeliveryDAOImpl.DELIVERY_DAYS).
+-- A new order is expected 2 days after it was placed (DeliveryDAO.DELIVERY_DAYS).
 
 INSERT INTO deliveries (order_id, staff_id, status, attempts, estimated_date, delivered_at, created_at, updated_at)
 SELECT o.id, s.id, v.status, v.attempts, CAST(DATEADD(day, 2, o.created_at) AS DATE),

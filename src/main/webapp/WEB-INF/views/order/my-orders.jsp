@@ -6,7 +6,7 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Order" %>
+<%@ page import="com.medisys.order.Order" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "My Orders"; %>
 <%@ include file="../common/header.jspf" %>
@@ -45,7 +45,7 @@
         </div>
         <div class="order-thumbs">
             <% int shown = 0;
-               for (com.medisys.model.OrderItem item : o.getItems()) {
+               for (com.medisys.order.OrderItem item : o.getItems()) {
                    if (shown++ == 4) { %><span class="more">+<%= o.getItems().size() - 4 %></span><% break; } %>
                 <span class="<%= item.getThumbCssClass() %>" title="<%= TextUtil.html(item.getMedicineName()) %>"><%= item.getThumbText() %></span>
             <% } %>

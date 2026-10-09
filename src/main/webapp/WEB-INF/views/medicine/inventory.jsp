@@ -6,10 +6,10 @@
     Owner  : Divisekara A. W. D. M. D. M. B.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.dao.MedicineDAO" %>
-<%@ page import="com.medisys.model.Category" %>
-<%@ page import="com.medisys.model.InventorySummary" %>
-<%@ page import="com.medisys.model.Medicine" %>
+<%@ page import="com.medisys.medicine.MedicineDAO" %>
+<%@ page import="com.medisys.medicine.Category" %>
+<%@ page import="com.medisys.medicine.InventorySummary" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="java.util.List" %>

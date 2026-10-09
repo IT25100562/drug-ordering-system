@@ -6,8 +6,8 @@
     Owner  : Divisekara A. W. D. M. D. M. B.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Category" %>
-<%@ page import="com.medisys.model.Medicine" %>
+<%@ page import="com.medisys.medicine.Category" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%
@@ -28,7 +28,7 @@
 <%!
     // Returns the escaped form value, or "" when the field is empty.
     private String val(Map<String, String> form, String field) {
-        return com.medisys.util.TextUtil.html(form.get(field));
+        return com.medisys.common.TextUtil.html(form.get(field));
     }
 %>
 

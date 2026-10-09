@@ -7,9 +7,8 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.ReportSummary" %>
-<%@ page import="com.medisys.model.SavedReport" %>
-<%@ page import="com.medisys.service.ReportService" %>
+<%@ page import="com.medisys.report.ReportSummary" %>
+<%@ page import="com.medisys.report.SavedReport" %>
 <%@ page import="java.math.BigDecimal" %>
 <% String pageTitle = "Saved report"; %>
 <%@ include file="../common/header.jspf" %>
@@ -103,11 +102,11 @@
                 <div class="field">
                     <label for="title">Title *</label>
                     <input type="text" id="title" name="title" value="<%= TextUtil.html(r.getTitle()) %>"
-                           minlength="<%= ReportService.TITLE_MIN %>" maxlength="<%= ReportService.TITLE_MAX %>" required>
+                           minlength="<%= SavedReport.TITLE_MIN %>" maxlength="<%= SavedReport.TITLE_MAX %>" required>
                 </div>
                 <div class="field">
                     <label for="notes">Notes</label>
-                    <textarea id="notes" name="notes" rows="4" maxlength="<%= ReportService.NOTES_MAX %>"><%= TextUtil.html(r.getNotes()) %></textarea>
+                    <textarea id="notes" name="notes" rows="4" maxlength="<%= SavedReport.NOTES_MAX %>"><%= TextUtil.html(r.getNotes()) %></textarea>
                 </div>
                 <button class="btn block" type="submit">Save changes</button>
             </form>

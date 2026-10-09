@@ -8,24 +8,24 @@
     Owner  : Deshabhi R. G. S.
 --%>
 <%
-    com.medisys.model.DeliveryStatus[] deliverySteps = {
-            com.medisys.model.DeliveryStatus.PENDING, com.medisys.model.DeliveryStatus.DISPATCHED,
-            com.medisys.model.DeliveryStatus.OUT_FOR_DELIVERY, com.medisys.model.DeliveryStatus.DELIVERED };
-    com.medisys.model.DeliveryStatus shownStatus = delivery.getStatus();
-    boolean failedNow = shownStatus == com.medisys.model.DeliveryStatus.FAILED;
+    com.medisys.delivery.DeliveryStatus[] deliverySteps = {
+            com.medisys.delivery.DeliveryStatus.PENDING, com.medisys.delivery.DeliveryStatus.DISPATCHED,
+            com.medisys.delivery.DeliveryStatus.OUT_FOR_DELIVERY, com.medisys.delivery.DeliveryStatus.DELIVERED };
+    com.medisys.delivery.DeliveryStatus shownStatus = delivery.getStatus();
+    boolean failedNow = shownStatus == com.medisys.delivery.DeliveryStatus.FAILED;
     // A failed attempt is shown on the "Out for delivery" step.
     if (failedNow) {
-        shownStatus = com.medisys.model.DeliveryStatus.OUT_FOR_DELIVERY;
+        shownStatus = com.medisys.delivery.DeliveryStatus.OUT_FOR_DELIVERY;
     }
 %>
 <section class="card">
-    <% if (delivery.getStatus() == com.medisys.model.DeliveryStatus.CANCELLED) { %>
+    <% if (delivery.getStatus() == com.medisys.delivery.DeliveryStatus.CANCELLED) { %>
         <div class="cancelled-banner">
             <strong>This delivery was cancelled</strong> because the order was cancelled.
         </div>
     <% } else { %>
         <ol class="order-timeline" aria-label="Delivery progress">
-            <% for (com.medisys.model.DeliveryStatus step : deliverySteps) {
+            <% for (com.medisys.delivery.DeliveryStatus step : deliverySteps) {
                    java.time.LocalDateTime at = delivery.getTimeOf(step);
                    boolean current = step == shownStatus;
                    boolean done = at != null || step.ordinal() < shownStatus.ordinal();
@@ -48,7 +48,7 @@
     <% } else { %>
     <ol class="tracking-log">
         <% for (int i = delivery.getUpdates().size() - 1; i >= 0; i--) {
-               com.medisys.model.DeliveryUpdate update = delivery.getUpdates().get(i);
+               com.medisys.delivery.DeliveryUpdate update = delivery.getUpdates().get(i);
         %>
             <li class="<%= i == delivery.getUpdates().size() - 1 ? "latest" : "" %>">
                 <span class="badge <%= update.getStatus().getCssClass() %>"><%= update.getStatus().getLabel() %></span>

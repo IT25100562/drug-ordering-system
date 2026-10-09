@@ -248,8 +248,9 @@ To get the demo data back at any time, run `schema.sql` and `sample-data.sql` ag
 5. Shared files (`header.jspf`, `style.css`, `AuthFilter`, `TextUtil`, the SQL scripts …) - agree
    with the team before changing them.
 
-Where your code lives: see *Files per module* in [README.md](README.md) and
-[handover-docs/file-ownership.txt](handover-docs/file-ownership.txt).
+Where your code lives: one folder per module, `src/main/java/com/medisys/<module>/`. See
+*Files per module* in [README.md](README.md), and [VIVA-GUIDE.md](VIVA-GUIDE.md) for the
+exact file and method of every Create / Read / Update / Delete.
 
 ---
 

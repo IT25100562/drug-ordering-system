@@ -9,9 +9,9 @@
     Owner  : Amadini G. G. A.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Cart" %>
-<%@ page import="com.medisys.model.CartItem" %>
-<%@ page import="com.medisys.model.Medicine" %>
+<%@ page import="com.medisys.cart.Cart" %>
+<%@ page import="com.medisys.cart.CartItem" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
 <% String pageTitle = "My Cart"; %>
 <%@ include file="../common/header.jspf" %>
 <%
@@ -115,8 +115,8 @@
         <a class="btn block <%= cart.isReadyForCheckout() ? "" : "disabled" %>" href="<%= ctx %>/checkout"
            data-checkout <%= cart.isReadyForCheckout() ? "" : "aria-disabled=\"true\" tabindex=\"-1\"" %>>
             Proceed to checkout</a>
-        <p class="meta center">Free delivery on orders of <%= TextUtil.money(com.medisys.service.OrderService.FREE_DELIVERY_FROM) %>
-            or more (otherwise <%= TextUtil.money(com.medisys.service.OrderService.DELIVERY_FEE) %>).<br>
+        <p class="meta center">Free delivery on orders of <%= TextUtil.money(com.medisys.order.Order.FREE_DELIVERY_FROM) %>
+            or more (otherwise <%= TextUtil.money(com.medisys.order.Order.DELIVERY_FEE) %>).<br>
             Maximum <%= maxPerItem %> packs of each medicine per order.</p>
     </aside>
 </div>

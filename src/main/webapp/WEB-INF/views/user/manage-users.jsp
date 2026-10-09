@@ -9,8 +9,8 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Role" %>
-<%@ page import="com.medisys.service.UserService" %>
+<%@ page import="com.medisys.user.Role" %>
+<%@ page import="com.medisys.common.Validator" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="java.util.List" %>
@@ -134,7 +134,7 @@
                             <input type="hidden" name="returnTo" value="<%= TextUtil.html(currentUrl) %>">
                             <label class="sr-only" for="newPassword-<%= u.getId() %>">New password for <%= TextUtil.html(u.getFullName()) %></label>
                             <input type="text" id="newPassword-<%= u.getId() %>" name="password" autocomplete="off"
-                                   minlength="<%= UserService.PASSWORD_MIN %>" maxlength="100" required placeholder="New password">
+                                   minlength="<%= Validator.PASSWORD_MIN %>" maxlength="100" required placeholder="New password">
                             <button class="btn small" type="submit">Save</button>
                         </form>
                     </details>
@@ -188,9 +188,9 @@
         </div>
         <div class="field">
             <label for="staffPassword">First password *</label>
-            <input type="text" id="staffPassword" name="password" minlength="<%= UserService.PASSWORD_MIN %>"
+            <input type="text" id="staffPassword" name="password" minlength="<%= Validator.PASSWORD_MIN %>"
                    maxlength="100" autocomplete="off" required>
-            <div class="hint">At least <%= UserService.PASSWORD_MIN %> characters with a letter and a number.
+            <div class="hint">At least <%= Validator.PASSWORD_MIN %> characters with a letter and a number.
                 They can change it on their profile page.</div>
         </div>
         <button class="btn" type="submit">Create account</button>

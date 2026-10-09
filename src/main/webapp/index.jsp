@@ -7,7 +7,7 @@
 <%@ page contentType="text/html;charset=UTF-8" %>
 <%
     // Staff have nothing to do on the shop front: send them to their work page.
-    com.medisys.model.User homeUser = com.medisys.util.SessionUtil.currentUser(request);
+    com.medisys.user.User homeUser = com.medisys.common.SessionUtil.currentUser(request);
     if (homeUser != null && !homeUser.isCustomer()) {
         String start;
         switch (homeUser.getRole()) {

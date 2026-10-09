@@ -8,9 +8,9 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%
-    com.medisys.model.OrderStatus[] steps = {
-            com.medisys.model.OrderStatus.PAID, com.medisys.model.OrderStatus.PROCESSING,
-            com.medisys.model.OrderStatus.SHIPPED, com.medisys.model.OrderStatus.DELIVERED };
+    com.medisys.order.OrderStatus[] steps = {
+            com.medisys.order.OrderStatus.PAID, com.medisys.order.OrderStatus.PROCESSING,
+            com.medisys.order.OrderStatus.SHIPPED, com.medisys.order.OrderStatus.DELIVERED };
 %>
 <section class="card">
     <% if (order.isCancelled()) { %>
@@ -21,7 +21,7 @@
         </div>
     <% } else { %>
         <ol class="order-timeline" aria-label="Order progress">
-            <% for (com.medisys.model.OrderStatus step : steps) {
+            <% for (com.medisys.order.OrderStatus step : steps) {
                    java.time.LocalDateTime at = order.getTimeOf(step);
                    boolean done = at != null;
                    boolean current = step == order.getStatus();
@@ -39,7 +39,7 @@
         <details class="history">
             <summary>Full history</summary>
             <ul>
-                <% for (com.medisys.model.OrderStatusChange change : order.getHistory()) { %>
+                <% for (com.medisys.order.OrderStatusChange change : order.getHistory()) { %>
                     <li>
                         <span class="nowrap"><%= TextUtil.dateTime(change.getChangedAt()) %></span>
                         <strong><%= change.getStatus().getLabel() %></strong>
@@ -65,7 +65,7 @@
             <th class="num">Price</th>
             <th class="num">Total</th>
         </tr>
-        <% for (com.medisys.model.OrderItem item : order.getItems()) { %>
+        <% for (com.medisys.order.OrderItem item : order.getItems()) { %>
         <tr>
             <td>
                 <div class="item-medicine">

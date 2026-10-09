@@ -6,7 +6,7 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.SavedReport" %>
+<%@ page import="com.medisys.report.SavedReport" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Saved reports"; %>
 <%@ include file="../common/header.jspf" %>

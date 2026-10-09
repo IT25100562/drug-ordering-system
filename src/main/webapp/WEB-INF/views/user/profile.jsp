@@ -8,9 +8,9 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Order" %>
-<%@ page import="com.medisys.model.Prescription" %>
-<%@ page import="com.medisys.service.UserService" %>
+<%@ page import="com.medisys.order.Order" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
+<%@ page import="com.medisys.common.Validator" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <% String pageTitle = "My Profile"; %>
@@ -191,9 +191,9 @@
                 </div>
                 <div class="field">
                     <label for="newPassword">New password</label>
-                    <input type="password" id="newPassword" name="newPassword" minlength="<%= UserService.PASSWORD_MIN %>"
+                    <input type="password" id="newPassword" name="newPassword" minlength="<%= Validator.PASSWORD_MIN %>"
                            maxlength="100" autocomplete="new-password" required>
-                    <div class="hint">At least <%= UserService.PASSWORD_MIN %> characters, with a letter and a number.</div>
+                    <div class="hint">At least <%= Validator.PASSWORD_MIN %> characters, with a letter and a number.</div>
                 </div>
                 <div class="field">
                     <label for="confirmPassword">Repeat new password</label>

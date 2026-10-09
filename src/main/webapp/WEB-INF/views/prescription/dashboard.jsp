@@ -6,8 +6,8 @@
     Owner  : Perera D. A. A. N. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Prescription" %>
-<%@ page import="com.medisys.model.PrescriptionStatus" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
+<%@ page import="com.medisys.prescription.PrescriptionStatus" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <% String pageTitle = "Verification Dashboard"; %>

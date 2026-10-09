@@ -6,7 +6,7 @@
     Owner  : Perera D. A. A. N. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Prescription" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Upload Prescription"; %>
 <%@ include file="../common/header.jspf" %>

@@ -5,7 +5,7 @@
  * Owner  : Divisekara A. W. D. M. D. M. B.
  *
  * - checks the add / edit medicine form before it is sent
- *   (the same rules as MedicineService, which checks again on the server)
+ *   (the same rules as MedicineServlet.validate(), which checks again on the server)
  * - sends the catalog / inventory filter as soon as the category changes
  */
 document.addEventListener("DOMContentLoaded", function () {

@@ -6,7 +6,7 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.service.UserService" %>
+<%@ page import="com.medisys.common.Validator" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="java.util.List" %>
@@ -22,7 +22,7 @@
     String loginUrl = ctx + "/login"
             + (returnTo.isEmpty() ? "" : "?returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8));
     // The latest birthday that is old enough, for the date picker.
-    String maxBirthDate = java.time.LocalDate.now().minusYears(UserService.MIN_AGE).toString();
+    String maxBirthDate = java.time.LocalDate.now().minusYears(Validator.MIN_AGE).toString();
     boolean sameAsPhone = form.isEmpty() || "on".equals(form.get("sameAsPhone"));
 %>
 <%!
@@ -68,7 +68,7 @@
                         <label for="dateOfBirth">Date of birth *</label>
                         <input type="date" id="dateOfBirth" name="dateOfBirth" value="<%= value(form, "dateOfBirth") %>"
                                max="<%= maxBirthDate %>" min="1900-01-01" autocomplete="bday" required>
-                        <div class="hint">You must be <%= UserService.MIN_AGE %> or older.</div>
+                        <div class="hint">You must be <%= Validator.MIN_AGE %> or older.</div>
                     </div>
                 </div>
             </fieldset>
@@ -104,9 +104,9 @@
                 <div class="row">
                     <div class="field">
                         <label for="password">Password *</label>
-                        <input type="password" id="password" name="password" minlength="<%= UserService.PASSWORD_MIN %>"
+                        <input type="password" id="password" name="password" minlength="<%= Validator.PASSWORD_MIN %>"
                                maxlength="100" autocomplete="new-password" required>
-                        <div class="hint">At least <%= UserService.PASSWORD_MIN %> characters, with a letter and a number.</div>
+                        <div class="hint">At least <%= Validator.PASSWORD_MIN %> characters, with a letter and a number.</div>
                     </div>
                     <div class="field">
                         <label for="confirmPassword">Repeat password *</label>

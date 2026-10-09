@@ -7,7 +7,7 @@
     Owner  : Deshabhi R. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Notification" %>
+<%@ page import="com.medisys.delivery.Notification" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Notifications"; %>
 <%@ include file="../common/header.jspf" %>

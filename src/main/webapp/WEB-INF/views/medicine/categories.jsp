@@ -6,7 +6,7 @@
     Owner  : Divisekara A. W. D. M. D. M. B.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Category" %>
+<%@ page import="com.medisys.medicine.Category" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Categories"; %>
 <%@ include file="../common/header.jspf" %>

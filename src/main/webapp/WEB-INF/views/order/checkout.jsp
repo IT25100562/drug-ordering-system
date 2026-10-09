@@ -6,9 +6,9 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Cart" %>
-<%@ page import="com.medisys.model.CartItem" %>
-<%@ page import="com.medisys.service.OrderService" %>
+<%@ page import="com.medisys.cart.Cart" %>
+<%@ page import="com.medisys.cart.CartItem" %>
+<%@ page import="com.medisys.order.Order" %>
 <%@ page import="java.math.BigDecimal" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
@@ -22,7 +22,7 @@
     List<String> errors = (List<String>) request.getAttribute("errors");
     BigDecimal deliveryFee = (BigDecimal) request.getAttribute("deliveryFee");
     BigDecimal total = (BigDecimal) request.getAttribute("total");
-    BigDecimal missingForFree = OrderService.FREE_DELIVERY_FROM.subtract(cart.getSubtotal());
+    BigDecimal missingForFree = Order.FREE_DELIVERY_FROM.subtract(cart.getSubtotal());
 %>
 
 <nav class="breadcrumb" aria-label="Breadcrumb">

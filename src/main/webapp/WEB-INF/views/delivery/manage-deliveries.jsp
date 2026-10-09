@@ -11,8 +11,8 @@
     Owner  : Deshabhi R. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Delivery" %>
-<%@ page import="com.medisys.model.DeliveryStatus" %>
+<%@ page import="com.medisys.delivery.Delivery" %>
+<%@ page import="com.medisys.delivery.DeliveryStatus" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <% String pageTitle = "Deliveries"; %>

@@ -7,7 +7,7 @@
     Owner  : Kaweesha P. M. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.service.UserService" %>
+<%@ page import="com.medisys.common.Validator" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Forgot password"; %>
 <%@ include file="../common/header.jspf" %>
@@ -47,9 +47,9 @@
             </div>
             <div class="field">
                 <label for="password">New password</label>
-                <input type="password" id="password" name="password" minlength="<%= UserService.PASSWORD_MIN %>"
+                <input type="password" id="password" name="password" minlength="<%= Validator.PASSWORD_MIN %>"
                        maxlength="100" autocomplete="new-password" required>
-                <div class="hint">At least <%= UserService.PASSWORD_MIN %> characters, with a letter and a number.</div>
+                <div class="hint">At least <%= Validator.PASSWORD_MIN %> characters, with a letter and a number.</div>
             </div>
             <div class="field">
                 <label for="confirmPassword">Repeat new password</label>

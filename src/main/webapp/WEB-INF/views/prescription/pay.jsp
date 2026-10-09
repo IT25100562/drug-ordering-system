@@ -6,8 +6,8 @@
     Owner  : Perera D. A. A. N. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Prescription" %>
-<%@ page import="com.medisys.model.PrescriptionItem" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
+<%@ page import="com.medisys.prescription.PrescriptionItem" %>
 <%@ page import="java.math.BigDecimal" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>

@@ -8,10 +8,10 @@
     Owner  : Perera D. A. A. N. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Prescription" %>
-<%@ page import="com.medisys.model.PrescriptionStatus" %>
-<%@ page import="com.medisys.model.OrderStatus" %>
-<%@ page import="com.medisys.service.OrderService" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
+<%@ page import="com.medisys.prescription.PrescriptionStatus" %>
+<%@ page import="com.medisys.order.OrderStatus" %>
+<%@ page import="com.medisys.order.Order" %>
 <%@ page import="java.math.BigDecimal" %>
 <% String pageTitle = "Prescription"; %>
 <%@ include file="../common/header.jspf" %>
@@ -102,8 +102,8 @@
             <p>This prescription can no longer be paid. Please upload a new one.</p>
             <a class="btn block" href="<%= ctx %>/prescriptions/upload">Upload a new prescription</a>
         <% } else { %>
-            <% BigDecimal fee = OrderService.deliveryFeeFor(p.getTotal());
-               BigDecimal toPay = OrderService.totalFor(p.getTotal()); %>
+            <% BigDecimal fee = Order.deliveryFeeFor(p.getTotal());
+               BigDecimal toPay = Order.totalFor(p.getTotal()); %>
             <h2>Total to pay</h2>
             <div class="price big"><%= TextUtil.money(toPay) %></div>
             <div class="totals">

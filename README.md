@@ -6,6 +6,10 @@ the order is released.
 
 > **Status:** all six major functions and the minor functions (accounts, login, profile,
 > forgot password, notifications) are done. See [Module status](#module-status).
+>
+> **Preparing for the viva?** [VIVA-GUIDE.md](VIVA-GUIDE.md) shows, for every module, the
+> exact file and method of each Create / Read / Update / Delete, where the validation is,
+> and the design patterns.
 
 ## Tech stack
 
@@ -17,13 +21,14 @@ the order is released.
 | Database | Microsoft SQL Server, plain JDBC (`mssql-jdbc` driver) |
 | Build | Maven (`pom.xml`). IntelliJ has Maven built in. |
 | UI | JSP pages (HTML) + one shared CSS file + plain JavaScript. No frameworks. |
-| File uploads | `FileStorage` interface. Now: a local folder. Later: a cloud storage (see below). |
+| File uploads | `common/FileStorage`: a local folder outside the web app (see below). |
 
 Design patterns used:
-- **Singleton**: `DBConnection` (which also holds the connection pool) and the storage in `StorageFactory`
-- **DAO**: a `dao` interface plus a `dao/impl` JDBC class for every table group
-- **Strategy + Factory**: `FileStorage` with `LocalFileStorage`, chosen by `StorageFactory`
-  from `app.properties`
+- **Singleton**: `common/DBConnection`. There is only one object (`getInstance()`), and it
+  holds the connection pool that every DAO borrows from.
+- **DAO (Data Access Object)**: one `...DAO` class per table group (for example
+  `medicine/MedicineDAO`). All the SQL is in the DAOs and nowhere else.
+- **MVC**: model classes (`Medicine`, `Order`, ...), servlets as controllers, JSPs as views.
 
 ## Getting started
 
@@ -69,32 +74,33 @@ From the command line: `mvn package` builds `target/medisys.war`.
 | Delivery Staff (rider) | delivery@medisys.lk | Delivery@123 |
 | Delivery Staff (rider) | rider2@medisys.lk | Delivery@123 |
 
-To make a hash for a new password: `java -cp target/classes com.medisys.util.PasswordUtil MyPassword`.
+To make a hash for a new password: `java -cp target/classes com.medisys.common.PasswordUtil MyPassword`.
 
 ## Folder layout
+
+**One folder per module.** Everything a module needs (its model classes, its DAO and its
+servlets) is in one Java package, and its pages are in the folder of the same name under
+`views/`. To find your work, open your module's folder.
 
 ```
 drug-ordering-system/
 ├── pom.xml
+├── VIVA-GUIDE.md                  where every CRUD operation is (read this before the viva)
 ├── database/                      SQL scripts (schema + sample data)
 └── src/main/
     ├── java/com/medisys/
-    │   ├── config/                DBConnection (shared)
-    │   ├── model/                 plain data classes + enums
-    │   ├── dao/                   DAO interfaces (what the database can do)
-    │   │   └── impl/              JDBC code (how it is done in SQL Server)
-    │   ├── service/               business rules, one class per feature
-    │   ├── servlet/               controllers, one folder per module
-    │   │   ├── user/        (minor functions: accounts, login, profile)
-    │   │   ├── report/      (04)
-    │   │   ├── medicine/    (03)
-    │   │   ├── cart/        (01)
-    │   │   ├── order/       (02)
-    │   │   ├── prescription/(05)
-    │   │   └── delivery/    (06)
-    │   ├── storage/               FileStorage, LocalFileStorage, StorageFactory (shared)
-    │   ├── filter/                AuthFilter: login + role checks (shared)
-    │   └── util/                  SessionUtil, TextUtil, PasswordUtil, AppInitListener
+    │   ├── common/        shared: DBConnection (Singleton), AuthFilter, Validator,
+    │   │                  FileStorage, SessionUtil, TextUtil, PasswordUtil, ...
+    │   ├── cart/          01  Cart, CartItem, WishlistItem, CartDAO, WishlistDAO, CartServlet, WishlistServlet
+    │   ├── order/         02  Order, OrderItem, Payment, OrderDAO, CheckoutServlet, OrderServlet, ManageOrdersServlet
+    │   ├── medicine/      03  Medicine, Category, MedicineDAO, CategoryDAO, CatalogServlet, MedicineServlet, CategoryServlet
+    │   ├── report/        04  Report, SavedReport, ReportDAO, SavedReportDAO, ReportServlet, SavedReportServlet
+    │   ├── prescription/  05  Prescription, PrescriptionItem, PrescriptionDAO, PrescriptionServlet,
+    │   │                      PrescriptionPaymentServlet, PharmacistServlet
+    │   ├── delivery/      06  Delivery, Notification, DeliveryDAO, NotificationDAO, DeliveryServlet,
+    │   │                      TrackDeliveryServlet, NotificationServlet
+    │   └── user/          minor: User, Role, UserDAO, LoginServlet, RegisterServlet, ProfileServlet,
+    │                             ForgotPasswordServlet, ManageUsersServlet
     ├── resources/                 db.properties, app.properties (your own, not in git)
     └── webapp/
         ├── index.jsp
@@ -102,12 +108,17 @@ drug-ordering-system/
         ├── js/                    app.js (shared) + one script per module
         └── WEB-INF/
             ├── web.xml
-            └── views/             JSP pages, one folder per module
+            └── views/             JSP pages, same folder names as the packages
                 └── common/        header.jspf, footer.jspf, error.jsp (shared)
 ```
 
-**Request flow:** browser → `AuthFilter` → servlet → service (rules) → DAO → SQL Server.
-The servlet then forwards to a JSP in `WEB-INF/views/`. JSPs are never opened directly.
+**Request flow (3 steps):** browser → `AuthFilter` (login + role) → **servlet** (reads the
+form, validates it, calls the DAO) → **DAO** (SQL on SQL Server) → the servlet forwards to
+a **JSP** in `WEB-INF/views/`. JSPs are never opened directly.
+
+Inside every DAO the methods are grouped under `// ===== CREATE`, `READ`, `UPDATE` and
+`DELETE` headings, and the comment at the top of every servlet lists its URLs with the
+CRUD operation each one does.
 
 ## Modules and owners
 
@@ -127,19 +138,22 @@ minor function because every platform needs it, and Reports and Analytics took i
 
 ### Files per module
 
-| Module | model | dao (+ impl) | service | servlet/ + views/ folder |
-|--------|-------|--------------|---------|--------------------------|
-| 01 | `CartItem`, `Cart`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartService`, `WishlistService` | `cart/` |
-| 02 | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` (+ `StockShortageException`) | `OrderService`, `PaymentService` | `order/` |
-| 03 | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `MedicineService` | `medicine/` |
-| 04 | `Report`, `ReportPeriod`, `ReportSummary`, `ReportRow`, `SavedReport` | `ReportDAO`, `SavedReportDAO` | `ReportService` | `report/` |
-| minor | `User`, `Role` | `UserDAO` | `UserService` (+ `util/PasswordUtil`) | `user/` (+ `avatar()` in `common/header.jspf`) |
-| 05 | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionService` (+ `PrescriptionRequiredException`) | `prescription/` |
-| 06 | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryService`, `NotificationService` | `delivery/` |
+All in `src/main/java/com/medisys/<folder>/`, with the pages in `WEB-INF/views/<folder>/`.
+
+| Module | Folder | Model | DAO (all the SQL) | Servlets (validation + calls the DAO) |
+|--------|--------|-------|-------------------|---------------------------------------|
+| 01 | `cart/` | `Cart`, `CartItem`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartServlet`, `WishlistServlet` |
+| 02 | `order/` | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` | `CheckoutServlet`, `OrderServlet`, `ManageOrdersServlet` |
+| 03 | `medicine/` | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `CatalogServlet`, `MedicineServlet`, `CategoryServlet` |
+| 04 | `report/` | `Report`, `ReportPeriod`, `ReportSummary`, `ReportRow`, `SavedReport` | `ReportDAO`, `SavedReportDAO` | `ReportServlet`, `SavedReportServlet` |
+| 05 | `prescription/` | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionServlet`, `PrescriptionPaymentServlet`, `PharmacistServlet` |
+| 06 | `delivery/` | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryServlet`, `TrackDeliveryServlet`, `NotificationServlet` |
+| minor | `user/` | `User`, `Role` | `UserDAO` | `LoginServlet`, `RegisterServlet`, `ForgotPasswordServlet`, `ProfileServlet`, `ManageUsersServlet` |
 
 **Shared files (agree with the team before changing them):** `pom.xml`, `web.xml`,
-`DBConnection`, `SessionUtil`, `TextUtil`, `AppInitListener`, `ValidationException`,
-`AuthFilter`, `JsonUtil`, `storage/*`, `common/*.jspf`, `css/style.css`, `js/app.js`, `database/*.sql`.
+everything in `common/` (`DBConnection`, `AuthFilter`, `Validator`, `FileStorage`,
+`SessionUtil`, `TextUtil`, `JsonUtil`, `PasswordUtil`, `ValidationException`,
+`AppStartupListener`), `views/common/*`, `css/style.css`, `js/app.js`, `database/*.sql`.
 
 ### URL map
 
@@ -174,17 +188,17 @@ for DELIVERY_STAFF.
   to `/prescriptions/upload`, and pays for the medicines the pharmacist lists.
 - **01 → 02:** checkout turns the cart into an order.
 - **05 → 02:** paying for an approved prescription creates an order
-  (`OrderService.placePrescriptionOrder`), so it is packed and tracked like any other order.
+  (`CheckoutServlet.placeOrder`), so it is packed and tracked like any other order.
 - **02 → 03:** placing an order reduces stock (in the same transaction); cancelling puts it back.
 - **02 → 06:** placing an order also creates its delivery, in the same transaction
-  (`OrderDAOImpl.create` calls `DeliveryDAO.createForOrder`). Cancelling the order cancels
-  the delivery (`cancelForOrder`).
+  (`OrderDAO.placeOrder` calls `DeliveryDAO.addDeliveryForOrder`). Cancelling the order
+  cancels the delivery (`cancelDeliveryForOrder`).
 - **06 → 02:** when the rider picks the parcel up, the order becomes SHIPPED. When it is
-  delivered, the order becomes DELIVERED (`DeliveryDAOImpl.updateStatus`, one transaction).
+  delivered, the order becomes DELIVERED (`DeliveryDAO.updateStatus`, one transaction).
 - **05, 02, 06 → 06:** anything that needs to tell a user something calls
-  `NotificationService.notify(...)`.
+  `NotificationDAO.addNotification(...)`.
 - **01, 02, 03, 05, 06 → 04:** the reports only read the other modules' tables
-  (`ReportDAOImpl`). Nothing is copied, so the numbers always match the rest of the app.
+  (`ReportDAO`). Nothing is copied, so the numbers always match the rest of the app.
 
 ## Module status
 
@@ -230,7 +244,7 @@ The admin's view of how the pharmacy is doing, for any period.
 **CRUD:** Create (save a report), Read (dashboard, list, view), Update (title and notes),
 Delete (saved report). The live report itself is read-only by design.
 
-**Rules (all in `ReportService`)**
+**Rules (in `report/ReportServlet` and `SavedReportServlet`)**
 - Custom dates must both be real dates, the start can't be after the end, the end can't
   be in the future, the start can't be before 2020, and a period is at most 366 days.
   Bad dates show a message and fall back to the last 30 days.
@@ -245,7 +259,7 @@ Delete (saved report). The live report itself is read-only by design.
   front so Excel doesn't run it as a formula ("CSV injection"). The file starts with a
   UTF-8 mark so Excel shows names correctly.
 - All the adding up happens in SQL (`GROUP BY`, `SUM`, `COUNT`, `CASE`) in
-  `ReportDAOImpl`, with dates as `>= from AND < the day after to`, so the last day is
+  `ReportDAO`, with dates as `>= from AND < the day after to`, so the last day is
   fully included.
 - The charts are plain HTML + CSS bars, with no chart library. Each bar's size is its value
   as a percentage of the largest one.
@@ -295,7 +309,7 @@ with who flagged the customer and when. The customer can still log in, order and
 and never sees the flag. Customer accounts are never switched off. Only staff accounts
 can be switched off (for someone who left).
 
-**Rules (all in `UserService`)**
+**Rules (in the `user/` servlets, with the shared field checks in `common/Validator`)**
 - Email and NIC are unique (email is compared in lower case).
 - NIC: old `123456789V/X` or new 12 digits. The day-of-year part must be valid, and the
   birth year inside the NIC must match the date of birth.
@@ -335,7 +349,7 @@ customer. Finally, log in as the admin and open **Users**.
 - `/admin/categories`: list, add, and delete categories. A category can only be deleted
   when no medicine uses it.
 
-**Rules (all in `MedicineService`, repeated in `js/medicine.js` for quick feedback)**
+**Rules (in `MedicineServlet.validate()`, repeated in `js/medicine.js` for quick feedback)**
 - name 2-150 characters; category and dosage form must be from the lists
 - price more than 0, at most Rs. 1,000,000, at most 2 decimals
 - stock 0-100000, reorder level 0-10000, restock quantity 1-10000
@@ -345,12 +359,12 @@ customer. Finally, log in as the admin and open **Users**.
 - a discontinued medicine must be restored before stock can be added
 
 **For other modules**
-- 01 (cart): `medicineService.getAvailableMedicine(id)` returns the medicine or throws a
-  `ValidationException` with a message (not available / out of stock).
-  `medicine.isRequiresPrescription()` tells you to send the customer to module 05.
-- 02 (orders): `medicineService.reduceStock(id, qty)` takes stock out safely. If two
-  orders arrive at the same time, the stock still can't go below 0. It throws a
-  `ValidationException` when there is not enough stock.
+- 01 (cart): `medicineDAO.getCatalogMedicine(id)` returns the medicine, or null when it is
+  discontinued or expired. `medicine.isRequiresPrescription()` tells you to send the
+  customer to module 05.
+- 02 (orders): `OrderDAO.placeOrder` takes the stock out inside the order's transaction
+  with `stock_quantity >= ?` in the `UPDATE`, so even two orders at the same time can't
+  take the stock below 0.
 
 The admin pages need an ADMIN login (`AuthFilter`).
 
@@ -368,9 +382,9 @@ The admin pages need an ADMIN login (`AuthFilter`).
 **Smooth updates:** every button is a normal form, so it works without JavaScript.
 `js/cart.js` sends those forms in the background and updates the page in place (toast
 messages, badges, totals). The servlets answer with JSON when the request asks for it
-(`JsonUtil`, `CartReply`).
+(`JsonUtil`, `CartServlet.reply`).
 
-**Rules (all in `CartService` / `WishlistService`)**
+**Rules (in `CartServlet` / `WishlistServlet`)**
 - only medicines on sale can be added (not discontinued / expired / out of stock)
 - quantity per medicine: 1 to min(stock, 10); adding again raises the quantity (capped)
 - prescription-only medicines never go into the cart. They show "Upload prescription",
@@ -379,10 +393,12 @@ messages, badges, totals). The servlets answer with JSON when the request asks f
 - a customer can only see or change their own cart (every query uses the logged-in user id)
 
 **For other modules**
-- 02 (checkout): `cartService.getCart(userId)` gives the lines and the subtotal; check
-  `cart.isReadyForCheckout()` first. After the order, call `cartService.clearCart(userId)`.
+- 02 (checkout): `cartDAO.getCart(userId)` gives the lines and the subtotal; check
+  `cart.isReadyForCheckout()` first. `OrderDAO.placeOrder` removes the bought lines.
+- 02 (orders) and the wishlist: "Buy again" and "Move to cart" call
+  `CartServlet.addToCart(...)`, so the cart rules are the same everywhere.
 - 05 (prescriptions): prescription-only medicines are refused with
-  `PrescriptionRequiredException`, which sends the customer to the upload page.
+  `CartServlet.PrescriptionNeededException`, which sends the customer to the upload page.
 
 **Performance:** `DBConnection` keeps a pool of open connections (Tomcat's built-in DBCP),
 because opening a SQL Server connection takes about 250 ms.
@@ -421,12 +437,12 @@ Labels shown to people: Order placed, Being packed, Out for delivery, Delivered,
   order straight away. "Out for delivery" and "Delivered" are set by the rider through
   module 06.
 
-**Rules (all in `OrderService` / `OrderDAOImpl`)**
-- Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`OrderService.DELIVERY_FEE`,
+**Rules (in `CheckoutServlet.placeOrder` / `OrderDAO`)**
+- Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`Order.DELIVERY_FEE`,
   `FREE_DELIVERY_FROM`). This applies to cart and prescription orders.
 - The cart must be ready for checkout (module 01's checks). Delivery name, address and
   phone are required, and the rider note is optional. Card checks come from
-  `PaymentService` (test card, Luhn, MM/YY in the future, CVV).
+  `Validator.card` (test card, Luhn, MM/YY in the future, CVV).
 - The page sends the total it showed (`expectedTotal`). If a price or the cart changed in
   the meantime, nothing is charged and the customer sees the new total.
 - Placing an order is **one database transaction**: stock is reduced for every line
@@ -448,11 +464,11 @@ RX-000006), new (Nimal), cancelled and refunded (Kasuni), and being packed with 
 delivery (Kasuni).
 
 **For other modules**
-- 05 (prescriptions): `PrescriptionService.pay()` calls
-  `orderService.placePrescriptionOrder(...)`. The receipt links to the order.
-- 06 (delivery): the delivery is created inside `OrderDAOImpl.create()`. The admin's
-  `OrderService.advance()` only goes PAID → PROCESSING, and the later steps come from
-  `DeliveryService`.
+- 05 (prescriptions): `PrescriptionPaymentServlet` calls `CheckoutServlet.placeOrder(...)`
+  with the approved medicines. The receipt links to the order.
+- 06 (delivery): the delivery is created inside `OrderDAO.placeOrder()`. The admin's
+  "mark as packed" (`ManageOrdersServlet`) only goes PAID → PROCESSING, and the later steps
+  come from the rider (`DeliveryServlet`).
 
 ### Module 05: Prescription Upload and Verification
 
@@ -495,7 +511,7 @@ customer pays for that list.
   Request correction need a note.
 - Delete an invalid or expired prescription from the dashboard or the review page.
 
-**Rules (all in `PrescriptionService`)**
+**Rules (in `PrescriptionServlet` and `PharmacistServlet`)**
 - JPG, PNG or PDF only, at most 5 MB. The type is read from the file's first bytes
   ("magic numbers"), so a renamed `.exe` or `.txt` is refused.
 - The file is stored under a new random name (`prescriptions/<uuid>.png`). The
@@ -527,12 +543,12 @@ folder, so they can't be opened by typing their address.
 **Demo data:** `sample-data.sql` adds six prescriptions: pending, correction requested,
 rejected, approved and waiting for payment (Nimal: Metformin + Panadol), expired, and
 paid (Kasuni: Losartan). Their files are in `src/main/webapp/WEB-INF/sample-uploads`, and
-`AppInitListener` copies them into the storage when the app starts.
+`AppStartupListener` copies them into the storage when the app starts.
 
 **Test card:** `4242 4242 4242 4242`, any future expiry date (MM/YY), and any 3-digit CVV.
 
 **For other modules**
-- 02 (orders): paying goes through `OrderService.placePrescriptionOrder()`, and the
+- 02 (orders): paying goes through `CheckoutServlet.placeOrder()`, and the
   delivery details live on the order.
 - 06 (delivery): prescription orders are normal orders, so nothing extra is needed.
 
@@ -573,16 +589,16 @@ delivered, and the customer follows each parcel on a tracking page.
   history, and for the rider "Got the package" or "Next step" with an optional note for
   the customer, and "Could not deliver" with a required reason.
 
-**Rules (all in `DeliveryService` / `DeliveryDAOImpl`)**
+**Rules (in `DeliveryServlet` / `DeliveryDAO`)**
 - One delivery per order (`UNIQUE order_id`), created in the order's transaction, so a
   paid order can never be missing its delivery. It is due 2 days after the order
-  (`DeliveryDAOImpl.DELIVERY_DAYS`).
+  (`DeliveryDAO.DELIVERY_DAYS`).
 - Only riders change deliveries; the admin can only look. Any rider takes a new parcel
   with **Got the package**. If two riders press it together, only the first one gets it
-  (`DeliveryDAOImpl.pickUp`, one transaction). The order moves Order placed → Being
+  (`DeliveryDAO.pickUp`, one transaction). The order moves Order placed → Being
   packed → Out for delivery in the same transaction, so the customer's timeline shows
   every step.
-- A parcel can't leave without a rider (checked in the service and by a `CHECK`
+- A parcel can't leave without a rider (checked in `DeliveryServlet` and by a `CHECK`
   constraint).
 - The status moves one allowed step at a time (`DeliveryStatus.nextSteps()`). The page
   sends the status it showed, so a double click or two users at once can't skip a step.
@@ -606,20 +622,18 @@ Finally, log in as `nimal@example.com` and open **Orders → Track**.
 
 ### File storage and moving to the cloud
 
-Uploaded files go through the `FileStorage` interface (`com.medisys.storage`).
-`app.properties` chooses the implementation:
+Uploaded files (prescriptions and profile photos) go through one class,
+`common/FileStorage` (`save`, `open`, `delete`). It keeps them in a folder outside the web
+app, which `app.properties` can change:
 
 ```
-storage.type=local          # the only one for now
 storage.local.dir=          # empty = <home folder>/medisys-uploads
 ```
 
-To use a cloud storage later (Cloudinary, Supabase Storage, ...):
-1. Write `CloudinaryFileStorage implements FileStorage` (save / put / exists / open / delete).
-2. Add a `case "cloudinary"` in `StorageFactory` and put the keys in `app.properties`
-   (never in git).
-3. Keep sending files through `PrescriptionFileServlet`, or use short-lived signed URLs.
-   Prescriptions are private medical data, so they must not be public links.
+To use a cloud storage later (Cloudinary, Supabase Storage, ...), change the inside of
+`FileStorage`'s methods and keep the keys in `app.properties` (never in git). Keep sending
+files through the servlets (`/prescriptions/file`, `/users/photo`) or short-lived signed
+URLs: prescriptions are private medical data, so they must not be public links.
 
 **Hosting note:** Vercel can't run a Java/Tomcat app. It hosts static sites and
 serverless functions for Node, Python and similar. A Tomcat WAR needs a host such as
@@ -631,9 +645,11 @@ mean converting the SQL (for example `IDENTITY` to `GENERATED ... AS IDENTITY`, 
 ## Coding rules
 
 - Simple, readable, commented code. No Spring, Hibernate or Lombok.
-- Business rules live in the **service** class, not in servlets or JSPs.
-- SQL lives only in **dao/impl** classes. Always use `PreparedStatement`, never string
-  concatenation.
+- Everything for a module is in its own folder (`com.medisys.<module>`).
+- Validation and rules live in the **servlet** (in a clearly marked `validate...()` method or
+  `// ---- validation` block). Checks that several forms share are in `common/Validator`.
+- SQL lives only in the **DAO** classes, grouped under CREATE / READ / UPDATE / DELETE
+  headings. Always use `PreparedStatement`, never string concatenation.
 - Escape all user text before printing it in a JSP (`TextUtil.html(...)`).
 - Every page includes `common/header.jspf` and `common/footer.jspf` and uses
   `css/style.css`.

@@ -6,8 +6,8 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Order" %>
-<%@ page import="com.medisys.model.OrderStatus" %>
+<%@ page import="com.medisys.order.Order" %>
+<%@ page import="com.medisys.order.OrderStatus" %>
 <%@ page import="java.net.URLEncoder" %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%@ page import="java.util.List" %>

@@ -7,10 +7,10 @@
     Owner  : Deshabhi R. G. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Delivery" %>
-<%@ page import="com.medisys.model.DeliveryStatus" %>
-<%@ page import="com.medisys.model.Order" %>
-<%@ page import="com.medisys.model.OrderItem" %>
+<%@ page import="com.medisys.delivery.Delivery" %>
+<%@ page import="com.medisys.delivery.DeliveryStatus" %>
+<%@ page import="com.medisys.order.Order" %>
+<%@ page import="com.medisys.order.OrderItem" %>
 <% String pageTitle = "Delivery"; %>
 <%@ include file="../common/header.jspf" %>
 <%

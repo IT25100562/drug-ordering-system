@@ -17,7 +17,7 @@
 <%!
     // Escaped value of one form field, "" when empty.
     private String cf(java.util.Map<String, String> form, String field) {
-        return com.medisys.util.TextUtil.html(form.get(field));
+        return com.medisys.common.TextUtil.html(form.get(field));
     }
 %>
 <p class="test-note"><strong>Test payment.</strong> No money is taken. Use any valid-looking card,

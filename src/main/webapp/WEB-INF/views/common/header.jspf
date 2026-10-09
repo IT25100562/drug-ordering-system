@@ -8,15 +8,15 @@
         <% String pageTitle = "My Prescriptions"; %>
         <%@ include file="../common/header.jspf" %>
 --%>
-<%@ page import="com.medisys.model.User" %>
-<%@ page import="com.medisys.service.CartService" %>
-<%@ page import="com.medisys.service.DeliveryService" %>
-<%@ page import="com.medisys.service.NotificationService" %>
-<%@ page import="com.medisys.service.OrderService" %>
-<%@ page import="com.medisys.service.PrescriptionService" %>
-<%@ page import="com.medisys.service.WishlistService" %>
-<%@ page import="com.medisys.util.SessionUtil" %>
-<%@ page import="com.medisys.util.TextUtil" %>
+<%@ page import="com.medisys.user.User" %>
+<%@ page import="com.medisys.cart.CartDAO" %>
+<%@ page import="com.medisys.cart.WishlistDAO" %>
+<%@ page import="com.medisys.delivery.DeliveryDAO" %>
+<%@ page import="com.medisys.delivery.NotificationDAO" %>
+<%@ page import="com.medisys.order.OrderDAO" %>
+<%@ page import="com.medisys.prescription.PrescriptionDAO" %>
+<%@ page import="com.medisys.common.SessionUtil" %>
+<%@ page import="com.medisys.common.TextUtil" %>
 <%
     String ctx = request.getContextPath();
     User currentUser = SessionUtil.currentUser(request);
@@ -35,19 +35,19 @@
     int headerDeliveryCount = 0;
     try {
         if (currentUser != null && currentUser.isCustomer()) {
-            headerCartCount = new CartService().countItems(currentUser.getId());
-            headerWishlistCount = new WishlistService().count(currentUser.getId());
-            headerUnreadCount = new NotificationService().countUnread(currentUser.getId());
+            headerCartCount = new CartDAO().countItems(currentUser.getId());
+            headerWishlistCount = new WishlistDAO().countItems(currentUser.getId());
+            headerUnreadCount = new NotificationDAO().countUnread(currentUser.getId());
         } else if (currentUser != null && currentUser.isPharmacist()) {
-            headerPendingCount = new PrescriptionService().getDashboardCounts().get("PENDING");
+            headerPendingCount = new PrescriptionDAO().countForDashboard().get("PENDING");
         } else if (currentUser != null && currentUser.isAdmin()) {
-            headerNewOrderCount = new OrderService().getCounts().get("PAID");
+            headerNewOrderCount = new OrderDAO().countByStatus().get("PAID");
             // deliveries still waiting for a rider
-            headerDeliveryCount = new DeliveryService().getCounts(currentUser).get("UNASSIGNED");
+            headerDeliveryCount = new DeliveryDAO().countByStatus(null).get("UNASSIGNED");
         } else if (currentUser != null && currentUser.isDeliveryStaff()) {
             // the rider's open deliveries
-            headerDeliveryCount = new DeliveryService().getCounts(currentUser).get("ACTIVE");
-            headerUnreadCount = new NotificationService().countUnread(currentUser.getId());
+            headerDeliveryCount = new DeliveryDAO().countByStatus(currentUser.getId()).get("ACTIVE");
+            headerUnreadCount = new NotificationDAO().countUnread(currentUser.getId());
         }
     } catch (java.sql.SQLException e) {
         log("Could not load the menu counts", e);

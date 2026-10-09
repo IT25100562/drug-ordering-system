@@ -11,7 +11,7 @@
  *                 Reject / Request correction need a note
  *  - live character counters (textarea[data-counter])
  *
- * PrescriptionService checks everything again on the server.
+ * PrescriptionServlet and PharmacistServlet check everything again on the server.
  */
 (function () {
 

@@ -7,9 +7,9 @@
     Owner  : Hewage B. H. A. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Delivery" %>
-<%@ page import="com.medisys.model.Order" %>
-<%@ page import="com.medisys.model.Payment" %>
+<%@ page import="com.medisys.delivery.Delivery" %>
+<%@ page import="com.medisys.order.Order" %>
+<%@ page import="com.medisys.order.Payment" %>
 <% String pageTitle = "Order"; %>
 <%@ include file="../common/header.jspf" %>
 <%
@@ -127,7 +127,7 @@
                 <button class="btn reject block" type="submit">Cancel order</button>
             </form>
         </section>
-        <% } else if (!order.isCancelled() && order.getStatus() != com.medisys.model.OrderStatus.DELIVERED) { %>
+        <% } else if (!order.isCancelled() && order.getStatus() != com.medisys.order.OrderStatus.DELIVERED) { %>
             <p class="meta center">Your order is already being prepared, so it can no longer be cancelled
                 online. Please call the pharmacy on 011 234 5678.</p>
         <% } %>

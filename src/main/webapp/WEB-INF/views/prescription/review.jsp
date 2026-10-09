@@ -8,9 +8,9 @@
     Owner  : Perera D. A. A. N. S.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Medicine" %>
-<%@ page import="com.medisys.model.Prescription" %>
-<%@ page import="com.medisys.service.PrescriptionService" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
+<%@ page import="com.medisys.prescription.Prescription" %>
+<%@ page import="com.medisys.prescription.PrescriptionItem" %>
 <%@ page import="java.util.List" %>
 <% String pageTitle = "Review Prescription"; %>
 <%@ include file="../common/header.jspf" %>
@@ -178,7 +178,7 @@
                     <%= TextUtil.dateTime(p.getPaidAt()) %> (<%= TextUtil.html(p.getPaymentReference()) %>)</p>
                 <p class="meta">Deliver to <%= TextUtil.html(p.getDeliveryName()) %>,
                     <%= TextUtil.html(p.getDeliveryAddress()) %>, <%= TextUtil.html(p.getDeliveryPhone()) %></p>
-            <% } else if (p.getStatus() == com.medisys.model.PrescriptionStatus.APPROVED) { %>
+            <% } else if (p.getStatus() == com.medisys.prescription.PrescriptionStatus.APPROVED) { %>
                 <p class="meta">Waiting for the customer to pay.</p>
             <% } %>
         </section>
@@ -253,13 +253,13 @@
                     </div>
                     <div class="field qty-col">
                         <label>Qty</label>
-                        <input type="number" name="quantity" min="1" max="<%= PrescriptionService.ITEM_QUANTITY_MAX %>"
+                        <input type="number" name="quantity" min="1" max="<%= PrescriptionItem.QUANTITY_MAX %>"
                                value="<%= TextUtil.html(at(rowQuantities, i).isEmpty() ? "1" : at(rowQuantities, i)) %>"
                                data-item-qty>
                     </div>
                     <div class="field dosage-col">
                         <label>How to use</label>
-                        <input type="text" name="dosage" maxlength="<%= PrescriptionService.DOSAGE_MAX %>"
+                        <input type="text" name="dosage" maxlength="<%= PrescriptionItem.DOSAGE_MAX %>"
                                list="dosage-suggestions" value="<%= TextUtil.html(at(rowDosages, i)) %>"
                                placeholder="e.g. 1 tablet twice daily after meals" data-item-dosage>
                     </div>

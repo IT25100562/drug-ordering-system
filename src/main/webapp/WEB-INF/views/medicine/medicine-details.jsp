@@ -7,7 +7,7 @@
     Owner  : Divisekara A. W. D. M. D. M. B.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Medicine" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
 <%@ page import="java.util.List" %>
 <%
     Medicine medicine = (Medicine) request.getAttribute("medicine");

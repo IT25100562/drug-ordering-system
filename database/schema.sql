@@ -50,7 +50,7 @@ GO
 -- password_hash is a salted PBKDF2 hash (see PasswordUtil) - never the password.
 -- Customers register themselves with NIC, date of birth, phone and WhatsApp.
 -- Staff accounts are added by the admin (NIC / date of birth may be empty).
--- photo_key: the profile photo in the file storage (see com.medisys.storage), or NULL.
+-- photo_key: the profile photo in the file storage (see common/FileStorage.java), or NULL.
 -- is_flagged: a pharmacist marked the customer as a trouble maker (e.g. sends
 -- unrelated photos). A flag is only a warning for the staff: the customer can
 -- still use everything. is_active = 0 is only used for staff who left.
@@ -262,7 +262,7 @@ GO
 -- The customer only uploads the file. The pharmacist reads it and, when
 -- approving, writes down the medicines (prescription_items).
 -- The file itself is NOT in the database: file_key says where the file storage
--- (see com.medisys.storage) keeps it.
+-- (see common/FileStorage.java) keeps it.
 -- order_id is set when the customer pays: paying creates an order (module 02),
 -- and the payment details live in orders / payments. A paid prescription can
 -- no longer be deleted. If that order is cancelled, order_id goes back to NULL.
@@ -333,12 +333,12 @@ CREATE TABLE notifications (
 CREATE INDEX ix_notifications_user ON notifications (user_id, is_read);
 
 -- The delivery of one paid order. It is created together with the order, in
--- the same transaction (see OrderDAOImpl.create).
+-- the same transaction (see OrderDAO.placeOrder).
 --   status: PENDING -> DISPATCHED -> OUT_FOR_DELIVERY -> DELIVERED
 --           OUT_FOR_DELIVERY -> FAILED -> OUT_FOR_DELIVERY (the rider tries again)
 --           PENDING -> CANCELLED (when the order is cancelled)
 -- Dispatching moves the order to SHIPPED and delivering moves it to DELIVERED,
--- in the same transaction (see DeliveryDAOImpl.updateStatus).
+-- in the same transaction (see DeliveryDAO.updateStatus).
 CREATE TABLE deliveries (
     id             INT IDENTITY(1,1) PRIMARY KEY,
     order_id       INT          NOT NULL,

@@ -6,8 +6,8 @@
     Owner  : Amadini G. G. A.
 --%>
 <%@ page contentType="text/html;charset=UTF-8" %>
-<%@ page import="com.medisys.model.Medicine" %>
-<%@ page import="com.medisys.model.WishlistItem" %>
+<%@ page import="com.medisys.medicine.Medicine" %>
+<%@ page import="com.medisys.cart.WishlistItem" %>
 <%@ page import="java.util.List" %>
 <%@ page import="java.util.Map" %>
 <%@ page import="java.util.Set" %>

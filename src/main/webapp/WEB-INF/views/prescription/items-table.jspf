@@ -14,8 +14,8 @@
         <th class="num">Price</th>
         <th class="num">Total</th>
     </tr>
-    <% for (com.medisys.model.PrescriptionItem item : p.getItems()) {
-           com.medisys.model.Medicine med = item.getMedicine();
+    <% for (com.medisys.prescription.PrescriptionItem item : p.getItems()) {
+           com.medisys.medicine.Medicine med = item.getMedicine();
     %>
     <tr>
         <td>
