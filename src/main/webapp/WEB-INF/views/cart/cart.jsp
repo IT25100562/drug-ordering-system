@@ -51,7 +51,7 @@
         %>
         <div class="cart-line <%= item.hasProblem() ? "has-problem" : "" %>" data-line="<%= m.getId() %>">
             <a class="<%= m.getThumbCssClass() %>" href="<%= ctx %>/medicines/view?id=<%= m.getId() %>"
-               tabindex="-1" aria-hidden="true"><%= m.getThumbText() %></a>
+               tabindex="-1" aria-hidden="true"><%= thumbInner(ctx, m, 64) %></a>
 
             <div class="line-info">
                 <a class="line-name" href="<%= ctx %>/medicines/view?id=<%= m.getId() %>"><%= TextUtil.html(m.getDisplayName()) %></a>

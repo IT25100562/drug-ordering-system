@@ -5,10 +5,14 @@ target/
 *.class
 *.war
 
-# IntelliJ - personal workspace files
-.idea/workspace.xml
-.idea/shelf/
+# IDE files (each member's own settings)
+.idea/
+*.iml
+.vscode/
 out/
+
+# Vercel CLI link
+.vercel/
 
 # Local database login (copy db.properties.example to create it)
 src/main/resources/db.properties
@@ -16,5 +20,5 @@ src/main/resources/db.properties
 # Uploaded prescription files, if someone points uploadDir inside the project
 medisys-uploads/
 
-# Local app settings (will hold cloud storage keys later)
+# Local app settings (holds the Cloudinary secret)
 src/main/resources/app.properties

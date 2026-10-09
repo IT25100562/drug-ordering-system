@@ -45,6 +45,14 @@ public final class TextUtil {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * Turns a search word into a pattern for ILIKE ("contains", any case).
+     * \ % _ have a meaning in LIKE, so they are escaped first.
+     */
+    public static String likePattern(String keyword) {
+        return "%" + keyword.trim().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+    }
+
     public static boolean isBlank(String value) {
         return value == null || value.trim().isEmpty();
     }

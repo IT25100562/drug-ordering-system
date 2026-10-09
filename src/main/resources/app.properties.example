@@ -1,10 +1,17 @@
 # MediSys app settings (optional)
 #
-# Without an app.properties file the default below is used, so you only need
-# this when you want something different. To use it, copy this file to
-# app.properties in the same folder. app.properties is in .gitignore, because
-# cloud storage keys will go in here later.
+# Copy this file to app.properties in the same folder. app.properties is in
+# .gitignore, because the Cloudinary secret goes in here.
+# On the live server these come from environment variables instead
+# (CLOUDINARY_URL, CLOUDINARY_FOLDER, STORAGE_LOCAL_DIR).
 
-# Folder where uploaded prescriptions and profile photos are kept
-# (see common/FileStorage.java). Leave empty for <your home folder>/medisys-uploads
+# Cloudinary (Dashboard -> "API environment variable"). When this is set,
+# uploaded prescriptions and profile photos are stored in Cloudinary.
+# Leave it empty to keep files in a local folder instead.
+cloudinary.url=
+# Folder inside Cloudinary (default: medisys)
+cloudinary.folder=
+
+# Folder for uploaded files when Cloudinary is NOT used.
+# Leave empty for <your home folder>/medisys-uploads
 storage.local.dir=

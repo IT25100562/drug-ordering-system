@@ -20,6 +20,16 @@
  */
 document.addEventListener("DOMContentLoaded", function () {
 
+    // Phones: the menu button opens and closes the main menu.
+    var toggle = document.querySelector(".nav-toggle");
+    if (toggle) {
+        toggle.addEventListener("click", function () {
+            var open = document.body.classList.toggle("nav-open");
+            toggle.setAttribute("aria-expanded", open ? "true" : "false");
+            toggle.setAttribute("aria-label", open ? "Close the menu" : "Open the menu");
+        });
+    }
+
     // Ask "Are you sure?" before sending forms marked with data-confirm.
     document.querySelectorAll("form[data-confirm]").forEach(function (form) {
         form.addEventListener("submit", function (event) {
@@ -81,7 +91,7 @@ function fadeOut(element, then) {
  * Shows a small message in the corner for a few seconds.
  *
  * @param type "success", "error" or "info"
- * @param link optional { text: "View cart", href: "/medisys/cart" }
+ * @param link optional { text: "View cart", href: "/cart" }
  */
 function showToast(message, type, link) {
     var area = document.querySelector(".toast-area");

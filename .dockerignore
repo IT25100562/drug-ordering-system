@@ -1,0 +1,7 @@
+target/
+.git/
+.idea/
+vercel/
+docs/
+src/main/resources/db.properties
+src/main/resources/app.properties

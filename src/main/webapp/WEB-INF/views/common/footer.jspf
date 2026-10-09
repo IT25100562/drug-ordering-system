@@ -5,7 +5,42 @@
 <div class="toast-area" aria-live="polite"></div>
 
 <footer class="site">
-    MediSys &middot; SE2030 Group Project
+    <%-- Staff only get the bottom line: the shop links are for customers. --%>
+    <% if (currentUser == null || currentUser.isCustomer()) { %>
+    <div class="footer-grid">
+        <div class="footer-brand">
+            <strong>MediSys</strong>
+            <p>Genuine medicines, checked by a pharmacist and delivered to your door.</p>
+        </div>
+        <div>
+            <h3>Shop</h3>
+            <a href="<%= ctx %>/medicines">All medicines</a>
+            <a href="<%= ctx %>/prescriptions/upload">Upload a prescription</a>
+            <a href="<%= ctx %>/cart">Cart</a>
+        </div>
+        <div>
+            <h3>My account</h3>
+            <% if (currentUser == null) { %>
+                <a href="<%= ctx %>/login">Log in</a>
+                <a href="<%= ctx %>/register">Create an account</a>
+            <% } else { %>
+                <a href="<%= ctx %>/account/profile">My profile</a>
+                <a href="<%= ctx %>/orders">My orders</a>
+            <% } %>
+            <a href="<%= ctx %>/forgot-password">Forgot password</a>
+        </div>
+        <div>
+            <h3>Pharmacy</h3>
+            <span>MediSys Pharmacy, Colombo 03</span>
+            <span>Open every day, 8.00 am - 10.00 pm</span>
+            <span>Delivery Rs. 300 &middot; free from Rs. 2,500</span>
+        </div>
+    </div>
+    <% } %>
+    <div class="footer-bottom">
+        <span>&copy; 2026 MediSys &middot; SE2030 Software Engineering group project</span>
+        <span>Demo system: payments use test cards only.</span>
+    </div>
 </footer>
 
 </body>

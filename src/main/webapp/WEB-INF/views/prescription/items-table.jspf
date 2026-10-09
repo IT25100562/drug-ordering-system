@@ -20,7 +20,7 @@
     <tr>
         <td>
             <div class="item-medicine">
-                <span class="<%= med.getThumbCssClass() %>" aria-hidden="true"><%= med.getThumbText() %></span>
+                <span class="<%= med.getThumbCssClass() %>" aria-hidden="true"><%= thumbInner(ctx, med, 48) %></span>
                 <span><strong><%= TextUtil.html(med.getDisplayName()) %></strong>
                     <br><span class="meta"><%= TextUtil.html(med.getDosageForm()) %>
                     <% if (med.getManufacturer() != null) { %>&middot; <%= TextUtil.html(med.getManufacturer()) %><% } %></span></span>

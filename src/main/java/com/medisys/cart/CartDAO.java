@@ -104,7 +104,7 @@ public class CartDAO {
     public int countItems(int userId) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "SELECT ISNULL(SUM(quantity), 0) FROM cart_items WHERE user_id = ?")) {
+                     "SELECT COALESCE(SUM(quantity), 0) FROM cart_items WHERE user_id = ?")) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
@@ -116,7 +116,7 @@ public class CartDAO {
     // ================================================================ UPDATE
 
     public boolean updateQuantity(int userId, int medicineId, int quantity) throws SQLException {
-        String sql = "UPDATE cart_items SET quantity = ?, updated_at = SYSDATETIME() "
+        String sql = "UPDATE cart_items SET quantity = ?, updated_at = CURRENT_TIMESTAMP "
                    + "WHERE user_id = ? AND medicine_id = ?";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {

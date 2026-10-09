@@ -1,8 +1,11 @@
-# MediSys viva guide
+# MediSys team guide (viva)
 
-Where every **Create / Read / Update / Delete** is, where the **validation** is, and what
-each member must be able to explain. Find your module, open the files it names, and
-practise the demo and the viva questions.
+Where every **Create / Read / Update / Delete** is, where the **validation** is, which
+**design patterns** are used, which **files each member owns**, and what each member must be
+able to explain. Find your module, open the files it names, and practise the demo and the
+viva questions.
+
+**Live system:** see the link at the top of `README.md`. **Run it yourself:** `SETUP.md`.
 
 > The spec says: *"Any work that cannot be adequately explained by the student will be
 > treated as unauthorised assistance."* Know your code.
@@ -18,7 +21,7 @@ Every module is **one folder**: `src/main/java/com/medisys/<module>/`. Its pages
 `src/main/webapp/WEB-INF/views/<module>/`, with the same folder name.
 
 ```
- JSP form ──POST──> AuthFilter ──> Servlet ──────────────> DAO ─────────────> SQL Server
+ JSP form ──POST──> AuthFilter ──> Servlet ──────────────> DAO ─────────────> PostgreSQL (Supabase)
  (views/)           login + role    1. reads the form       the SQL, with
                     check           2. VALIDATES it         PreparedStatement
                                     3. calls the DAO
@@ -47,15 +50,45 @@ Each folder has three kinds of class:
 
 ### Design patterns (the spec asks for at least 2)
 
-1. **Singleton**: `common/DBConnection`. The constructor is private, and `getInstance()`
-   always returns the same one object. It holds a **connection pool** (Tomcat DBCP)
-   because opening a new SQL Server connection takes about 250 ms. Every DAO borrows a
-   connection with `DBConnection.getInstance().getConnection()` in a try-with-resources,
-   which gives it back.
-2. **DAO (Data Access Object)**: every table group has one DAO class, and the SQL is
-   only there. Servlets never write SQL; they call DAO methods such as
-   `medicineDAO.addMedicine(m)`. If the database changed, only the DAOs would change.
-3. **MVC**: Model = the model classes, View = the JSPs, Controller = the servlets.
+| Pattern | Where (open this file) | Why it is used |
+|---------|------------------------|----------------|
+| **MVC** | Model = `medicine/Medicine.java` etc., View = `WEB-INF/views/**.jsp`, Controller = `...Servlet.java` | Each kind of code has one job: servlets decide, JSPs only show, models carry data. JSPs are in `WEB-INF`, so the browser can only reach them through their servlet. |
+| **DAO** | every `...DAO.java` (e.g. `medicine/MedicineDAO.java`) | All SQL for a table group is in one class, under `// ===== CREATE / READ / UPDATE / DELETE` headings. Servlets never write SQL. We proved its value: moving from SQL Server to PostgreSQL changed only the DAOs. |
+| **Singleton** | `common/DBConnection.java` | Private constructor + `getInstance()`: one shared **connection pool** (Tomcat DBCP) for the whole app, because opening a cloud database connection takes a few hundred ms. |
+| **Strategy** | `common/StorageStrategy.java` (interface), `CloudinaryStorage.java`, `LocalStorage.java` | Where uploaded files live is swappable: Cloudinary in the live system, a local folder offline. `FileStorage.strategy()` picks one at startup from the settings; no servlet changes. |
+| **Facade** | `common/FileStorage.java` | Servlets call simple `FileStorage.save()/open()/delete()`; the facade checks the key and hides which strategy does the work. |
+| **Intercepting Filter** | `common/AuthFilter.java` | Every protected URL passes this filter first: login check + role check in one place instead of in every servlet. |
+| **Post / Redirect / Get** | every `doPost()` ends with `response.sendRedirect(...)` | Refreshing a page never submits a form twice; `SessionUtil.flash()` carries the message. |
+
+Say at least **Singleton + DAO + Strategy** in the viva and open the files while you explain.
+
+### Where things live in the cloud
+
+| What | Service | Where in the code |
+|------|---------|-------------------|
+| The database (all tables) | **Supabase** (PostgreSQL) | `common/DBConnection.java`, settings `DB_URL`, `DB_USER`, `DB_PASSWORD` |
+| Uploaded files: prescriptions, profile photos (private), product photos (public CDN) | **Cloudinary** | `common/CloudinaryStorage.java`, setting `CLOUDINARY_URL` |
+| The Java app (Tomcat) | **Render** (Docker) | `Dockerfile`, `render.yaml` |
+| The `*.vercel.app` address | **Vercel** (forwards every request to Render) | `vercel/vercel.json` |
+
+Settings are read by `common/AppConfig.java`: environment variables on the server,
+`db.properties` / `app.properties` on a laptop (both git-ignored, never pushed).
+
+### Who owns which files
+
+| # | Module | Owner | Java (`src/main/java/com/medisys/...`) | Pages (`src/main/webapp/WEB-INF/views/...`) + JS |
+|---|--------|-------|-----------------------------------------|---------------------------------------------------|
+| 01 | Shopping Cart and Wishlist | Amadini G. G. A. | `cart/` Cart, CartItem, **CartDAO**, CartServlet, WishlistItem, **WishlistDAO**, WishlistServlet | `cart/cart.jsp`, `cart/wishlist.jsp`, `common/heart-button.jspf`, `js/cart.js` |
+| 02 | Order Placement and Checkout | Hewage B. H. A. S. | `order/` Order, OrderItem, OrderStatus, OrderStatusChange, Payment, **OrderDAO**, CheckoutServlet, OrderServlet, ManageOrdersServlet | `order/*.jsp`, `order/order-parts.jspf`, `common/checkout-fields.jspf` |
+| 03 | Medicine Catalog and Inventory | Divisekara A. W. D. M. D. M. B. | `medicine/` Medicine, Category, InventorySummary, **MedicineDAO**, **CategoryDAO**, CatalogServlet, MedicineServlet, CategoryServlet | `medicine/*.jsp`, `js/medicine.js` |
+| 04 | Reports and Analytics | Kaweesha P. M. G. S. | `report/` Report, ReportPeriod, ReportRow, ReportSummary, SavedReport, **ReportDAO**, **SavedReportDAO**, ReportServlet, SavedReportServlet | `report/*.jsp` |
+| 05 | Prescription Upload and Verification | Perera D. A. A. N. S. | `prescription/` Prescription, PrescriptionItem, PrescriptionStatus, **PrescriptionDAO**, PrescriptionServlet, PharmacistServlet, PrescriptionPaymentServlet | `prescription/*.jsp`, `prescription/*.jspf`, `js/prescription.js` |
+| 06 | Delivery Tracking and Notification | Deshabhi R. G. S. | `delivery/` Delivery, DeliveryStatus, DeliveryUpdate, Notification, **DeliveryDAO**, **NotificationDAO**, DeliveryServlet, TrackDeliveryServlet, NotificationServlet | `delivery/*.jsp`, `delivery/delivery-parts.jspf` |
+| - | Minor functions (users, login) | Whole team | `user/` User, Role, **UserDAO**, LoginServlet, RegisterServlet, ProfileServlet, ForgotPasswordServlet, ManageUsersServlet | `user/*.jsp` |
+| - | Shared | Whole team | `common/` (everything) | `common/header.jspf`, `footer.jspf`, `home.jsp`, `error.jsp`, `css/style.css`, `js/app.js` |
+
+Your **tables** are in your module's section of `database/schema.sql`, and your demo rows in
+the same section of `database/sample-data.sql`.
 
 ---
 
@@ -87,7 +120,8 @@ Also: **Move to cart** and **Save for later** (`WishlistServlet.doPost`, actions
 
 **Know this**
 - `cart_items` has `UNIQUE (user_id, medicine_id)`. If two clicks arrive at the same moment,
-  SQL Server error 2627/2601 (duplicate key) is caught and the quantity is raised instead.
+  PostgreSQL error `23505` (unique_violation, `e.getSQLState()`) is caught and the quantity
+  is raised instead.
 - Every query uses the logged-in user's id, so nobody can see another customer's cart.
 - Smooth updates: every button is a normal HTML form. `cart.js` sends it with `fetch()`, the
   servlet sees "wants JSON" (`JsonUtil.wantsJson`) and `CartServlet.reply()` answers in JSON.
@@ -103,7 +137,7 @@ Amoxicillin (prescription only): you are sent to the upload page.
   prescription first (module 05); the customer then pays for the pharmacist's list.
 - *What stops quantity 50 when there are 8 in stock?* `addToCart()` allows 1..min(stock, 10),
   and checkout takes stock with `WHERE stock_quantity >= ?`.
-- *What happens on a double click?* The UNIQUE constraint + catching error 2627: the
+- *What happens on a double click?* The UNIQUE constraint + catching SQLState 23505: the
   quantity goes up once.
 
 ---
@@ -175,7 +209,10 @@ future MM/YY, CVV 123 → thank-you page → Orders → Cancel. Admin → Orders
 | **R** | Medicine details | `GET /medicines/view?id=` | `CatalogServlet.showMedicine()` | `MedicineDAO.getCatalogMedicine()` |
 | **R** | Inventory (tabs + totals) | `GET /admin/medicines` | `MedicineServlet.showInventory()` | `searchMedicines()`, `getSummary()` |
 | **R** | Categories | `GET /admin/categories` | `CategoryServlet.doGet()` | `CategoryDAO.getAllCategories()` |
+| **R** | Product photo | `GET /medicines/image?id=` (or the Cloudinary CDN link) | `CatalogServlet.sendImage()` | `MedicineDAO.getMedicineById()` |
 | **U** | Edit a medicine | `POST /admin/medicines/edit` (id > 0) | `MedicineServlet.saveMedicine()` | `MedicineDAO.updateMedicine()` |
+| **U** | Upload / remove the product photo | `POST /admin/medicines/edit` (`image`, `removeImage`) | `MedicineServlet.saveMedicine()` | `MedicineDAO.updateImage()` |
+| **U** | Rename a category | `POST /admin/categories` (`update`) | `CategoryServlet.updateCategory()` | `CategoryDAO.updateCategory()` |
 | **U** | Add stock | `POST /admin/medicines/restock` | `MedicineServlet.restock()` | `MedicineDAO.addStock()` |
 | **D** | Discontinue (soft delete) / Restore | `POST /admin/medicines/discontinue` | `MedicineServlet.discontinueOrRestore()` | `discontinueMedicine()`, `restoreMedicine()` |
 | **D** | Delete a category | `POST /admin/categories` (`delete`) | `CategoryServlet.deleteCategory()` | `CategoryDAO.deleteCategory()` |
@@ -186,15 +223,20 @@ future MM/YY, CVV 123 → thank-you page → Orders → Cancel. Admin → Orders
 - stock 0-100000, reorder level 0-10000, restock 1-10000
 - expiry date not in the past (an already saved past date may stay when editing)
 - no two medicines with the same name **and** strength (`MedicineDAO.medicineExists()`)
-- category name 2-100 and unique; a category can only be deleted when no medicine uses it
+- category name 2-100 and unique (ignoring capitals); a category can only be deleted when no
+  medicine uses it
+- product photo: JPG or PNG only (real type from the first bytes), at most 2 MB
 
 **Know this**
 - **Soft delete:** a medicine is never really deleted because old orders and prescriptions
-  point to it. `is_discontinued = 1` hides it from the catalog.
+  point to it. `is_discontinued = TRUE` hides it from the catalog.
 - The catalog hides discontinued and expired medicines; opening one directly gives 404.
 - Low stock = stock <= reorder level.
-- Search is safe from SQL injection: `PreparedStatement` with `?`, and the LIKE special
-  characters `[ % _` are escaped.
+- Search is safe from SQL injection: `PreparedStatement` with `?`. It uses `ILIKE` (ignores
+  capitals) and `TextUtil.likePattern()` escapes the LIKE special characters `\ % _`.
+- **Product photos live in Cloudinary** as public images; the catalog links straight to
+  Cloudinary's CDN, which resizes them and sends WebP/AVIF (`Medicine.getImageUrl()` →
+  `CloudinaryStorage.publicUrl()`). The table only stores the key (`image_key`).
 
 **Demo (2 min):** as a guest: Medicines → search "pan" → category filter → open one.
 Admin → Inventory: tabs, add a medicine with a wrong price (see the errors), restock
@@ -228,7 +270,7 @@ Brufen, discontinue + restore. Categories: add one, try to delete a used one.
 
 **Know this**
 - The adding up is done in SQL (`ReportDAO`): `COUNT`, `SUM`, `AVG`, `GROUP BY`,
-  `CASE WHEN` inside `SUM`, sub-queries, `TOP (?)`.
+  `CASE WHEN` inside `SUM`, sub-queries, `LIMIT ?`, `EXTRACT(EPOCH FROM ...)` for hours.
 - Dates: `created_at >= from AND created_at < the day after to`, so the whole last day is
   included whatever the time.
 - "Sales" = orders not cancelled. Approval rate = approved / (approved + rejected).
@@ -284,9 +326,10 @@ Also: **Pay**: `POST /prescriptions/pay`, `PrescriptionPaymentServlet` → `Chec
 - Status (`PrescriptionStatus`): PENDING → APPROVED / REJECTED / CORRECTION_REQUESTED →
   (new copy) → PENDING. Paid = APPROVED + `order_id` set.
 - Only registered customers can upload (`AuthFilter` sends guests to log in / register).
-- The stored file gets a random name (UUID), so a name like `..\..\x` can't write outside
-  the folder. Files are **not** in the web folder: `/prescriptions/file` sends them only to
-  the owner or a pharmacist; anyone else gets 404.
+- The stored file gets a random name (UUID), so a name like `..\..\x` can't be used. The
+  file is kept in **Cloudinary as a private ("authenticated") file**: it has no public
+  address. `/prescriptions/file` downloads it with a link signed by our secret key and sends
+  it only to the owner or a pharmacist; anyone else gets 404.
 - Two pharmacists can't both decide: the UPDATE has `WHERE status = 'PENDING'`.
 - A paid prescription can never be deleted (`deletePrescription()` has `AND order_id IS NULL`).
 
@@ -396,12 +439,14 @@ up to 2 MB, real type checked.
 ## 9. Whole team: everyone must be able to explain this
 
 **Shared files** (agree with the team before changing them): `pom.xml`, `web.xml`,
-everything in `common/` (`DBConnection`, `AuthFilter`, `Validator`, `FileStorage`,
-`SessionUtil`, `TextUtil`, `JsonUtil`, `PasswordUtil`, `ValidationException`,
-`AppStartupListener`), `views/common/*`, `css/style.css`, `js/app.js`, `database/*.sql`.
+everything in `common/` (`AppConfig`, `DBConnection`, `AuthFilter`, `Validator`, `FileStorage`,
+`StorageStrategy`, `CloudinaryStorage`, `LocalStorage`, `HomeServlet`, `SessionUtil`, `TextUtil`,
+`JsonUtil`, `PasswordUtil`, `ValidationException`, `AppStartupListener`), `views/common/*`,
+`css/style.css`, `js/app.js`, `database/*.sql`, `Dockerfile`, `render.yaml`, `vercel/`.
 
-**Technologies:** Java 17+, Jakarta Servlets + JSP on Tomcat 11, SQL Server with plain JDBC,
-Maven, HTML + one CSS file + plain JavaScript. No frameworks (no Spring, no Hibernate).
+**Technologies:** Java 17+, Jakarta Servlets + JSP on Tomcat 11, PostgreSQL (Supabase) with
+plain JDBC, Cloudinary (file storage + image CDN), Maven, Docker (Render), Vercel (the public
+address), HTML + one CSS file + plain JavaScript. No frameworks (no Spring, no Hibernate).
 
 **Security: "how do you protect against...?"**
 
@@ -417,7 +462,9 @@ Maven, HTML + one CSS file + plain JavaScript. No frameworks (no Spring, no Hibe
 | Open redirect | only local `returnTo` paths accepted |
 | CSV injection | `'` in front of `= + - @` in exports |
 | Payment data | only the last 4 card digits are stored |
-| Secrets | `db.properties` / `app.properties` are git-ignored |
+| Secrets | environment variables on the server; `db.properties` / `app.properties` are git-ignored |
+| Supabase REST API | Row Level Security is on for every table (`schema.sql`, last section), so the public key can read nothing |
+| Private files | prescriptions and profile photos are "authenticated" Cloudinary files: no public link exists |
 
 **Ideas every member should be able to explain**
 - GET shows a page, POST changes data. After a POST the servlet **redirects**

@@ -1,6 +1,7 @@
 package com.medisys.order;
 
 import com.medisys.common.DBConnection;
+import com.medisys.common.TextUtil;
 import com.medisys.delivery.DeliveryDAO;
 import com.medisys.prescription.Prescription;
 
@@ -92,8 +93,8 @@ public class OrderDAO {
                 }
 
                 // 2. Take every medicine out of stock, only if there is enough.
-                String stock = "UPDATE medicines SET stock_quantity = stock_quantity - ?, updated_at = SYSDATETIME() "
-                             + "WHERE id = ? AND stock_quantity >= ? AND is_discontinued = 0";
+                String stock = "UPDATE medicines SET stock_quantity = stock_quantity - ?, updated_at = CURRENT_TIMESTAMP "
+                             + "WHERE id = ? AND stock_quantity >= ? AND is_discontinued = FALSE";
                 try (PreparedStatement ps = con.prepareStatement(stock)) {
                     for (OrderItem item : order.getItems()) {
                         ps.setInt(1, item.getQuantity());
@@ -144,7 +145,7 @@ public class OrderDAO {
 
                 // 7. Link the prescription, or take the bought medicines out of the cart.
                 if (prescriptionId != null) {
-                    String link = "UPDATE prescriptions SET order_id = ?, updated_at = SYSDATETIME() "
+                    String link = "UPDATE prescriptions SET order_id = ?, updated_at = CURRENT_TIMESTAMP "
                                 + "WHERE id = ? AND order_id IS NULL";
                     try (PreparedStatement ps = con.prepareStatement(link)) {
                         ps.setInt(1, orderId);
@@ -177,15 +178,17 @@ public class OrderDAO {
     }
 
     private boolean lockPayablePrescription(Connection con, int prescriptionId, int userId) throws SQLException {
-        String sql = "SELECT COUNT(*) FROM prescriptions WITH (UPDLOCK, ROWLOCK) "
+        // FOR UPDATE locks the row until the transaction ends, so the same
+        // prescription can't be paid twice at the same moment.
+        String sql = "SELECT id FROM prescriptions "
                    + "WHERE id = ? AND user_id = ? AND status = 'APPROVED' AND order_id IS NULL "
-                   + "AND uploaded_at >= DATEADD(day, -" + Prescription.EXPIRY_DAYS + ", SYSDATETIME())";
+                   + "AND uploaded_at >= CURRENT_TIMESTAMP - INTERVAL '" + Prescription.EXPIRY_DAYS + " days' "
+                   + "FOR UPDATE";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, prescriptionId);
             ps.setInt(2, userId);
             try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt(1) == 1;
+                return rs.next();
             }
         }
     }
@@ -266,8 +269,8 @@ public class OrderDAO {
         if (keyword != null && !keyword.isBlank()) {
             // "ORD-000012", "12" or part of the customer's name / email
             String digits = keyword.replaceAll("(?i)^ord-?", "").replaceFirst("^0+(?=\\d)", "");
-            String pattern = "%" + keyword.trim().replace("[", "[[]").replace("%", "[%]").replace("_", "[_]") + "%";
-            sql.append("AND (u.full_name LIKE ? OR u.email LIKE ?");
+            String pattern = TextUtil.likePattern(keyword);
+            sql.append("AND (u.full_name ILIKE ? OR u.email ILIKE ?");
             params.add(pattern);
             params.add(pattern);
             if (digits.matches("\\d{1,9}")) {
@@ -317,7 +320,7 @@ public class OrderDAO {
         try (Connection con = DBConnection.getInstance().getConnection()) {
             con.setAutoCommit(false);
             try {
-                String sql = "UPDATE orders SET status = ?, updated_at = SYSDATETIME() WHERE id = ? AND status = ?";
+                String sql = "UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?";
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
                     ps.setString(1, to.name());
                     ps.setInt(2, id);
@@ -350,7 +353,7 @@ public class OrderDAO {
                 // 1. Lock the order and check its status.
                 OrderStatus current = null;
                 try (PreparedStatement ps = con.prepareStatement(
-                        "SELECT status FROM orders WITH (UPDLOCK, ROWLOCK) WHERE id = ?")) {
+                        "SELECT status FROM orders WHERE id = ? FOR UPDATE")) {
                     ps.setInt(1, id);
                     try (ResultSet rs = ps.executeQuery()) {
                         if (rs.next()) {
@@ -365,7 +368,7 @@ public class OrderDAO {
 
                 // 2. Cancel it.
                 try (PreparedStatement ps = con.prepareStatement(
-                        "UPDATE orders SET status = 'CANCELLED', cancel_reason = ?, updated_at = SYSDATETIME() WHERE id = ?")) {
+                        "UPDATE orders SET status = 'CANCELLED', cancel_reason = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")) {
                     ps.setString(1, reason);
                     ps.setInt(2, id);
                     ps.executeUpdate();
@@ -373,22 +376,23 @@ public class OrderDAO {
 
                 // 3. Put the medicines back in stock.
                 try (PreparedStatement ps = con.prepareStatement(
-                        "UPDATE m SET m.stock_quantity = m.stock_quantity + i.quantity, m.updated_at = SYSDATETIME() "
-                        + "FROM medicines m JOIN order_items i ON i.medicine_id = m.id WHERE i.order_id = ?")) {
+                        "UPDATE medicines m SET stock_quantity = m.stock_quantity + i.quantity, "
+                        + "updated_at = CURRENT_TIMESTAMP "
+                        + "FROM order_items i WHERE i.medicine_id = m.id AND i.order_id = ?")) {
                     ps.setInt(1, id);
                     ps.executeUpdate();
                 }
 
                 // 4. Refund the (test) payment.
                 try (PreparedStatement ps = con.prepareStatement(
-                        "UPDATE payments SET status = 'REFUNDED', refunded_at = SYSDATETIME() WHERE order_id = ?")) {
+                        "UPDATE payments SET status = 'REFUNDED', refunded_at = CURRENT_TIMESTAMP WHERE order_id = ?")) {
                     ps.setInt(1, id);
                     ps.executeUpdate();
                 }
 
                 // 5. A prescription paid by this order can be paid again.
                 try (PreparedStatement ps = con.prepareStatement(
-                        "UPDATE prescriptions SET order_id = NULL, updated_at = SYSDATETIME() WHERE order_id = ?")) {
+                        "UPDATE prescriptions SET order_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE order_id = ?")) {
                     ps.setInt(1, id);
                     ps.executeUpdate();
                 }

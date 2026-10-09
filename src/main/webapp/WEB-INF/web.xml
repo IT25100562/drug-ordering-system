@@ -19,13 +19,9 @@
     <response-character-encoding>UTF-8</response-character-encoding>
 
     <!--
-        Where uploaded prescription files are kept is set in app.properties
-        (see app.properties.example). Default: <your home folder>/medisys-uploads
+        The home page "/" is HomeServlet. Settings (database, Cloudinary) come
+        from environment variables or db.properties / app.properties (see AppConfig).
     -->
-
-    <welcome-file-list>
-        <welcome-file>index.jsp</welcome-file>
-    </welcome-file-list>
 
     <session-config>
         <session-timeout>30</session-timeout>

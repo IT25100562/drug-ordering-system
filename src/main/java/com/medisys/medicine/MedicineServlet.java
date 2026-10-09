@@ -1,15 +1,19 @@
 package com.medisys.medicine;
 
+import com.medisys.common.FileStorage;
 import com.medisys.common.SessionUtil;
 import com.medisys.common.TextUtil;
 
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -27,6 +31,7 @@ import java.util.Map;
  *   GET  /admin/medicines/edit?id=5                filled form (edit)
  *   POST /admin/medicines/edit   id=0              save a new medicine           CREATE
  *   POST /admin/medicines/edit   id=5              save the changes              UPDATE
+ *        (both can also upload a product photo, or remove it with removeImage=on)
  *   POST /admin/medicines/restock                  add delivered stock           UPDATE
  *   POST /admin/medicines/discontinue              hide from the catalog         DELETE (soft)
  *   POST /admin/medicines/discontinue action=restore   put it back
@@ -34,6 +39,7 @@ import java.util.Map;
  * Module : 03 - Medicine Catalog and Inventory
  * Owner  : Divisekara A. W. D. M. D. M. B.
  */
+@MultipartConfig(maxFileSize = 3L * 1024 * 1024, maxRequestSize = 4L * 1024 * 1024)
 @WebServlet({"/admin/medicines", "/admin/medicines/edit", "/admin/medicines/restock", "/admin/medicines/discontinue"})
 public class MedicineServlet extends HttpServlet {
 
@@ -44,6 +50,7 @@ public class MedicineServlet extends HttpServlet {
     private static final int STOCK_MAX = 100000;
     private static final int REORDER_MAX = 10000;
     private static final int RESTOCK_MAX = 10000;
+    private static final int IMAGE_MAX_BYTES = 2 * 1024 * 1024;
 
     /** Names of the input fields in medicine-form.jsp. */
     private static final String[] FIELDS = {
@@ -158,6 +165,15 @@ public class MedicineServlet extends HttpServlet {
         } else {
             errors = validate(form, existing, medicine);
         }
+        // ---- validation of the product photo (optional): JPG / PNG, at most 2 MB,
+        // the real type comes from the first bytes, not from the file name.
+        byte[] image = readImage(request);
+        String imageType = image.length == 0 ? null : FileStorage.detectType(image);
+        if (image.length > IMAGE_MAX_BYTES) {
+            errors.add("The photo is too large. The limit is 2 MB.");
+        } else if (image.length > 0 && !"image/jpeg".equals(imageType) && !"image/png".equals(imageType)) {
+            errors.add("The photo must be a JPG or PNG image.");
+        }
         if (!errors.isEmpty()) {
             // Show the same form again with the messages and what the admin typed.
             request.setAttribute("medicine", existing);
@@ -167,14 +183,47 @@ public class MedicineServlet extends HttpServlet {
 
         String message;
         if (id == 0) {
-            int newId = medicineDAO.addMedicine(medicine);                                  // CREATE
-            message = "Medicine \"" + medicine.getName() + "\" was added (ID " + newId + ").";
+            id = medicineDAO.addMedicine(medicine);                                         // CREATE
+            message = "Medicine \"" + medicine.getName() + "\" was added (ID " + id + ").";
         } else {
             medicineDAO.updateMedicine(medicine);                                           // UPDATE
             message = "Medicine \"" + medicine.getName() + "\" was updated.";
         }
+
+        // The photo goes to the file storage (Cloudinary); the table keeps only its key.
+        String oldImage = existing == null ? null : existing.getImageKey();
+        if (image.length > 0) {
+            String key = FileStorage.save(image, "medicines", imageType);
+            medicineDAO.updateImage(id, key);                                               // UPDATE
+            deleteImageFile(oldImage);
+        } else if (request.getParameter("removeImage") != null && oldImage != null) {
+            medicineDAO.updateImage(id, null);                                              // UPDATE
+            deleteImageFile(oldImage);
+        }
         SessionUtil.flash(request, "success", message);
         response.sendRedirect(request.getContextPath() + "/admin/medicines");
+    }
+
+    /** The uploaded photo, or an empty array when none was chosen. */
+    private byte[] readImage(HttpServletRequest request) throws IOException, ServletException {
+        String type = request.getContentType();
+        if (type == null || !type.startsWith("multipart/")) {
+            return new byte[0];
+        }
+        Part part = request.getPart("image");
+        if (part == null || part.getSize() == 0) {
+            return new byte[0];
+        }
+        try (InputStream in = part.getInputStream()) {
+            return in.readNBytes(IMAGE_MAX_BYTES + 1);      // one byte more shows "too large"
+        }
+    }
+
+    /** Demo photos are shared with the seed data, so only uploaded ones are deleted. */
+    private void deleteImageFile(String key) {
+        if (key != null && !key.startsWith("medicines/med-")) {
+            FileStorage.delete(key);
+        }
     }
 
     /**

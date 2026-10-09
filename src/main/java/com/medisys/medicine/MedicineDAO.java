@@ -1,6 +1,7 @@
 package com.medisys.medicine;
 
 import com.medisys.common.DBConnection;
+import com.medisys.common.TextUtil;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -18,7 +19,7 @@ import java.util.List;
  *
  *   CREATE  addMedicine
  *   READ    searchMedicines, getMedicineById, getCatalogMedicine, getSummary
- *   UPDATE  updateMedicine, addStock
+ *   UPDATE  updateMedicine, addStock, updateImage
  *   DELETE  discontinueMedicine (a "soft delete": the row stays because old
  *           orders point to it, but customers no longer see it), restoreMedicine
  *
@@ -42,7 +43,7 @@ public class MedicineDAO {
     public static final String SELECT_MEDICINE =
             "SELECT m.id, m.name, m.category_id, c.name AS category_name, m.manufacturer, "
             + "m.dosage_form, m.strength, m.description, m.price, m.stock_quantity, "
-            + "m.reorder_level, m.requires_prescription, m.expiry_date, m.is_discontinued, "
+            + "m.reorder_level, m.requires_prescription, m.expiry_date, m.is_discontinued, m.image_key, "
             + "m.created_at, m.updated_at "
             + "FROM medicines m JOIN categories c ON c.id = m.category_id ";
 
@@ -80,23 +81,22 @@ public class MedicineDAO {
         List<Object> params = new ArrayList<>();
 
         if (FILTER_DISCONTINUED.equals(filter)) {
-            sql.append("m.is_discontinued = 1 ");
+            sql.append("m.is_discontinued = TRUE ");
         } else {
-            sql.append("m.is_discontinued = 0 ");
+            sql.append("m.is_discontinued = FALSE ");
             if (FILTER_CATALOG.equals(filter)) {
-                sql.append("AND (m.expiry_date IS NULL OR m.expiry_date >= CAST(GETDATE() AS DATE)) ");
+                sql.append("AND (m.expiry_date IS NULL OR m.expiry_date >= CURRENT_DATE) ");
             } else if (FILTER_LOW_STOCK.equals(filter)) {
                 sql.append("AND m.stock_quantity > 0 AND m.stock_quantity <= m.reorder_level ");
             } else if (FILTER_OUT_OF_STOCK.equals(filter)) {
                 sql.append("AND m.stock_quantity = 0 ");
             } else if (FILTER_EXPIRED.equals(filter)) {
-                sql.append("AND m.expiry_date < CAST(GETDATE() AS DATE) ");
+                sql.append("AND m.expiry_date < CURRENT_DATE ");
             }
         }
         if (keyword != null && !keyword.isBlank()) {
-            // [ % _ have a meaning in LIKE, so they are escaped.
-            String pattern = "%" + keyword.trim().replace("[", "[[]").replace("%", "[%]").replace("_", "[_]") + "%";
-            sql.append("AND (m.name LIKE ? OR m.manufacturer LIKE ?) ");
+            String pattern = TextUtil.likePattern(keyword);
+            sql.append("AND (m.name ILIKE ? OR m.manufacturer ILIKE ?) ");
             params.add(pattern);
             params.add(pattern);
         }
@@ -143,8 +143,9 @@ public class MedicineDAO {
 
     /** True if another medicine (not excludeId) has the same name and strength. */
     public boolean medicineExists(String name, String strength, int excludeId) throws SQLException {
-        // ISNULL lets a missing strength match another missing strength.
-        String sql = "SELECT COUNT(*) FROM medicines WHERE name = ? AND ISNULL(strength, '') = ? AND id <> ?";
+        // COALESCE lets a missing strength match another missing strength; LOWER ignores case.
+        String sql = "SELECT COUNT(*) FROM medicines WHERE LOWER(name) = LOWER(?) "
+                   + "AND LOWER(COALESCE(strength, '')) = LOWER(?) AND id <> ?";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, name);
@@ -160,13 +161,13 @@ public class MedicineDAO {
     /** The numbers at the top of the inventory page. */
     public InventorySummary getSummary() throws SQLException {
         String sql = "SELECT "
-                + "SUM(CASE WHEN is_discontinued = 0 THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN is_discontinued = 0 AND stock_quantity > 0 "
+                + "SUM(CASE WHEN is_discontinued = FALSE THEN 1 ELSE 0 END), "
+                + "SUM(CASE WHEN is_discontinued = FALSE AND stock_quantity > 0 "
                 + "         AND stock_quantity <= reorder_level THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN is_discontinued = 0 AND stock_quantity = 0 THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN is_discontinued = 0 "
-                + "         AND expiry_date < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END), "
-                + "SUM(CASE WHEN is_discontinued = 1 THEN 1 ELSE 0 END) "
+                + "SUM(CASE WHEN is_discontinued = FALSE AND stock_quantity = 0 THEN 1 ELSE 0 END), "
+                + "SUM(CASE WHEN is_discontinued = FALSE "
+                + "         AND expiry_date < CURRENT_DATE THEN 1 ELSE 0 END), "
+                + "SUM(CASE WHEN is_discontinued = TRUE THEN 1 ELSE 0 END) "
                 + "FROM medicines";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql);
@@ -189,7 +190,7 @@ public class MedicineDAO {
     public boolean updateMedicine(Medicine m) throws SQLException {
         String sql = "UPDATE medicines SET name = ?, category_id = ?, manufacturer = ?, dosage_form = ?, "
                    + "strength = ?, description = ?, price = ?, stock_quantity = ?, reorder_level = ?, "
-                   + "requires_prescription = ?, expiry_date = ?, updated_at = SYSDATETIME() "
+                   + "requires_prescription = ?, expiry_date = ?, updated_at = CURRENT_TIMESTAMP "
                    + "WHERE id = ?";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -201,10 +202,21 @@ public class MedicineDAO {
 
     /** Adds delivered stock. */
     public boolean addStock(int id, int quantity) throws SQLException {
-        String sql = "UPDATE medicines SET stock_quantity = stock_quantity + ?, updated_at = SYSDATETIME() WHERE id = ?";
+        String sql = "UPDATE medicines SET stock_quantity = stock_quantity + ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, quantity);
+            ps.setInt(2, id);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    /** Sets the product photo, or removes it with null. */
+    public boolean updateImage(int id, String imageKey) throws SQLException {
+        String sql = "UPDATE medicines SET image_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, imageKey);
             ps.setInt(2, id);
             return ps.executeUpdate() == 1;
         }
@@ -223,7 +235,7 @@ public class MedicineDAO {
     }
 
     private boolean setDiscontinued(int id, boolean discontinued) throws SQLException {
-        String sql = "UPDATE medicines SET is_discontinued = ?, updated_at = SYSDATETIME() WHERE id = ?";
+        String sql = "UPDATE medicines SET is_discontinued = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setBoolean(1, discontinued);
@@ -271,6 +283,7 @@ public class MedicineDAO {
         Date expiry = rs.getDate("expiry_date");
         m.setExpiryDate(expiry == null ? null : expiry.toLocalDate());
         m.setDiscontinued(rs.getBoolean("is_discontinued"));
+        m.setImageKey(rs.getString("image_key"));
         Timestamp created = rs.getTimestamp("created_at");
         m.setCreatedAt(created == null ? null : created.toLocalDateTime());
         Timestamp updated = rs.getTimestamp("updated_at");

@@ -47,7 +47,7 @@
     <article class="medicine-card" data-wish="<%= m.getId() %>">
         <div class="card-media">
             <a class="<%= m.getThumbCssClass() %>" href="<%= onSale ? detailsUrl : "#" %>" tabindex="-1"
-               aria-hidden="true"><%= m.getThumbText() %></a>
+               aria-hidden="true"><%= thumbInner(ctx, m, 64) %></a>
             <% if (item.getAddedAt() != null) { %>
                 <span class="meta">Saved <%= TextUtil.date(item.getAddedAt().toLocalDate()) %></span>
             <% } %>

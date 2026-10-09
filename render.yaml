@@ -1,0 +1,24 @@
+# Render "Blueprint": Render reads this file and creates the web service.
+# Render dashboard -> New -> Blueprint -> pick this GitHub repo.
+# The secrets (sync: false) are typed in once in the Render dashboard.
+services:
+  - type: web
+    name: medisys
+    runtime: docker
+    plan: free
+    region: singapore          # closest Render region to Sri Lanka and Supabase ap-south-1
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /login
+    autoDeploy: true           # every push to main goes live
+    envVars:
+      - key: PORT
+        value: "8080"          # Tomcat listens on 8080
+      - key: DB_URL
+        sync: false            # jdbc:postgresql://<pooler host>:5432/postgres?sslmode=require
+      - key: DB_USER
+        sync: false            # postgres.<project ref>
+      - key: DB_PASSWORD
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false            # cloudinary://<key>:<secret>@<cloud name>

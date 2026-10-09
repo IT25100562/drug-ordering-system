@@ -1,6 +1,7 @@
 package com.medisys.user;
 
 import com.medisys.common.DBConnection;
+import com.medisys.common.TextUtil;
 
 import java.sql.Connection;
 import java.sql.Date;
@@ -77,7 +78,7 @@ public class UserDAO {
 
     /** The user, or null when no user has this email. */
     public User getUserByEmail(String email) throws SQLException {
-        List<User> list = query(SELECT_USER + "WHERE u.email = ?", email);
+        List<User> list = query(SELECT_USER + "WHERE LOWER(u.email) = LOWER(?)", email);
         return list.isEmpty() ? null : list.get(0);
     }
 
@@ -94,12 +95,12 @@ public class UserDAO {
 
     /** True when another account (not excludeId) already uses this email. */
     public boolean emailExists(String email, int excludeId) throws SQLException {
-        return count("SELECT COUNT(*) FROM users WHERE email = ? AND id <> ?", email, excludeId) > 0;
+        return count("SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(?) AND id <> ?", email, excludeId) > 0;
     }
 
     /** True when another account (not excludeId) already uses this NIC. */
     public boolean nicExists(String nic, int excludeId) throws SQLException {
-        return count("SELECT COUNT(*) FROM users WHERE nic = ? AND id <> ?", nic, excludeId) > 0;
+        return count("SELECT COUNT(*) FROM users WHERE UPPER(nic) = UPPER(?) AND id <> ?", nic, excludeId) > 0;
     }
 
     /**
@@ -117,12 +118,11 @@ public class UserDAO {
         } else if (FILTER_STAFF.equals(filter)) {
             sql.append("AND u.role <> 'CUSTOMER' ");
         } else if (FILTER_FLAGGED.equals(filter)) {
-            sql.append("AND u.is_flagged = 1 ");
+            sql.append("AND u.is_flagged = TRUE ");
         }
         if (keyword != null && !keyword.isBlank()) {
-            // [ % _ have a meaning in LIKE, so they are escaped.
-            String pattern = "%" + keyword.trim().replace("[", "[[]").replace("%", "[%]").replace("_", "[_]") + "%";
-            sql.append("AND (u.full_name LIKE ? OR u.email LIKE ?) ");
+            String pattern = TextUtil.likePattern(keyword);
+            sql.append("AND (u.full_name ILIKE ? OR u.email ILIKE ?) ");
             params.add(pattern);
             params.add(pattern);
         }
@@ -135,7 +135,7 @@ public class UserDAO {
         String sql = "SELECT COUNT(*) AS all_users, "
                    + "SUM(CASE WHEN role = 'CUSTOMER' THEN 1 ELSE 0 END) AS customers, "
                    + "SUM(CASE WHEN role <> 'CUSTOMER' THEN 1 ELSE 0 END) AS staff, "
-                   + "SUM(CASE WHEN is_flagged = 1 THEN 1 ELSE 0 END) AS flagged "
+                   + "SUM(CASE WHEN is_flagged = TRUE THEN 1 ELSE 0 END) AS flagged "
                    + "FROM users";
         Map<String, Integer> counts = new LinkedHashMap<>();
         try (Connection con = DBConnection.getInstance().getConnection();
@@ -176,35 +176,35 @@ public class UserDAO {
 
     /** Saves the details a user may change: name, phone, WhatsApp, address. */
     public void updateContactDetails(User u) throws SQLException {
-        update("UPDATE users SET full_name = ?, phone = ?, whatsapp = ?, address = ?, updated_at = SYSDATETIME() "
+        update("UPDATE users SET full_name = ?, phone = ?, whatsapp = ?, address = ?, updated_at = CURRENT_TIMESTAMP "
                + "WHERE id = ?", u.getFullName(), u.getPhone(), u.getWhatsapp(), u.getAddress(), u.getId());
     }
 
     public void updatePassword(int id, String passwordHash) throws SQLException {
-        update("UPDATE users SET password_hash = ?, updated_at = SYSDATETIME() WHERE id = ?", passwordHash, id);
+        update("UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", passwordHash, id);
     }
 
     /** Sets the profile photo, or removes it with null. */
     public void updatePhoto(int id, String photoKey) throws SQLException {
-        update("UPDATE users SET photo_key = ?, updated_at = SYSDATETIME() WHERE id = ?", photoKey, id);
+        update("UPDATE users SET photo_key = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", photoKey, id);
     }
 
     /** Staff accounts only: turn login on or off. Customers are never switched off. */
     public boolean setActive(int id, boolean active) throws SQLException {
-        return update("UPDATE users SET is_active = ?, updated_at = SYSDATETIME() "
+        return update("UPDATE users SET is_active = ?, updated_at = CURRENT_TIMESTAMP "
                       + "WHERE id = ? AND role <> 'CUSTOMER'", active, id) == 1;
     }
 
     /** Puts a red flag on a customer. */
     public boolean flagCustomer(int id, String reason, int flaggedBy) throws SQLException {
-        return update("UPDATE users SET is_flagged = 1, flag_reason = ?, flagged_by = ?, flagged_at = SYSDATETIME() "
+        return update("UPDATE users SET is_flagged = TRUE, flag_reason = ?, flagged_by = ?, flagged_at = CURRENT_TIMESTAMP "
                       + "WHERE id = ? AND role = 'CUSTOMER'", reason, flaggedBy, id) == 1;
     }
 
     /** Removes the red flag. */
     public boolean removeFlag(int id) throws SQLException {
-        return update("UPDATE users SET is_flagged = 0, flag_reason = NULL, flagged_by = NULL, flagged_at = NULL "
-                      + "WHERE id = ? AND is_flagged = 1", id) == 1;
+        return update("UPDATE users SET is_flagged = FALSE, flag_reason = NULL, flagged_by = NULL, flagged_at = NULL "
+                      + "WHERE id = ? AND is_flagged = TRUE", id) == 1;
     }
 
     // =============================================================== helpers

@@ -2,22 +2,20 @@ package com.medisys.common;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * Keeps uploaded files (prescriptions and profile photos) in a folder on this
- * computer.
+ * The one class the servlets use for uploaded files (prescriptions and
+ * profile photos).
  *
- * The folder is OUTSIDE the web app, so a file can never be opened by typing
- * its address - it is only sent by a servlet that checked who is asking.
- * By default it is <your home folder>/medisys-uploads; app.properties
- * (storage.local.dir) can change that.
+ * Design patterns:
+ *   - FACADE   : servlets call simple static methods (save, open, delete) and
+ *                never see where the files really are.
+ *   - STRATEGY : the real work is done by a StorageStrategy, chosen once when
+ *                the app starts (see strategy()):
+ *                  CLOUDINARY_URL is set -> CloudinaryStorage (live system)
+ *                  otherwise             -> LocalStorage (a folder on this computer)
  *
  * A file is found by its "key", e.g. "prescriptions/5f1c...e2.png". The key is
  * made here, never taken from the user, and is checked against a strict
@@ -32,7 +30,7 @@ public final class FileStorage {
     private static final Pattern SAFE_KEY =
             Pattern.compile("[a-z0-9-]{1,40}/[A-Za-z0-9-]{1,64}\\.(png|jpg|pdf)");
 
-    private static Path root;
+    private static StorageStrategy strategy;
 
     private FileStorage() {
     }
@@ -40,45 +38,49 @@ public final class FileStorage {
     /** Saves a new file under a fresh random name and returns its key. */
     public static String save(byte[] data, String folder, String contentType) throws IOException {
         String key = folder + "/" + UUID.randomUUID() + "." + extensionFor(contentType);
-        put(key, new java.io.ByteArrayInputStream(data));
+        strategy().put(check(key), data, contentType);
         return key;
     }
 
     /** Saves a file under a known key (used for the demo files). */
     public static void put(String key, InputStream data) throws IOException {
-        Path target = toPath(key);
-        Files.createDirectories(target.getParent());
-        // Write to a temporary file first, so a failed upload never leaves half a file.
-        Path temp = Files.createTempFile(target.getParent(), "upload-", ".tmp");
-        try {
-            Files.copy(data, temp, StandardCopyOption.REPLACE_EXISTING);
-            Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
-        } finally {
-            Files.deleteIfExists(temp);
-        }
+        byte[] bytes = data.readAllBytes();
+        strategy().put(check(key), bytes, detectType(bytes));
     }
 
     public static boolean exists(String key) throws IOException {
-        return Files.isRegularFile(toPath(key));
+        return strategy().exists(check(key));
     }
 
     /** Opens a saved file for reading. The caller must close the stream. */
     public static InputStream open(String key) throws IOException {
-        return Files.newInputStream(toPath(key));
+        return strategy().open(check(key));
     }
 
     /** Deletes a file. Never fails: a problem is only written to the log. */
     public static void delete(String key) {
         try {
-            Files.deleteIfExists(toPath(key));
+            strategy().delete(check(key));
         } catch (IOException e) {
             System.out.println("[MediSys] Could not delete file " + key + ": " + e.getMessage());
         }
     }
 
+    /**
+     * A CDN address for a product photo (Cloudinary), or null when the photo
+     * must be sent by our own servlet (local storage, or a storage problem).
+     */
+    public static String publicUrl(String key, int size) {
+        try {
+            return strategy().publicUrl(check(key), size);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     /** Short text for the startup log. */
     public static String describe() throws IOException {
-        return "local folder " + root();
+        return strategy().describe();
     }
 
     /**
@@ -112,36 +114,21 @@ public final class FileStorage {
         }
     }
 
-    /** Turns a key into a path inside the root folder, or refuses it. */
-    private static Path toPath(String key) throws IOException {
+    private static String check(String key) throws IOException {
         if (key == null || !SAFE_KEY.matcher(key).matches()) {
             throw new IOException("Invalid file key");
         }
-        Path folder = root();
-        Path path = folder.resolve(key).normalize();
-        if (!path.startsWith(folder)) {
-            throw new IOException("Invalid file key");
-        }
-        return path;
+        return key;
     }
 
-    /** The upload folder, read once from app.properties (optional). */
-    private static synchronized Path root() throws IOException {
-        if (root == null) {
-            Properties settings = new Properties();
-            try (InputStream in = FileStorage.class.getClassLoader().getResourceAsStream("app.properties")) {
-                if (in != null) {
-                    settings.load(in);
-                }
-            }
-            String dir = settings.getProperty("storage.local.dir", "").trim();
-            Path folder = dir.isEmpty()
-                    ? Paths.get(System.getProperty("user.home"), "medisys-uploads")
-                    : Paths.get(dir);
-            folder = folder.toAbsolutePath().normalize();
-            Files.createDirectories(folder);
-            root = folder;
+    /** Picks the storage strategy once: Cloudinary when its URL is set, else the local folder. */
+    private static synchronized StorageStrategy strategy() throws IOException {
+        if (strategy == null) {
+            String cloudinaryUrl = AppConfig.get("cloudinary.url");
+            strategy = cloudinaryUrl.startsWith("cloudinary://")
+                    ? new CloudinaryStorage(cloudinaryUrl)
+                    : new LocalStorage();
         }
-        return root;
+        return strategy;
     }
 }

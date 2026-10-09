@@ -19,6 +19,7 @@ import java.util.List;
  *
  *   GET  /admin/categories                  list with medicine counts       READ
  *   POST /admin/categories  action=add      add a category                  CREATE
+ *   POST /admin/categories  action=update   rename / change the description UPDATE
  *   POST /admin/categories  action=delete   delete an unused category       DELETE
  *
  * Module : 03 - Medicine Catalog and Inventory
@@ -47,6 +48,8 @@ public class CategoryServlet extends HttpServlet {
         try {
             if ("add".equals(action)) {
                 addCategory(request);
+            } else if ("update".equals(action)) {
+                updateCategory(request);
             } else if ("delete".equals(action)) {
                 deleteCategory(request);
             }
@@ -61,12 +64,38 @@ public class CategoryServlet extends HttpServlet {
     private void addCategory(HttpServletRequest request) throws SQLException {
         String name = TextUtil.clean(request.getParameter("name"));
         String description = TextUtil.clean(request.getParameter("description"));
+        if (!isValid(request, name, description, 0)) {
+            return;
+        }
+        categoryDAO.addCategory(new Category(0, name, description.isEmpty() ? null : description));
+        SessionUtil.flash(request, "success", "Category \"" + name + "\" was added.");
+    }
 
-        // ---- validation
+    // ================================================================ UPDATE
+
+    private void updateCategory(HttpServletRequest request) throws SQLException {
+        Integer id = TextUtil.parseInt(request.getParameter("id"));
+        Category category = id == null ? null : categoryDAO.getCategoryById(id);
+        if (category == null) {
+            SessionUtil.flash(request, "error", "That category no longer exists.");
+            return;
+        }
+        String name = TextUtil.clean(request.getParameter("name"));
+        String description = TextUtil.clean(request.getParameter("description"));
+        if (!isValid(request, name, description, id)) {
+            return;
+        }
+        categoryDAO.updateCategory(new Category(id, name, description.isEmpty() ? null : description));
+        SessionUtil.flash(request, "success", "Category \"" + name + "\" was saved.");
+    }
+
+    /** VALIDATION shared by add and update. Shows the problems and returns false when there are any. */
+    private boolean isValid(HttpServletRequest request, String name, String description, int id)
+            throws SQLException {
         List<String> errors = new ArrayList<>();
         if (name.length() < 2 || name.length() > 100) {
             errors.add("Category name must have 2 to 100 characters.");
-        } else if (categoryDAO.categoryExists(name)) {
+        } else if (categoryDAO.categoryExists(name, id)) {
             errors.add("A category called \"" + name + "\" already exists.");
         }
         if (description.length() > 255) {
@@ -74,11 +103,9 @@ public class CategoryServlet extends HttpServlet {
         }
         if (!errors.isEmpty()) {
             SessionUtil.flash(request, "error", String.join(" ", errors));
-            return;
+            return false;
         }
-
-        categoryDAO.addCategory(new Category(0, name, description.isEmpty() ? null : description));
-        SessionUtil.flash(request, "success", "Category \"" + name + "\" was added.");
+        return true;
     }
 
     // ================================================================ DELETE

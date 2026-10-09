@@ -36,13 +36,25 @@
             <td>
                 <a href="<%= ctx %>/admin/medicines?category=<%= c.getId() %>"><%= c.getMedicineCount() %></a>
             </td>
-            <td>
+            <td class="row-actions">
+                <details class="inline-edit">
+                    <summary class="btn small plain">Edit</summary>
+                    <form method="post" action="<%= ctx %>/admin/categories" class="edit-category">
+                        <input type="hidden" name="action" value="update">
+                        <input type="hidden" name="id" value="<%= c.getId() %>">
+                        <label>Name <input type="text" name="name" required minlength="2" maxlength="100"
+                               value="<%= TextUtil.html(c.getName()) %>"></label>
+                        <label>Description <input type="text" name="description" maxlength="255"
+                               value="<%= c.getDescription() == null ? "" : TextUtil.html(c.getDescription()) %>"></label>
+                        <button class="btn small" type="submit">Save</button>
+                    </form>
+                </details>
                 <% if (c.getMedicineCount() == 0) { %>
                     <form method="post" action="<%= ctx %>/admin/categories"
                           data-confirm="Delete the category <%= TextUtil.html(c.getName()) %>?">
                         <input type="hidden" name="action" value="delete">
                         <input type="hidden" name="id" value="<%= c.getId() %>">
-                        <button class="btn small reject" type="submit">Delete</button>
+                        <button class="btn small danger-outline" type="submit">Delete</button>
                     </form>
                 <% } else { %>
                     <span class="meta">In use</span>

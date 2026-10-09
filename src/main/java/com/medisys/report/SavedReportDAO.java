@@ -81,7 +81,7 @@ public class SavedReportDAO {
     public boolean updateSavedReport(int id, String title, String notes) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "UPDATE saved_reports SET title = ?, notes = ?, updated_at = SYSDATETIME() WHERE id = ?")) {
+                     "UPDATE saved_reports SET title = ?, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")) {
             ps.setString(1, title);
             ps.setString(2, notes);
             ps.setInt(3, id);

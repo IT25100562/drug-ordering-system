@@ -90,6 +90,16 @@
     private String avatar(String ctx, User user, String cssClass) {
         return avatar(ctx, user.getId(), user.hasPhoto(), user.getFullName(), cssClass);
     }
+
+    // What goes inside a medicine tile: the product photo, or a short text such as "TAB".
+    // size: the width in pixels the photo is shown at (Cloudinary sends it at that size).
+    private String thumbInner(String ctx, com.medisys.medicine.Medicine m, int size) {
+        if (m.hasImage()) {
+            return "<img src=\"" + TextUtil.html(m.getImageUrl(ctx, size * 2)) + "\" alt=\"\" loading=\"lazy\" width=\""
+                    + size + "\" height=\"" + size + "\">";
+        }
+        return m.getThumbText();
+    }
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -97,7 +107,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= TextUtil.html(pageTitle) %> | MediSys</title>
+    <meta name="description" content="MediSys - order genuine medicines online. Prescriptions checked by a pharmacist, delivered to your door.">
+    <meta name="theme-color" content="#0b6b5e">
     <link rel="icon" type="image/svg+xml" href="<%= ctx %>/images/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
     <link rel="stylesheet" href="<%= ctx %>/css/style.css">
     <script src="<%= ctx %>/js/app.js" defer></script>
 </head>
@@ -106,10 +121,18 @@
 <a class="skip-link" href="#main">Skip to content</a>
 
 <header class="topbar">
-    <a class="brand" href="<%= ctx %>/">MediSys
-        <span>Online Medicine Ordering System</span>
+    <a class="brand" href="<%= ctx %>/" aria-label="MediSys home">
+        <svg class="brand-mark" viewBox="0 0 40 40" width="36" height="36" aria-hidden="true">
+            <rect width="40" height="40" rx="11" fill="#0b6b5e"/>
+            <path d="M16 9h8v7h7v8h-7v7h-8v-7H9v-8h7z" fill="#ffffff"/>
+            <circle cx="31" cy="31" r="5" fill="#ffb703"/>
+        </svg>
+        <span class="brand-text">MediSys<small>Online Pharmacy</small></span>
     </a>
-    <nav aria-label="Main menu">
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Open the menu">
+        <span></span><span></span><span></span>
+    </button>
+    <nav aria-label="Main menu" id="main-nav">
         <a class="<%= activeIf(currentPath, "/medicines") %>" href="<%= ctx %>/medicines">Medicines</a>
 
         <% if (currentUser == null) { %>

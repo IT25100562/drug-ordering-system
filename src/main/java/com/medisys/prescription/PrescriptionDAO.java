@@ -59,7 +59,7 @@ public class PrescriptionDAO {
 
     /** SQL condition: uploaded more than 30 days ago and not paid. */
     private static final String EXPIRED =
-            "(p.order_id IS NULL AND p.uploaded_at < DATEADD(day, -" + Prescription.EXPIRY_DAYS + ", SYSDATETIME()))";
+            "(p.order_id IS NULL AND p.uploaded_at < CURRENT_TIMESTAMP - INTERVAL '" + Prescription.EXPIRY_DAYS + " days')";
 
     // ================================================================ CREATE
 
@@ -189,7 +189,7 @@ public class PrescriptionDAO {
             try {
                 // "AND status = 'PENDING'" makes sure two pharmacists cannot both decide.
                 String update = "UPDATE prescriptions SET status = 'APPROVED', pharmacist_note = ?, "
-                              + "reviewed_by = ?, reviewed_at = SYSDATETIME(), updated_at = SYSDATETIME() "
+                              + "reviewed_by = ?, reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
                               + "WHERE id = ? AND status = 'PENDING'";
                 try (PreparedStatement ps = con.prepareStatement(update)) {
                     ps.setString(1, note);
@@ -227,7 +227,7 @@ public class PrescriptionDAO {
     public boolean rejectOrAskCorrection(int id, PrescriptionStatus status, String note, int reviewerId)
             throws SQLException {
         String sql = "UPDATE prescriptions SET status = ?, pharmacist_note = ?, reviewed_by = ?, "
-                   + "reviewed_at = SYSDATETIME(), updated_at = SYSDATETIME() "
+                   + "reviewed_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
                    + "WHERE id = ? AND status = 'PENDING'";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -246,7 +246,7 @@ public class PrescriptionDAO {
         // The pharmacist's last note is kept so they can see what was asked.
         String sql = "UPDATE prescriptions SET file_key = ?, original_file_name = ?, content_type = ?, "
                    + "file_size = ?, status = 'PENDING', correction_count = correction_count + 1, "
-                   + "uploaded_at = SYSDATETIME(), updated_at = SYSDATETIME() "
+                   + "uploaded_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP "
                    + "WHERE id = ? AND status = 'CORRECTION_REQUESTED'";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {

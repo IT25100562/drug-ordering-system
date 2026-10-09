@@ -1,10 +1,17 @@
-# MediSys database settings (SQL Server)
+# MediSys database settings (PostgreSQL)
 #
 # Copy this file to db.properties in the same folder.
-# The login below is created by database/create-database.sql, so it works as
-# is on every team member's machine. Change it only if you use your own login.
 # db.properties is in .gitignore, so it is never pushed to GitHub.
+# On the live server these come from the DB_URL, DB_USER and DB_PASSWORD
+# environment variables instead (see DEPLOYMENT.md).
 
-db.url=jdbc:sqlserver://localhost:1433;databaseName=MediSysDB;encrypt=false;trustServerCertificate=true
-db.user=medisys_app
-db.password=MediSys@2026
+# Option A - the shared Supabase database (ask the team lead for the password).
+# Supabase dashboard -> Connect -> "Session pooler" gives these values:
+# db.url=jdbc:postgresql://aws-0-ap-south-1.pooler.supabase.com:5432/postgres?sslmode=require
+# db.user=postgres.<project ref>
+# db.password=<database password>
+
+# Option B - PostgreSQL on your own laptop (database/README in SETUP.md):
+db.url=jdbc:postgresql://localhost:5432/medisys
+db.user=postgres
+db.password=postgres

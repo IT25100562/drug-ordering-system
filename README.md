@@ -1,662 +1,100 @@
 # MediSys: Online Medicine Ordering System
 
 SE2030 Software Engineering group project. MediSys is a Java web app where customers order
-medicines online. Prescription-only medicines are checked by a senior pharmacist before
-the order is released.
+medicines online. Prescription-only medicines are checked by a pharmacist before they can be
+paid for, and every order is tracked until the rider delivers it.
 
-> **Status:** all six major functions and the minor functions (accounts, login, profile,
-> forgot password, notifications) are done. See [Module status](#module-status).
->
-> **Preparing for the viva?** [VIVA-GUIDE.md](VIVA-GUIDE.md) shows, for every module, the
-> exact file and method of each Create / Read / Update / Delete, where the validation is,
-> and the design patterns.
+**Live system:** <https://medisys.vercel.app> *(the address is set when the Vercel project is
+created; see [DEPLOYMENT.md](DEPLOYMENT.md))*
+
+| Document | For |
+|----------|-----|
+| [VIVA-GUIDE.md](VIVA-GUIDE.md) | **Every member.** Each module's Create / Read / Update / Delete (file, method, URL), the validation, the design patterns, and **which files you own** |
+| [SETUP.md](SETUP.md) | Running the project on your own laptop |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | How the live system is hosted (Supabase, Cloudinary, Render, Vercel) |
+
+## The six major functions
+
+| # | Module | Owner | Java package | CRUD in |
+|---|--------|-------|--------------|---------|
+| 01 | Shopping Cart and Wishlist | Amadini G. G. A. | `com.medisys.cart` | `CartDAO`, `WishlistDAO` |
+| 02 | Order Placement and Checkout | Hewage B. H. A. S. | `com.medisys.order` | `OrderDAO` |
+| 03 | Medicine Catalog and Inventory | Divisekara A. W. D. M. D. M. B. | `com.medisys.medicine` | `MedicineDAO`, `CategoryDAO` |
+| 04 | Reports and Analytics | Kaweesha P. M. G. S. | `com.medisys.report` | `ReportDAO`, `SavedReportDAO` |
+| 05 | Prescription Upload and Verification | Perera D. A. A. N. S. | `com.medisys.prescription` | `PrescriptionDAO` |
+| 06 | Delivery Tracking and Notification | Deshabhi R. G. S. | `com.medisys.delivery` | `DeliveryDAO`, `NotificationDAO` |
+
+**Minor functions** (used by every module): register, login / logout, forgot password,
+profile with photo and history, roles and page protection, staff accounts, red flags on
+customers, notifications. Package `com.medisys.user`.
 
 ## Tech stack
 
 | Part | Choice |
 |------|--------|
-| Language | Java 17 (any newer JDK also works) |
-| Web | Jakarta Servlets + JSP (`jakarta.servlet`, **not** `javax`) |
-| Server | Apache Tomcat 11 |
-| Database | Microsoft SQL Server, plain JDBC (`mssql-jdbc` driver) |
-| Build | Maven (`pom.xml`). IntelliJ has Maven built in. |
-| UI | JSP pages (HTML) + one shared CSS file + plain JavaScript. No frameworks. |
-| File uploads | `common/FileStorage`: a local folder outside the web app (see below). |
+| Language | Java 17+ |
+| Web | Jakarta Servlets + JSP on Apache Tomcat 11 (MVC, no frameworks) |
+| Database | PostgreSQL on **Supabase**, plain JDBC + connection pool |
+| Files and images | **Cloudinary**: private prescriptions / profile photos, public product photos on its CDN |
+| Hosting | **Render** (Docker) runs Tomcat; **Vercel** gives the `*.vercel.app` address |
+| Build | Maven (`pom.xml`) |
+| UI | JSP + one CSS file (`css/style.css`) + plain JavaScript, responsive down to phones |
 
-Design patterns used:
-- **Singleton**: `common/DBConnection`. There is only one object (`getInstance()`), and it
-  holds the connection pool that every DAO borrows from.
-- **DAO (Data Access Object)**: one `...DAO` class per table group (for example
-  `medicine/MedicineDAO`). All the SQL is in the DAOs and nowhere else.
-- **MVC**: model classes (`Medicine`, `Order`, ...), servlets as controllers, JSPs as views.
-
-## Getting started
-
-> **New to the project?** Follow the step-by-step [SETUP.md](SETUP.md). It covers installing IntelliJ,
-> SQL Server and Tomcat, creating the database, running the app, a tour of all six modules, and troubleshooting.
-> The short version is below.
-
-1. Clone the repo and open the folder in IntelliJ IDEA. When IntelliJ asks, load it as a
-   Maven project. It downloads the dependencies itself.
-2. **Database** (SQL Server must be running, with TCP port 1433 enabled). From the project
-   folder, run the three scripts in order:
-
-   ```
-   sqlcmd -S localhost -E -C -i database\create-database.sql
-   sqlcmd -S localhost -E -C -d MediSysDB -i database\schema.sql
-   sqlcmd -S localhost -E -C -d MediSysDB -i database\sample-data.sql
-   ```
-
-   The first script creates the `MediSysDB` database and a `medisys_app` login.
-   `schema.sql` **drops and recreates** every table, so run it again (followed by
-   `sample-data.sql`) whenever the tables change or you want fresh demo data.
-   You can also open the scripts in IntelliJ's Database tool and run them there.
-3. Copy `src/main/resources/db.properties.example` to `db.properties` in the same folder.
-   It already has the `medisys_app` login. `db.properties` is git-ignored.
-   *Optional:* copy `app.properties.example` to `app.properties` to change where uploaded
-   files are kept. The default folder is `<your home folder>/medisys-uploads`.
-4. Add a **Tomcat Server → Local** run configuration (Tomcat 11). On the Deployment tab,
-   add the artifact `medisys:war exploded` and set the context path to `/medisys`.
-5. Run it and open <http://localhost:8080/medisys/>.
-
-From the command line: `mvn package` builds `target/medisys.war`.
-
-### Demo accounts (from `sample-data.sql`)
-
-| Role | Email | Password |
-|------|-------|----------|
-| Customer | nimal@example.com | Customer@123 |
-| Customer | kasuni@example.com | Customer@123 |
-| Customer (red-flagged) | tharindu@example.com | Customer@123 |
-| Customers with order history (reports) | amaya@, dilan@, ishara@example.com | Customer@123 |
-| Admin | admin@medisys.lk | Admin@123 |
-| Senior Pharmacist | pharmacist@medisys.lk | Pharma@123 |
-| Delivery Staff (rider) | delivery@medisys.lk | Delivery@123 |
-| Delivery Staff (rider) | rider2@medisys.lk | Delivery@123 |
-
-To make a hash for a new password: `java -cp target/classes com.medisys.common.PasswordUtil MyPassword`.
+Design patterns: **MVC, DAO, Singleton, Strategy, Facade, Intercepting Filter,
+Post/Redirect/Get**. Each one is explained, with the file to open, in
+[VIVA-GUIDE.md](VIVA-GUIDE.md#design-patterns-the-spec-asks-for-at-least-2).
 
 ## Folder layout
 
-**One folder per module.** Everything a module needs (its model classes, its DAO and its
-servlets) is in one Java package, and its pages are in the folder of the same name under
-`views/`. To find your work, open your module's folder.
-
 ```
-drug-ordering-system/
-├── pom.xml
-├── VIVA-GUIDE.md                  where every CRUD operation is (read this before the viva)
-├── database/                      SQL scripts (schema + sample data)
-└── src/main/
-    ├── java/com/medisys/
-    │   ├── common/        shared: DBConnection (Singleton), AuthFilter, Validator,
-    │   │                  FileStorage, SessionUtil, TextUtil, PasswordUtil, ...
-    │   ├── cart/          01  Cart, CartItem, WishlistItem, CartDAO, WishlistDAO, CartServlet, WishlistServlet
-    │   ├── order/         02  Order, OrderItem, Payment, OrderDAO, CheckoutServlet, OrderServlet, ManageOrdersServlet
-    │   ├── medicine/      03  Medicine, Category, MedicineDAO, CategoryDAO, CatalogServlet, MedicineServlet, CategoryServlet
-    │   ├── report/        04  Report, SavedReport, ReportDAO, SavedReportDAO, ReportServlet, SavedReportServlet
-    │   ├── prescription/  05  Prescription, PrescriptionItem, PrescriptionDAO, PrescriptionServlet,
-    │   │                      PrescriptionPaymentServlet, PharmacistServlet
-    │   ├── delivery/      06  Delivery, Notification, DeliveryDAO, NotificationDAO, DeliveryServlet,
-    │   │                      TrackDeliveryServlet, NotificationServlet
-    │   └── user/          minor: User, Role, UserDAO, LoginServlet, RegisterServlet, ProfileServlet,
-    │                             ForgotPasswordServlet, ManageUsersServlet
-    ├── resources/                 db.properties, app.properties (your own, not in git)
-    └── webapp/
-        ├── index.jsp
-        ├── css/style.css          one stylesheet for every page (shared)
-        ├── js/                    app.js (shared) + one script per module
-        └── WEB-INF/
-            ├── web.xml
-            └── views/             JSP pages, same folder names as the packages
-                └── common/        header.jspf, footer.jspf, error.jsp (shared)
+src/main/java/com/medisys/
+    cart/  order/  medicine/  report/  prescription/  delivery/   one folder per module:
+                                                                  model + DAO + servlets
+    user/                                                         minor functions
+    common/                                                       shared: DB connection, login filter,
+                                                                  file storage, validation
+src/main/webapp/
+    WEB-INF/views/<module>/*.jsp                                  the pages (same folder names)
+    css/style.css   js/*.js   images/
+    WEB-INF/sample-uploads/                                       demo files (copied to Cloudinary at startup)
+database/
+    schema.sql        all tables, one section per module
+    sample-data.sql   demo data, one section per module
+Dockerfile  render.yaml  vercel/                                   live hosting
 ```
 
-**Request flow (3 steps):** browser → `AuthFilter` (login + role) → **servlet** (reads the
-form, validates it, calls the DAO) → **DAO** (SQL on SQL Server) → the servlet forwards to
-a **JSP** in `WEB-INF/views/`. JSPs are never opened directly.
-
-Inside every DAO the methods are grouped under `// ===== CREATE`, `READ`, `UPDATE` and
-`DELETE` headings, and the comment at the top of every servlet lists its URLs with the
-CRUD operation each one does.
-
-## Modules and owners
-
-| # | Module | Owner |
-|---|--------|-------|
-| 01 | Shopping Cart and Wishlist | Amadini G. G. A. |
-| 02 | Order Placement and Checkout | Hewage B. H. A. S. |
-| 03 | Medicine Catalog and Inventory | Divisekara A. W. D. M. D. M. B. |
-| 04 | Reports and Analytics | Kaweesha P. M. G. S. |
-| 05 | Prescription Upload and Verification | Perera D. A. A. N. S. |
-| 06 | Delivery Tracking and Notification | Deshabhi R. G. S. |
-
-**Minor functions** (supporting features every module uses): register, login / logout,
-forgot password, profile with photo and history, roles and page protection, staff accounts,
-red flags on customers, notifications. User management used to be module 04; it became a
-minor function because every platform needs it, and Reports and Analytics took its place.
-
-### Files per module
-
-All in `src/main/java/com/medisys/<folder>/`, with the pages in `WEB-INF/views/<folder>/`.
-
-| Module | Folder | Model | DAO (all the SQL) | Servlets (validation + calls the DAO) |
-|--------|--------|-------|-------------------|---------------------------------------|
-| 01 | `cart/` | `Cart`, `CartItem`, `WishlistItem` | `CartDAO`, `WishlistDAO` | `CartServlet`, `WishlistServlet` |
-| 02 | `order/` | `Order`, `OrderItem`, `OrderStatus`, `OrderStatusChange`, `Payment` | `OrderDAO` | `CheckoutServlet`, `OrderServlet`, `ManageOrdersServlet` |
-| 03 | `medicine/` | `Medicine`, `Category`, `InventorySummary` | `MedicineDAO`, `CategoryDAO` | `CatalogServlet`, `MedicineServlet`, `CategoryServlet` |
-| 04 | `report/` | `Report`, `ReportPeriod`, `ReportSummary`, `ReportRow`, `SavedReport` | `ReportDAO`, `SavedReportDAO` | `ReportServlet`, `SavedReportServlet` |
-| 05 | `prescription/` | `Prescription`, `PrescriptionItem`, `PrescriptionStatus` | `PrescriptionDAO` | `PrescriptionServlet`, `PrescriptionPaymentServlet`, `PharmacistServlet` |
-| 06 | `delivery/` | `Delivery`, `DeliveryStatus`, `DeliveryUpdate`, `Notification` | `DeliveryDAO`, `NotificationDAO` | `DeliveryServlet`, `TrackDeliveryServlet`, `NotificationServlet` |
-| minor | `user/` | `User`, `Role` | `UserDAO` | `LoginServlet`, `RegisterServlet`, `ForgotPasswordServlet`, `ProfileServlet`, `ManageUsersServlet` |
-
-**Shared files (agree with the team before changing them):** `pom.xml`, `web.xml`,
-everything in `common/` (`DBConnection`, `AuthFilter`, `Validator`, `FileStorage`,
-`SessionUtil`, `TextUtil`, `JsonUtil`, `PasswordUtil`, `ValidationException`,
-`AppStartupListener`), `views/common/*`, `css/style.css`, `js/app.js`, `database/*.sql`.
-
-### URL map
-
-| Module | URL | Who |
-|--------|-----|-----|
-| minor | `/login`, `/logout`, `/register`, `/forgot-password` | everyone |
-| minor | `/account/profile`, `/account/photo` | logged in |
-| minor | `/users/photo?id=` | the user, pharmacists, admins |
-| minor | `/users/flag` | pharmacist / admin |
-| minor | `/admin/users` | admin |
-| 04 | `/admin/reports`, `/admin/reports/export?type=`, `/admin/reports/saved`, `/admin/reports/saved/view?id=` | admin |
-| 03 | `/medicines`, `/medicines/view?id=` | everyone |
-| 03 | `/admin/medicines`, `/admin/medicines/edit`, `/admin/medicines/restock`, `/admin/medicines/discontinue`, `/admin/categories` | admin |
-| 01 | `/cart`, `/cart/add`, `/cart/update`, `/cart/remove` | customer |
-| 01 | `/wishlist`, `/wishlist/action` | customer |
-| 02 | `/checkout` | customer |
-| 02 | `/orders`, `/orders/view?id=`, `/orders/cancel`, `/orders/reorder` | customer |
-| 02 | `/admin/orders`, `/admin/orders/view?id=`, `/admin/orders/status` | admin |
-| 05 | `/prescriptions`, `/prescriptions/upload`, `/prescriptions/view?id=`, `/prescriptions/pay?id=`, `/prescriptions/correct`, `/prescriptions/delete` | customer |
-| 05 | `/prescriptions/file?id=` | the customer who uploaded it, or a pharmacist |
-| 05 | `/pharmacist/dashboard`, `/pharmacist/review`, `/pharmacist/delete` | pharmacist |
-| 06 | `/deliveries/track?orderId=` | customer |
-| 06 | `/staff/deliveries`, `/staff/deliveries/view?id=`, `/staff/deliveries/update` | delivery staff / admin |
-| 06 | `/notifications`, `/notifications/delete` | logged in |
-
-`AuthFilter` protects `/admin/*` for ADMIN, `/pharmacist/*` for PHARMACIST and `/staff/*`
-for DELIVERY_STAFF.
-
-### How the modules connect
-
-- **01 → 05:** a prescription-only medicine never goes in the cart. The customer is sent
-  to `/prescriptions/upload`, and pays for the medicines the pharmacist lists.
-- **01 → 02:** checkout turns the cart into an order.
-- **05 → 02:** paying for an approved prescription creates an order
-  (`CheckoutServlet.placeOrder`), so it is packed and tracked like any other order.
-- **02 → 03:** placing an order reduces stock (in the same transaction); cancelling puts it back.
-- **02 → 06:** placing an order also creates its delivery, in the same transaction
-  (`OrderDAO.placeOrder` calls `DeliveryDAO.addDeliveryForOrder`). Cancelling the order
-  cancels the delivery (`cancelDeliveryForOrder`).
-- **06 → 02:** when the rider picks the parcel up, the order becomes SHIPPED. When it is
-  delivered, the order becomes DELIVERED (`DeliveryDAO.updateStatus`, one transaction).
-- **05, 02, 06 → 06:** anything that needs to tell a user something calls
-  `NotificationDAO.addNotification(...)`.
-- **01, 02, 03, 05, 06 → 04:** the reports only read the other modules' tables
-  (`ReportDAO`). Nothing is copied, so the numbers always match the rest of the app.
-
-## Module status
-
-| # | Module | Status |
-|---|--------|--------|
-| 01 | Shopping Cart and Wishlist | **done** (see below) |
-| 02 | Order Placement and Checkout | **done** (see below) |
-| 03 | Medicine Catalog and Inventory | **done** (see below) |
-| 04 | Reports and Analytics | **done** (see below) |
-| 05 | Prescription Upload and Verification | **done** (see below) |
-| 06 | Delivery Tracking and Notification | **done** (see below) |
-| minor | User accounts and roles, notifications | **done** (see below) |
-
-### Module 04: Reports and Analytics
-
-The admin's view of how the pharmacy is doing, for any period.
-
-**Pages** (admin only: **Reports** in the menu)
-- `/admin/reports`: pick **Last 7 / 30 / 90 days, This month, Last month, This year**, or
-  your own **From / To** dates. The page shows:
-  - **Headline tiles:** revenue and paid orders, average order (with delivery fees),
-    customers who ordered and new accounts, cancelled orders and the amount refunded.
-  - **Revenue per day:** a bar for every day of the period (0 on quiet days), with a
-    tooltip per bar (mouse or keyboard), the shop vs prescription split, and
-    **Show as table**.
-  - **Top 10 medicines** and **Sales by category:** bars scaled to the biggest value,
-    with packs sold.
-  - **Prescriptions:** uploaded, approval rate, average time to the pharmacist's decision,
-    share paid after approval, and a bar per status.
-  - **Deliveries:** delivered, on time (on or before the expected day), failed attempts,
-    and a table per rider.
-  - **Top 5 customers** by money spent.
-  - **Inventory today:** stock value, low stock (at or below the reorder level), out of
-    stock, and expiring within 60 days or already expired.
-  - Every section has **Download CSV** (opens in Excel), and **Print** gives a clean printout.
-- **Save this report** stores the headline numbers of the period with a title and notes.
-- `/admin/reports/saved`: every saved report (period, revenue, orders, prescriptions,
-  on-time rate), with **Open** and **Delete**.
-- `/admin/reports/saved/view?id=`: the numbers **when saved** next to the **same period
-  today**, with the change. A later cancellation or a late delivery shows up here. The
-  title and notes can be edited.
-
-**CRUD:** Create (save a report), Read (dashboard, list, view), Update (title and notes),
-Delete (saved report). The live report itself is read-only by design.
-
-**Rules (in `report/ReportServlet` and `SavedReportServlet`)**
-- Custom dates must both be real dates, the start can't be after the end, the end can't
-  be in the future, the start can't be before 2020, and a period is at most 366 days.
-  Bad dates show a message and fall back to the last 30 days.
-- "Sales" means orders that were **not cancelled**, counted on the day they were placed.
-  Cancelled orders are reported separately with the refunded amount.
-- The approval rate is approved ÷ (approved + rejected). Prescriptions still pending or
-  waiting for a correction are not counted as either.
-- On time means delivered on or before the delivery's expected day.
-- A saved report's numbers never change. Only the title (3-100 characters) and notes
-  (up to 500) can be edited.
-- **CSV safety:** values are quoted, and a value that starts with `= + - @` gets a `'` in
-  front so Excel doesn't run it as a formula ("CSV injection"). The file starts with a
-  UTF-8 mark so Excel shows names correctly.
-- All the adding up happens in SQL (`GROUP BY`, `SUM`, `COUNT`, `CASE`) in
-  `ReportDAO`, with dates as `>= from AND < the day after to`, so the last day is
-  fully included.
-- The charts are plain HTML + CSS bars, with no chart library. Each bar's size is its value
-  as a percentage of the largest one.
-
-**Demo data:** three more customers (Amaya, Dilan, Ishara) with 30 orders spread over the
-last 75 days: some late, some after a failed delivery attempt, three cancelled. Their
-password is `Customer@123` like the other demo customers.
-
-**Try it:** log in as `admin@medisys.lk`, open **Reports**, switch between 7 / 30 / 90 days,
-download a CSV, then **Save this report**. Place an order as a customer and open the
-saved report again. **Today** now differs from **When saved**.
-
-### Minor functions: user accounts and roles
-
-Anyone can browse the medicines. An account is needed to order and to
-**upload a prescription**. A guest who opens `/prescriptions/upload` is sent to the
-login page with the message "Only registered customers can upload prescriptions". The
-page has a **Create a free account** link, and after registering the customer is brought
-straight back to the upload page.
-
-**Pages**
-- `/forgot-password`: a customer sets a new password after entering the email, NIC and
-  date of birth they registered with. There is no e-mail server, so no reset link is
-  sent. Every mismatch gets the same message. Staff passwords are reset by the admin on
-  `/admin/users`.
-- `/` (home): guests and customers see the start page; staff are sent straight to their
-  work page.
-- `/register`: only what the pharmacy needs: full name, NIC, date of birth, phone,
-  WhatsApp (with a "same as my phone number" box), email and password. All errors are
-  shown together, and the typed values are kept (except the password).
-- `/account/profile`: profile photo (add / change / remove), name and role, the latest
-  5 **prescriptions** and **orders** (with Track), editable name / phone / WhatsApp /
-  delivery address, a read-only email, NIC and date of birth, and Change password. Staff
-  get the same page without the history.
-- `/admin/users` (admin): everyone with their **photo**, name, email, role, joined date
-  and red flag. There are tabs (Everyone, Customers, Flagged, Staff) and search. NIC, date
-  of birth and phone are **not** shown here. The admin can **add staff accounts**
-  (pharmacist, delivery staff, admin), switch staff accounts off or on, and remove a flag.
-- Pharmacist review page (`/pharmacist/review`): a customer card with the photo, NIC, age,
-  phone, WhatsApp (opens `wa.me`), email, address, and "N prescriptions / N rejected /
-  N orders", plus **Flag this customer** or **Remove the flag**. The dashboard shows each
-  customer's photo, and flagged customers' rows are red.
-
-**Red flag, not a ban.** A pharmacist (or admin) can flag a customer who misuses the
-system, for example by uploading holiday photos. A reason is required, and staff see it
-with who flagged the customer and when. The customer can still log in, order and upload,
-and never sees the flag. Customer accounts are never switched off. Only staff accounts
-can be switched off (for someone who left).
-
-**Rules (in the `user/` servlets, with the shared field checks in `common/Validator`)**
-- Email and NIC are unique (email is compared in lower case).
-- NIC: old `123456789V/X` or new 12 digits. The day-of-year part must be valid, and the
-  birth year inside the NIC must match the date of birth.
-- The customer must be at least 18. Names are 2-100 letters.
-- Phones are Sri Lankan numbers stored as `0771234567` (`+94 77 123 4567` is accepted).
-  WhatsApp must be a mobile number (07...).
-- Passwords need at least 8 characters, with a letter and a digit. They are saved as a
-  salted PBKDF2 hash. Login gives the same message for a wrong email or a wrong password.
-- Photos are JPG or PNG only (checked from the file's first bytes), up to 2 MB, and stored
-  through `FileStorage` under `profiles/`. `/users/photo` serves a photo only to its
-  owner, pharmacists and admins; everyone else gets 404.
-- Flag reasons are 5-300 characters. Only customers can be flagged, and only by a
-  pharmacist or admin. A reason is always stored (a `CHECK` in the table).
-- The admin can't switch off their own account.
-
-**Demo data:** Nimal and Kasuni have profile photos. Tharindu (`tharindu@example.com`)
-is flagged because his RX-000007 was a beach photo.
-
-**Try it:** log out and click Upload prescription on a prescription-only medicine, then
-register. Afterwards, log in as the pharmacist, open the new prescription, and flag the
-customer. Finally, log in as the admin and open **Users**.
-
-### Module 03: Medicine Catalog and Inventory
-
-**Customer pages**
-- `/medicines`: catalog cards with search (name or manufacturer), category filter, price,
-  stock badge and a "Prescription" badge. Discontinued and expired medicines are hidden.
-- `/medicines/view?id=`: full details. Unknown, discontinued or expired medicines give a 404.
-  The Add to Cart and Add to Wishlist buttons post to module 01.
-
-**Admin pages**
-- `/admin/medicines`: inventory table with totals (active, low stock, out of stock,
-  expired), filter tabs, search and category filter. Per row: add stock, Edit,
-  Discontinue (with a confirm box), or Restore on the Discontinued tab.
-- `/admin/medicines/edit`: add / edit form. All errors are shown together, and the
-  typed values are kept.
-- `/admin/categories`: list, add, and delete categories. A category can only be deleted
-  when no medicine uses it.
-
-**Rules (in `MedicineServlet.validate()`, repeated in `js/medicine.js` for quick feedback)**
-- name 2-150 characters; category and dosage form must be from the lists
-- price more than 0, at most Rs. 1,000,000, at most 2 decimals
-- stock 0-100000, reorder level 0-10000, restock quantity 1-10000
-- expiry date cannot be in the past (an already saved past date may stay)
-- no two medicines with the same name and strength
-- "Delete" is a soft delete (`is_discontinued`), so old orders keep their medicine
-- a discontinued medicine must be restored before stock can be added
-
-**For other modules**
-- 01 (cart): `medicineDAO.getCatalogMedicine(id)` returns the medicine, or null when it is
-  discontinued or expired. `medicine.isRequiresPrescription()` tells you to send the
-  customer to module 05.
-- 02 (orders): `OrderDAO.placeOrder` takes the stock out inside the order's transaction
-  with `stock_quantity >= ?` in the `UPDATE`, so even two orders at the same time can't
-  take the stock below 0.
-
-The admin pages need an ADMIN login (`AuthFilter`).
-
-### Module 01: Shopping Cart and Wishlist
-
-**Pages** (customer login required; guests are sent to login and brought back afterwards)
-- `/cart`: cart lines with a - / + quantity stepper, line totals, Save for later, Remove,
-  Empty cart, and an order summary with Proceed to checkout. Lines that can't be bought
-  right now (out of stock, more than the stock, discontinued, prescription not approved)
-  are highlighted, and checkout is blocked until they are fixed.
-- `/wishlist`: saved medicines with Move to cart and Remove.
-- On the catalog and details pages: Add to Cart, a heart (save / unsave), "N in your cart",
-  and menu badges for the cart and wishlist counts.
-
-**Smooth updates:** every button is a normal form, so it works without JavaScript.
-`js/cart.js` sends those forms in the background and updates the page in place (toast
-messages, badges, totals). The servlets answer with JSON when the request asks for it
-(`JsonUtil`, `CartServlet.reply`).
-
-**Rules (in `CartServlet` / `WishlistServlet`)**
-- only medicines on sale can be added (not discontinued / expired / out of stock)
-- quantity per medicine: 1 to min(stock, 10); adding again raises the quantity (capped)
-- prescription-only medicines never go into the cart. They show "Upload prescription",
-  and the customer pays for them through the prescription (module 05).
-- the cart is checked again each time it is shown, because prices and stock can change
-- a customer can only see or change their own cart (every query uses the logged-in user id)
-
-**For other modules**
-- 02 (checkout): `cartDAO.getCart(userId)` gives the lines and the subtotal; check
-  `cart.isReadyForCheckout()` first. `OrderDAO.placeOrder` removes the bought lines.
-- 02 (orders) and the wishlist: "Buy again" and "Move to cart" call
-  `CartServlet.addToCart(...)`, so the cart rules are the same everywhere.
-- 05 (prescriptions): prescription-only medicines are refused with
-  `CartServlet.PrescriptionNeededException`, which sends the customer to the upload page.
-
-**Performance:** `DBConnection` keeps a pool of open connections (Tomcat's built-in DBCP),
-because opening a SQL Server connection takes about 250 ms.
-
-### Module 02: Order Placement and Checkout
-
-```
- cart / approved prescription ──pay──> PAID ──> PROCESSING ──> SHIPPED ──> DELIVERED
-                                        │           │
-                                        └───────────┴──cancel──> CANCELLED (stock back, payment refunded)
-```
-Labels shown to people: Order placed, Being packed, Out for delivery, Delivered, Cancelled.
-
-**Customer pages**
-- `/checkout`: step bar (Cart, Delivery & payment, Confirmation), delivery details filled
-  in from the account, an optional note for the rider, the test card form, and the order
-  summary with subtotal, delivery fee and total. The Pay button shows the amount.
-- `/orders`: every order, newest first, with its status, items and total, plus Buy again
-  and View order.
-- `/orders/view?id=`: a thank-you box right after paying, a timeline with the time of
-  each step, the medicines (with "how to use" for prescription orders), delivery details,
-  payment (or refund), Print, Buy again (cart orders), and Cancel while it is still
-  "Order placed".
-- `/orders/reorder`: Buy again puts the same medicines back in the cart. Medicines that
-  can't be bought now (out of stock, prescription only, ...) are skipped with a message.
-
-**Admin pages**
-- `/admin/orders`: totals per status, tabs (Open, each status, All), search by order number
-  (`ORD-000012` or `12`), customer name or email, and a one-click "Mark: next step"
-  button per row. The menu shows how many new orders are waiting.
-- `/admin/orders/view?id=`: the whole order, "Next step" (mark as packed) with an optional
-  note for the customer, the delivery card (status, rider, due date) with a link to the
-  delivery, the full history, a packing slip to print, and Cancel and refund with a
-  required reason.
-- Marking an order "Being packed" is optional for the admin: a rider can pick up a new
-  order straight away. "Out for delivery" and "Delivered" are set by the rider through
-  module 06.
-
-**Rules (in `CheckoutServlet.placeOrder` / `OrderDAO`)**
-- Delivery costs **Rs. 300.00** and is **free from Rs. 2,500.00** (`Order.DELIVERY_FEE`,
-  `FREE_DELIVERY_FROM`). This applies to cart and prescription orders.
-- The cart must be ready for checkout (module 01's checks). Delivery name, address and
-  phone are required, and the rider note is optional. Card checks come from
-  `Validator.card` (test card, Luhn, MM/YY in the future, CVV).
-- The page sends the total it showed (`expectedTotal`). If a price or the cart changed in
-  the meantime, nothing is charged and the customer sees the new total.
-- Placing an order is **one database transaction**: stock is reduced for every line
-  (never below 0), the order, lines, payment and first history row are saved, and the
-  bought medicines leave the cart. If one medicine is short, everything is rolled back and
-  the customer is told which one.
-- A prescription order also links the prescription (`prescriptions.order_id`) in the
-  same transaction, so it can't be paid twice.
-- Status only moves one step forward. If two admins click at the same time, the second
-  one is told the order already changed.
-- The customer can cancel only while "Order placed". The pharmacy can cancel until it is
-  "Out for delivery" and must give a reason (5-300 characters). Cancelling puts the
-  stock back, marks the payment REFUNDED, and frees a prescription so it can be paid again.
-- Customers can only see their own orders (anyone else's gives 404). Only the last 4 card
-  digits are stored. Every status change notifies the customer.
-
-**Demo data:** five orders: delivered (Nimal), out for delivery (Kasuni, paid prescription
-RX-000006), new (Nimal), cancelled and refunded (Kasuni), and being packed with free
-delivery (Kasuni).
-
-**For other modules**
-- 05 (prescriptions): `PrescriptionPaymentServlet` calls `CheckoutServlet.placeOrder(...)`
-  with the approved medicines. The receipt links to the order.
-- 06 (delivery): the delivery is created inside `OrderDAO.placeOrder()`. The admin's
-  "mark as packed" (`ManageOrdersServlet`) only goes PAID → PROCESSING, and the later steps
-  come from the rider (`DeliveryServlet`).
-
-### Module 05: Prescription Upload and Verification
-
-Customers can't always read a doctor's handwriting, so **they only upload the
-prescription**. The senior pharmacist reads it and writes down the medicines, and the
-customer pays for that list.
-
-```
- customer uploads file ──> PENDING ──pharmacist lists medicines + approves──> APPROVED ──customer pays──> PAID
-                             │  ▲                                                      (an order is created)
-             reject / ask    │  │  customer sends a new copy
-             for correction  ▼  │
-                REJECTED / CORRECTION_REQUESTED
-```
-
-**Customer pages**
-- `/prescriptions/upload`: drag and drop or browse for a JPG, PNG or PDF (with a
-  preview), add an optional note, and tick "issued to me". Prescription-only medicines in
-  the catalog link here instead of showing Add to Cart.
-- `/prescriptions`: every prescription with a progress bar (Uploaded, Pharmacist check,
-  Medicines listed, Paid) and the right button: View medicines & pay, View receipt,
-  Send corrected copy, Upload a new prescription, View file, or Delete.
-- `/prescriptions/view?id=`: once approved, the medicines with **how to use each one**,
-  the quantities, prices and total, the pharmacist's note, and the **Pay** button.
-  After payment the same page is the receipt (order number and status, payment
-  reference, amount, card ending, delivery address, Track order and Print).
-- `/prescriptions/pay?id=`: the same delivery and card form as the cart checkout. The
-  summary shows the medicines, the delivery fee and the total.
-- `/prescriptions/correct?id=`: shows the pharmacist's note and takes the new copy.
-- `/notifications`: messages about each decision and the payment.
-
-**Senior pharmacist pages**
-- `/pharmacist/dashboard`: totals, and tabs for waiting (oldest first), correction
-  requested, approved but not paid, paid, rejected, expired, and all.
-- `/pharmacist/review?id=`: the image or PDF next to the customer details, and a
-  **medicine lines editor**. Each line has a medicine (from the catalog, grouped by
-  category, out-of-stock ones disabled), a quantity, and "how to use" (with
-  suggestions). Lines can be added and removed, and the line totals and grand total
-  update as you type. Approve only unlocks when the 5 checks are ticked. Reject and
-  Request correction need a note.
-- Delete an invalid or expired prescription from the dashboard or the review page.
-
-**Rules (in `PrescriptionServlet` and `PharmacistServlet`)**
-- JPG, PNG or PDF only, at most 5 MB. The type is read from the file's first bytes
-  ("magic numbers"), so a renamed `.exe` or `.txt` is refused.
-- The file is stored under a new random name (`prescriptions/<uuid>.png`). The
-  customer's file name is only displayed, after removing any folder parts.
-- A customer can have at most 5 prescriptions waiting at the same time.
-- A decision can only be made while the prescription is PENDING, and two pharmacists
-  can't both decide.
-- **Approve** needs at least one medicine line. Each line needs a medicine that is on
-  sale, a quantity from 1 to 100 that isn't more than the stock, and "how to use" text
-  (3 to 300 characters). The same medicine can't appear twice, and there are at most 20
-  lines. The price is copied onto the line at approval time.
-- Reject and Correction need a note of at least 5 characters. An expired prescription
-  can't be approved.
-- **Pay:** only an approved, unpaid, not expired prescription, by its own customer.
-  Paying creates a module 02 order in **one database transaction** (stock, order,
-  payment, and the link `prescriptions.order_id`). A prescription can't be paid twice.
-  If the order is cancelled, the link is cleared and the prescription can be paid again.
-- **Expired:** uploaded more than 30 days ago and not paid. A corrected copy starts the
-  30 days again.
-- A paid prescription (linked to an order) can never be deleted. Deleting also removes the stored file, and
-  the customer is notified.
-- The cart never accepts a prescription-only medicine. It sends the customer to the
-  upload page instead.
-
-**Who can open a file:** `/prescriptions/file` sends the file only to the customer who
-uploaded it, or to a pharmacist. Anyone else gets 404. Files are never inside the web
-folder, so they can't be opened by typing their address.
-
-**Demo data:** `sample-data.sql` adds six prescriptions: pending, correction requested,
-rejected, approved and waiting for payment (Nimal: Metformin + Panadol), expired, and
-paid (Kasuni: Losartan). Their files are in `src/main/webapp/WEB-INF/sample-uploads`, and
-`AppStartupListener` copies them into the storage when the app starts.
-
-**Test card:** `4242 4242 4242 4242`, any future expiry date (MM/YY), and any 3-digit CVV.
-
-**For other modules**
-- 02 (orders): paying goes through `CheckoutServlet.placeOrder()`, and the
-  delivery details live on the order.
-- 06 (delivery): prescription orders are normal orders, so nothing extra is needed.
-
-### Module 06: Delivery Tracking and Notification
-
-Every paid order gets a delivery automatically. Riders (DELIVERY_STAFF accounts) take
-new parcels themselves, with no admin step in between, update them until they are
-delivered, and the customer follows each parcel on a tracking page.
-
-```
- order paid ──> PENDING ──"Got the package"──> OUT_FOR_DELIVERY ──> DELIVERED
- ("New")        (any rider; the order          (order: SHIPPED)  │  ▲    (order: DELIVERED)
-                 becomes packed + shipped)                       ▼  │ try again
-                                                                FAILED (reason required)
- order cancelled while PENDING ──> CANCELLED
-```
-
-**Customer pages**
-- `/deliveries/track?orderId=`: a one-line answer ("Your parcel is on the way to you."),
-  the expected date with a "Running late" badge when it is overdue, a progress bar
-  (Preparing, Dispatched, Out for delivery, Delivered, or "Attempt failed"), the rider's
-  name and phone, the address, and the full tracking history (newest first). Opened from
-  My Orders (**Track**) and from the order page (**Track delivery**).
-- `/notifications`: every message the system sent, with **Delete** per message and
-  **Clear read**. Riders have the bell too.
-
-**Staff pages** (`/staff/*`: DELIVERY_STAFF and ADMIN)
-- `/staff/deliveries`: three tabs.
-  - **New deliveries:** every new parcel that no rider has taken yet. A rider presses
-    **Got the package**. The parcel becomes theirs and goes straight to *Out for delivery*.
-  - **On the way:** **Delivered**, **Could not deliver** (asks for a reason), and
-    **Try again** after a failed attempt.
-  - **Completed:** delivered and cancelled.
-
-  The admin sees every delivery in the same tabs, **read only**. The menu shows the number
-  of parcels waiting for a rider (admin) or the rider's open deliveries (rider).
-- `/staff/deliveries/view?id=`: the address with a call link, the parcel contents, the
-  history, and for the rider "Got the package" or "Next step" with an optional note for
-  the customer, and "Could not deliver" with a required reason.
-
-**Rules (in `DeliveryServlet` / `DeliveryDAO`)**
-- One delivery per order (`UNIQUE order_id`), created in the order's transaction, so a
-  paid order can never be missing its delivery. It is due 2 days after the order
-  (`DeliveryDAO.DELIVERY_DAYS`).
-- Only riders change deliveries; the admin can only look. Any rider takes a new parcel
-  with **Got the package**. If two riders press it together, only the first one gets it
-  (`DeliveryDAO.pickUp`, one transaction). The order moves Order placed → Being
-  packed → Out for delivery in the same transaction, so the customer's timeline shows
-  every step.
-- A parcel can't leave without a rider (checked in `DeliveryServlet` and by a `CHECK`
-  constraint).
-- The status moves one allowed step at a time (`DeliveryStatus.nextSteps()`). The page
-  sends the status it showed, so a double click or two users at once can't skip a step.
-- "Could not deliver" needs a reason (5-300 characters). Each trip counts as an attempt.
-- The delivery update and the order's status change are saved in **one transaction**.
-- A rider gets 404 for someone else's delivery, and a customer gets 404 for someone else's
-  order. Notifications can only be deleted by their owner (`WHERE id = ? AND user_id = ?`).
-- The customer is notified at every step. Everything is HTML-escaped on the page.
-
-**Tables:** `deliveries` (one row per order: rider, status, attempts, due date,
-delivered time) and `delivery_updates` (the tracking history).
-
-**Demo data:** ORD-000001 delivered by Kamal. ORD-000002 is out for delivery with Ruwan on
-a second attempt after "nobody at home", and is running late. ORD-000003 has no rider yet
-and isn't packed. ORD-000004 was cancelled. ORD-000005 is packed and assigned to Ruwan,
-ready to pick up.
-
-**Try it:** log in as `delivery@medisys.lk`, open **My Deliveries → New deliveries**, and
-press **Got the package** on ORD-000003. Then press **Delivered** in **On the way**.
-Finally, log in as `nimal@example.com` and open **Orders → Track**.
-
-### File storage and moving to the cloud
-
-Uploaded files (prescriptions and profile photos) go through one class,
-`common/FileStorage` (`save`, `open`, `delete`). It keeps them in a folder outside the web
-app, which `app.properties` can change:
-
-```
-storage.local.dir=          # empty = <home folder>/medisys-uploads
-```
-
-To use a cloud storage later (Cloudinary, Supabase Storage, ...), change the inside of
-`FileStorage`'s methods and keep the keys in `app.properties` (never in git). Keep sending
-files through the servlets (`/prescriptions/file`, `/users/photo`) or short-lived signed
-URLs: prescriptions are private medical data, so they must not be public links.
-
-**Hosting note:** Vercel can't run a Java/Tomcat app. It hosts static sites and
-serverless functions for Node, Python and similar. A Tomcat WAR needs a host such as
-Render, Railway or Fly.io (with a Dockerfile), or Azure App Service. Supabase's database
-is PostgreSQL, while `schema.sql` is written for SQL Server, so moving to Supabase would
-mean converting the SQL (for example `IDENTITY` to `GENERATED ... AS IDENTITY`, `TOP` to
-`LIMIT`, `SYSDATETIME()` to `now()`).
+## Demo logins
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@medisys.lk` | `Admin@123` |
+| Pharmacist | `pharmacist@medisys.lk` | `Pharma@123` |
+| Customer | `nimal@example.com` | `Customer@123` |
+| Customer (red-flagged) | `tharindu@example.com` | `Customer@123` |
+| Rider | `delivery@medisys.lk` / `rider2@medisys.lk` | `Delivery@123` |
+
+Test card: `4242 4242 4242 4242`, any future MM/YY, any 3-digit CVV. No real money moves.
 
 ## Coding rules
 
-- Simple, readable, commented code. No Spring, Hibernate or Lombok.
-- Everything for a module is in its own folder (`com.medisys.<module>`).
-- Validation and rules live in the **servlet** (in a clearly marked `validate...()` method or
-  `// ---- validation` block). Checks that several forms share are in `common/Validator`.
-- SQL lives only in the **DAO** classes, grouped under CREATE / READ / UPDATE / DELETE
-  headings. Always use `PreparedStatement`, never string concatenation.
-- Escape all user text before printing it in a JSP (`TextUtil.html(...)`).
-- Every page includes `common/header.jspf` and `common/footer.jspf` and uses
-  `css/style.css`.
+- Everything for a module is in its own folder (`com.medisys.<module>`), its pages in
+  `WEB-INF/views/<module>/`.
+- SQL lives only in the **DAO** classes, under `// ===== CREATE / READ / UPDATE / DELETE`
+  headings. Always `PreparedStatement` with `?`, never string concatenation.
+- Validation lives in the **servlet** (`validate...()` method or `// ---- validation` block);
+  shared checks are in `common/Validator`.
+- Escape all user text in a JSP with `TextUtil.html(...)`.
+- Every page includes `common/header.jspf` and `common/footer.jspf`.
+- Never commit secrets: `db.properties` and `app.properties` are git-ignored.
 
 ## Git workflow
 
-- `main`: stable, demo-ready code.
-- `Dev`: integration branch. Merge feature branches here first.
-- `feature/<module-name>`: one branch per module, e.g. `feature/prescription-module`.
-  Open a PR into `Dev`.
+There is one branch: **`main`**, and it is always the live system. Render redeploys every
+push to `main` automatically.
+
+1. `git pull` before you start.
+2. Make a small change, run it locally (SETUP.md), then commit and push to `main`.
+3. Open the live site a few minutes later and check your change.
+
+For a bigger change, make a short-lived branch, open a pull request into `main`, and delete
+the branch after merging.

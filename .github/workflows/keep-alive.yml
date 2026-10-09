@@ -1,0 +1,19 @@
+# Render's free plan sleeps after 15 minutes without visitors, and waking up
+# takes about a minute. This opens the site every 10 minutes so it stays awake
+# and answers immediately, like a real live system.
+# Set the repository variable APP_URL (Settings -> Secrets and variables ->
+# Actions -> Variables), e.g. https://medisys.onrender.com
+name: keep-alive
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    if: ${{ vars.APP_URL != '' }}
+    steps:
+      - name: Open the login page
+        run: curl --silent --show-error --fail --max-time 120 --output /dev/null "${{ vars.APP_URL }}/login"

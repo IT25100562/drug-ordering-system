@@ -1,5 +1,7 @@
 package com.medisys.medicine;
 
+import com.medisys.common.FileStorage;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +39,7 @@ public class Medicine {
     private boolean requiresPrescription;
     private LocalDate expiryDate;     // may be null
     private boolean discontinued;
+    private String imageKey;            // product photo in the file storage, or null
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -89,7 +92,24 @@ public class Medicine {
      */
     public String getThumbCssClass() {
         String form = dosageForm == null ? "other" : dosageForm.toLowerCase();
-        return "thumb thumb-" + form;
+        return "thumb thumb-" + form + (hasImage() ? " has-image" : "");
+    }
+
+    public boolean hasImage() {
+        return imageKey != null && !imageKey.isEmpty();
+    }
+
+    /**
+     * Address of the product photo, about "size" pixels wide.
+     * With Cloudinary it is a fast CDN link (resized and compressed by Cloudinary);
+     * with local storage the photo is sent by CatalogServlet (/medicines/image).
+     */
+    public String getImageUrl(String ctx, int size) {
+        if (!hasImage()) {
+            return null;
+        }
+        String cdn = FileStorage.publicUrl(imageKey, size);
+        return cdn != null ? cdn : ctx + "/medicines/image?id=" + id;
     }
 
     /** Short text inside that tile, e.g. "TAB" or "SYR". */
@@ -213,6 +233,14 @@ public class Medicine {
 
     public boolean isDiscontinued() {
         return discontinued;
+    }
+
+    public String getImageKey() {
+        return imageKey;
+    }
+
+    public void setImageKey(String imageKey) {
+        this.imageKey = imageKey;
     }
 
     public void setDiscontinued(boolean discontinued) {

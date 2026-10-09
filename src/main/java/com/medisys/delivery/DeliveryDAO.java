@@ -70,7 +70,7 @@ public class DeliveryDAO {
      */
     public void addDeliveryForOrder(Connection con, int orderId) throws SQLException {
         String sql = "INSERT INTO deliveries (order_id, estimated_date) "
-                   + "VALUES (?, CAST(DATEADD(day, ?, SYSDATETIME()) AS DATE))";
+                   + "VALUES (?, CURRENT_DATE + CAST(? AS INTEGER))";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, orderId);
             ps.setInt(2, DELIVERY_DAYS);
@@ -181,7 +181,7 @@ public class DeliveryDAO {
                 // 1. The delivery: still at the pharmacy, and free or already this rider's.
                 //    If two riders press the button together, only one gets it.
                 String sql = "UPDATE deliveries SET staff_id = ?, status = 'OUT_FOR_DELIVERY', "
-                           + "attempts = attempts + 1, updated_at = SYSDATETIME() "
+                           + "attempts = attempts + 1, updated_at = CURRENT_TIMESTAMP "
                            + "WHERE id = ? AND status = 'PENDING' AND (staff_id IS NULL OR staff_id = ?)";
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
                     ps.setInt(1, riderId);
@@ -235,8 +235,8 @@ public class DeliveryDAO {
                 //    A rider is required once the parcel leaves (also a CHECK in the table).
                 String sql = "UPDATE deliveries SET status = ?, "
                            + "attempts = attempts + ?, "
-                           + "delivered_at = CASE WHEN ? = 'DELIVERED' THEN SYSDATETIME() ELSE delivered_at END, "
-                           + "updated_at = SYSDATETIME() "
+                           + "delivered_at = CASE WHEN ? = 'DELIVERED' THEN CURRENT_TIMESTAMP ELSE delivered_at END, "
+                           + "updated_at = CURRENT_TIMESTAMP "
                            + "WHERE id = ? AND status = ? AND staff_id IS NOT NULL";
                 try (PreparedStatement ps = con.prepareStatement(sql)) {
                     ps.setString(1, to.name());
@@ -282,7 +282,7 @@ public class DeliveryDAO {
      */
     public void cancelDeliveryForOrder(Connection con, int orderId, String reason, Integer changedBy)
             throws SQLException {
-        String sql = "UPDATE deliveries SET status = 'CANCELLED', updated_at = SYSDATETIME() "
+        String sql = "UPDATE deliveries SET status = 'CANCELLED', updated_at = CURRENT_TIMESTAMP "
                    + "WHERE order_id = ? AND status = 'PENDING'";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setInt(1, orderId);
@@ -297,7 +297,7 @@ public class DeliveryDAO {
     /** Moves the order one step and adds its history row. */
     private boolean moveOrder(Connection con, int orderId, OrderStatus from, OrderStatus to, String note,
                               int changedBy) throws SQLException {
-        String sql = "UPDATE orders SET status = ?, updated_at = SYSDATETIME() WHERE id = ? AND status = ?";
+        String sql = "UPDATE orders SET status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND status = ?";
         try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, to.name());
             ps.setInt(2, orderId);

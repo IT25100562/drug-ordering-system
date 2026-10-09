@@ -97,7 +97,7 @@
         <article class="medicine-card">
             <div class="card-media">
                 <a class="<%= m.getThumbCssClass() %>" href="<%= detailsUrl %>" tabindex="-1" aria-hidden="true">
-                    <%= m.getThumbText() %>
+                    <%= thumbInner(ctx, m, 220) %>
                 </a>
                 <% if (shopper) { %>
                     <%@ include file="../common/heart-button.jspf" %>

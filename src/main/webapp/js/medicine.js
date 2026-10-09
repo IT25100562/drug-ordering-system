@@ -31,6 +31,22 @@ document.addEventListener("DOMContentLoaded", function () {
             description.addEventListener("input", update);
             update();
         }
+
+        // Preview of the chosen product photo, before it is uploaded.
+        var imageInput = form.elements["image"];
+        var preview = document.getElementById("image-preview");
+        if (imageInput && preview) {
+            imageInput.addEventListener("change", function () {
+                var file = imageInput.files[0];
+                if (!file || !/^image\/(png|jpeg)$/.test(file.type)) {
+                    return;
+                }
+                var img = document.createElement("img");
+                img.alt = "Preview of the new photo";
+                img.src = URL.createObjectURL(file);
+                preview.replaceChildren(img);
+            });
+        }
     }
 
     // ------------------------------------------- auto-submit filters

@@ -43,9 +43,8 @@ import java.util.Map;
 @WebServlet({"/cart", "/cart/add", "/cart/update", "/cart/remove"})
 public class CartServlet extends HttpServlet {
 
-    /** SQL Server error numbers for "duplicate key". */
-    private static final int DUPLICATE_KEY = 2627;
-    private static final int DUPLICATE_INDEX = 2601;
+    /** PostgreSQL error code (SQLState) for "duplicate key": unique_violation. */
+    private static final String DUPLICATE_KEY = "23505";
 
     private static final CartDAO cartDAO = new CartDAO();
     private static final WishlistDAO wishlistDAO = new WishlistDAO();
@@ -161,7 +160,7 @@ public class CartServlet extends HttpServlet {
                 cartDAO.addItem(userId, medicineId, newQuantity);
             } catch (SQLException e) {
                 // Two clicks at the same moment: the line was just created, so update it.
-                if (e.getErrorCode() != DUPLICATE_KEY && e.getErrorCode() != DUPLICATE_INDEX) {
+                if (!DUPLICATE_KEY.equals(e.getSQLState())) {
                     throw e;
                 }
                 cartDAO.updateQuantity(userId, medicineId, newQuantity);

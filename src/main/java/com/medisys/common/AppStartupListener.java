@@ -49,14 +49,18 @@ public class AppStartupListener implements ServletContextListener {
         DBConnection.shutdown();
     }
 
-    /** Copies each demo file to "samples/<name>" unless it is already there. */
+    /**
+     * Copies each demo file to "samples/<name>" unless it is already there.
+     * Product photos (med-*.png) go to "medicines/<name>", the public folder.
+     */
     private void copySampleFiles(ServletContext context) throws Exception {
         Set<String> paths = context.getResourcePaths(SAMPLE_FOLDER);
         if (paths == null) {
             return;
         }
         for (String path : paths) {
-            String key = "samples/" + path.substring(SAMPLE_FOLDER.length());
+            String name = path.substring(SAMPLE_FOLDER.length());
+            String key = (name.startsWith("med-") ? "medicines/" : "samples/") + name;
             if (FileStorage.exists(key)) {
                 continue;
             }

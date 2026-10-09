@@ -15,6 +15,7 @@ import java.util.List;
  *
  *   CREATE  addCategory
  *   READ    getAllCategories, getCategoryById, categoryExists, countMedicines
+ *   UPDATE  updateCategory
  *   DELETE  deleteCategory
  *
  * Module : 03 - Medicine Catalog and Inventory
@@ -72,12 +73,40 @@ public class CategoryDAO {
     }
 
     public boolean categoryExists(String name) throws SQLException {
-        return count("SELECT COUNT(*) FROM categories WHERE name = ?", name) > 0;
+        return categoryExists(name, 0);
+    }
+
+    /** True if another category (not excludeId) already has this name, ignoring capitals. */
+    public boolean categoryExists(String name, int excludeId) throws SQLException {
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(
+                     "SELECT COUNT(*) FROM categories WHERE LOWER(name) = LOWER(?) AND id <> ?")) {
+            ps.setString(1, name);
+            ps.setInt(2, excludeId);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        }
     }
 
     /** How many medicines (including discontinued ones) use this category. */
     public int countMedicines(int categoryId) throws SQLException {
         return count("SELECT COUNT(*) FROM medicines WHERE category_id = ?", categoryId);
+    }
+
+    // ================================================================ UPDATE
+
+    /** Renames a category and changes its description. */
+    public boolean updateCategory(Category category) throws SQLException {
+        String sql = "UPDATE categories SET name = ?, description = ? WHERE id = ?";
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, category.getName());
+            ps.setString(2, category.getDescription());
+            ps.setInt(3, category.getId());
+            return ps.executeUpdate() == 1;
+        }
     }
 
     // ================================================================ DELETE

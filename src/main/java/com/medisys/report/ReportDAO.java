@@ -78,7 +78,7 @@ public class ReportDAO {
                     + "SUM(CASE WHEN order_id IS NOT NULL THEN 1 ELSE 0 END) AS paid, "
                     // average time from upload to the pharmacist's decision, in hours
                     + "AVG(CASE WHEN reviewed_at IS NOT NULL "
-                    + "    THEN CAST(DATEDIFF(minute, uploaded_at, reviewed_at) AS FLOAT) / 60 END) AS review_hours "
+                    + "    THEN EXTRACT(EPOCH FROM (reviewed_at - uploaded_at)) / 3600 END) AS review_hours "
                     + "FROM prescriptions WHERE uploaded_at >= ? AND uploaded_at < ?";
             try (PreparedStatement ps = con.prepareStatement(rx)) {
                 setPeriod(ps, 1, p);
@@ -137,7 +137,7 @@ public class ReportDAO {
     /** Best selling medicines by revenue: count = packs, amount = revenue, detail = category. */
     public List<ReportRow> getTopMedicines(ReportPeriod p, int limit) throws SQLException {
         // The name is taken from the order line (as it was sold), the category from the catalog.
-        String sql = "SELECT TOP (?) i.medicine_name, c.name AS category, SUM(i.quantity) AS packs, "
+        String sql = "SELECT i.medicine_name, c.name AS category, SUM(i.quantity) AS packs, "
                    + "SUM(i.quantity * i.unit_price) AS revenue "
                    + "FROM order_items i "
                    + "JOIN orders o ON o.id = i.order_id "
@@ -145,7 +145,7 @@ public class ReportDAO {
                    + "JOIN categories c ON c.id = m.category_id "
                    + "WHERE " + SOLD
                    + "GROUP BY i.medicine_id, i.medicine_name, c.name "
-                   + "ORDER BY revenue DESC, packs DESC";
+                   + "ORDER BY revenue DESC, packs DESC LIMIT ?";
         return rows(sql, limit, p, "medicine_name", "category", "packs", "revenue");
     }
 
@@ -163,10 +163,10 @@ public class ReportDAO {
 
     /** Customers who spent the most: count = orders, amount = spent. */
     public List<ReportRow> getTopCustomers(ReportPeriod p, int limit) throws SQLException {
-        String sql = "SELECT TOP (?) u.full_name, COUNT(*) AS orders, SUM(o.total) AS spent "
+        String sql = "SELECT u.full_name, COUNT(*) AS orders, SUM(o.total) AS spent "
                    + "FROM orders o JOIN users u ON u.id = o.user_id "
                    + "WHERE " + SOLD
-                   + "GROUP BY u.id, u.full_name ORDER BY spent DESC";
+                   + "GROUP BY u.id, u.full_name ORDER BY spent DESC LIMIT ?";
         return rows(sql, limit, p, "full_name", null, "orders", "spent");
     }
 
@@ -232,7 +232,7 @@ public class ReportDAO {
     public List<ReportRow> getLowStock() throws SQLException {
         String sql = "SELECT m.name, m.strength, c.name AS category, m.stock_quantity, m.reorder_level "
                    + "FROM medicines m JOIN categories c ON c.id = m.category_id "
-                   + "WHERE m.is_discontinued = 0 AND m.stock_quantity <= m.reorder_level "
+                   + "WHERE m.is_discontinued = FALSE AND m.stock_quantity <= m.reorder_level "
                    + "ORDER BY m.stock_quantity, m.name";
         List<ReportRow> rows = new ArrayList<>();
         try (Connection con = DBConnection.getInstance().getConnection();
@@ -249,8 +249,8 @@ public class ReportDAO {
     /** Medicines on sale that expire within "days" days: count = stock, detail = expiry date. */
     public List<ReportRow> getExpiringSoon(int days) throws SQLException {
         String sql = "SELECT m.name, m.strength, m.expiry_date, m.stock_quantity FROM medicines m "
-                   + "WHERE m.is_discontinued = 0 AND m.expiry_date IS NOT NULL "
-                   + "AND m.expiry_date < DATEADD(day, ?, CAST(SYSDATETIME() AS DATE)) "
+                   + "WHERE m.is_discontinued = FALSE AND m.expiry_date IS NOT NULL "
+                   + "AND m.expiry_date < CURRENT_DATE + CAST(? AS INTEGER) "
                    + "ORDER BY m.expiry_date, m.name";
         List<ReportRow> rows = new ArrayList<>();
         try (Connection con = DBConnection.getInstance().getConnection();
@@ -270,7 +270,7 @@ public class ReportDAO {
     public BigDecimal getStockValue() throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "SELECT SUM(price * stock_quantity) FROM medicines WHERE is_discontinued = 0");
+                     "SELECT SUM(price * stock_quantity) FROM medicines WHERE is_discontinued = FALSE");
              ResultSet rs = ps.executeQuery()) {
             rs.next();
             return money(rs.getBigDecimal(1));
@@ -280,7 +280,7 @@ public class ReportDAO {
     public int countOutOfStock() throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "SELECT COUNT(*) FROM medicines WHERE is_discontinued = 0 AND stock_quantity = 0");
+                     "SELECT COUNT(*) FROM medicines WHERE is_discontinued = FALSE AND stock_quantity = 0");
              ResultSet rs = ps.executeQuery()) {
             rs.next();
             return rs.getInt(1);
@@ -306,19 +306,18 @@ public class ReportDAO {
     }
 
     /**
-     * Runs a report query and maps each row. The query's parameters are an
-     * optional TOP (?) limit first, then the period.
+     * Runs a report query and maps each row. The query's parameters are the
+     * period first, then an optional LIMIT ?.
      */
     private List<ReportRow> rows(String sql, Integer limit, ReportPeriod p, String labelColumn,
                                  String detailColumn, String countColumn, String amountColumn) throws SQLException {
         List<ReportRow> rows = new ArrayList<>();
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
-            int index = 1;
+            setPeriod(ps, 1, p);
             if (limit != null) {
-                ps.setInt(index++, limit);
+                ps.setInt(3, limit);
             }
-            setPeriod(ps, index, p);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     ReportRow row = new ReportRow();

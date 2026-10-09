@@ -44,7 +44,8 @@
         <p class="subtitle">Fields marked * are required.</p>
     <% } %>
 
-    <form id="medicine-form" method="post" action="<%= ctx %>/admin/medicines/edit" novalidate>
+    <form id="medicine-form" method="post" action="<%= ctx %>/admin/medicines/edit"
+          enctype="multipart/form-data" novalidate>
         <% if (errors != null && !errors.isEmpty()) { %>
             <div class="message error js-errors">
                 <ul>
@@ -104,6 +105,27 @@
             <textarea id="description" name="description" rows="4"
                       maxlength="2000"><%= val(form, "description") %></textarea>
             <div class="hint" id="description-count"></div>
+        </div>
+
+        <%-- Product photo: saved in Cloudinary (see common/FileStorage.java) --%>
+        <div class="field image-field">
+            <label for="image">Product photo</label>
+            <div class="image-picker">
+                <div class="image-preview" id="image-preview">
+                    <% if (saved != null && saved.hasImage()) { %>
+                        <img src="<%= saved.getImageUrl(ctx, 240) %>" alt="Current photo of <%= TextUtil.html(saved.getDisplayName()) %>">
+                    <% } else { %>
+                        <span>No photo</span>
+                    <% } %>
+                </div>
+                <div>
+                    <input type="file" id="image" name="image" accept="image/png,image/jpeg">
+                    <div class="hint">JPG or PNG, up to 2 MB. A square photo on a white background looks best.</div>
+                    <% if (saved != null && saved.hasImage()) { %>
+                        <label class="checkbox-inline"><input type="checkbox" name="removeImage"> Remove the current photo</label>
+                    <% } %>
+                </div>
+            </div>
         </div>
 
         <div class="row">

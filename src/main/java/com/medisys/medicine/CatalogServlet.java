@@ -3,6 +3,7 @@ package com.medisys.medicine;
 import com.medisys.cart.Cart;
 import com.medisys.cart.CartDAO;
 import com.medisys.cart.WishlistDAO;
+import com.medisys.common.FileStorage;
 import com.medisys.common.SessionUtil;
 import com.medisys.common.TextUtil;
 import com.medisys.user.User;
@@ -14,6 +15,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.NoSuchFileException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,13 +28,15 @@ import java.util.List;
  *
  *   GET /medicines?q=pan&category=2&sort=price-asc   search, filter and sort
  *   GET /medicines/view?id=5                         one medicine, with related ones
+ *   GET /medicines/image?id=5                        its product photo (only used with
+ *                                                    local storage; Cloudinary has a CDN link)
  *
  * Only medicines that are not discontinued and not expired are shown.
  *
  * Module : 03 - Medicine Catalog and Inventory
  * Owner  : Divisekara A. W. D. M. D. M. B.
  */
-@WebServlet({"/medicines", "/medicines/view"})
+@WebServlet({"/medicines", "/medicines/view", "/medicines/image"})
 public class CatalogServlet extends HttpServlet {
 
     private final MedicineDAO medicineDAO = new MedicineDAO();
@@ -45,11 +50,34 @@ public class CatalogServlet extends HttpServlet {
         try {
             if (request.getServletPath().equals("/medicines/view")) {
                 showMedicine(request, response);
+            } else if (request.getServletPath().equals("/medicines/image")) {
+                sendImage(request, response);
             } else {
                 showCatalog(request, response);
             }
         } catch (SQLException e) {
             throw new ServletException("Could not load the catalog", e);
+        }
+    }
+
+    /** Sends a product photo. Product photos are public, so anyone may see them. */
+    private void sendImage(HttpServletRequest request, HttpServletResponse response)
+            throws SQLException, IOException {
+        Integer id = TextUtil.parseInt(request.getParameter("id"));
+        Medicine medicine = id == null ? null : medicineDAO.getMedicineById(id);
+        if (medicine == null || !medicine.hasImage()) {
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
+            return;
+        }
+        try (InputStream in = FileStorage.open(medicine.getImageKey())) {
+            // Only JPG / PNG are accepted at upload, so the key's extension tells the type.
+            response.setContentType(medicine.getImageKey().endsWith(".png") ? "image/png" : "image/jpeg");
+            response.setHeader("X-Content-Type-Options", "nosniff");
+            response.setHeader("Cache-Control", "public, max-age=86400");
+            in.transferTo(response.getOutputStream());
+        } catch (NoSuchFileException e) {
+            log("Medicine photo missing: " + medicine.getImageKey());
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 

@@ -107,11 +107,16 @@
         <tr>
             <td><%= m.getId() %></td>
             <td>
-                <strong><%= TextUtil.html(m.getDisplayName()) %></strong><br>
-                <span class="meta"><%= TextUtil.html(m.getDosageForm()) %>
-                    <% if (m.getManufacturer() != null) { %> &middot; <%= TextUtil.html(m.getManufacturer()) %><% } %>
-                </span>
-                <% if (m.isRequiresPrescription()) { %><br><span class="badge badge-rx">Prescription</span><% } %>
+                <div class="inventory-name">
+                    <span class="<%= m.getThumbCssClass() %>" aria-hidden="true"><%= thumbInner(ctx, m, 44) %></span>
+                    <div>
+                        <strong><%= TextUtil.html(m.getDisplayName()) %></strong><br>
+                        <span class="meta"><%= TextUtil.html(m.getDosageForm()) %>
+                            <% if (m.getManufacturer() != null) { %> &middot; <%= TextUtil.html(m.getManufacturer()) %><% } %>
+                        </span>
+                        <% if (m.isRequiresPrescription()) { %><br><span class="badge badge-rx">Prescription</span><% } %>
+                    </div>
+                </div>
             </td>
             <td><%= TextUtil.html(m.getCategoryName()) %></td>
             <td class="nowrap"><%= TextUtil.money(m.getPrice()) %></td>
@@ -146,7 +151,7 @@
                         <input type="hidden" name="id" value="<%= m.getId() %>">
                         <input type="hidden" name="action" value="discontinue">
                         <input type="hidden" name="returnQuery" value="<%= TextUtil.html(listQuery) %>">
-                        <button class="btn small reject" type="submit">Discontinue</button>
+                        <button class="btn small danger-outline" type="submit">Discontinue</button>
                     </form>
                 <% } %>
             </td>

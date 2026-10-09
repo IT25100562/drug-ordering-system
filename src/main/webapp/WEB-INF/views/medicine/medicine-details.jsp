@@ -39,7 +39,7 @@
     <%-- ------------------------------------------------ left: information --%>
     <section class="card">
         <div class="details-head">
-            <div class="<%= m.getThumbCssClass() %> large" aria-hidden="true"><%= m.getThumbText() %></div>
+            <div class="<%= m.getThumbCssClass() %> large" aria-hidden="true"><%= thumbInner(ctx, m, 420) %></div>
             <div>
                 <span class="category-name"><%= TextUtil.html(m.getCategoryName()) %></span>
                 <h1><%= TextUtil.html(m.getDisplayName()) %></h1>
@@ -156,7 +156,7 @@
     <div class="catalog-grid compact">
         <% for (Medicine r : related) { %>
             <a class="medicine-card link-card" href="<%= ctx %>/medicines/view?id=<%= r.getId() %>">
-                <span class="<%= r.getThumbCssClass() %>" aria-hidden="true"><%= r.getThumbText() %></span>
+                <span class="<%= r.getThumbCssClass() %>" aria-hidden="true"><%= thumbInner(ctx, r, 64) %></span>
                 <strong><%= TextUtil.html(r.getDisplayName()) %></strong>
                 <span class="meta"><%= TextUtil.html(r.getDosageForm()) %></span>
                 <span class="price-row">
