@@ -4,14 +4,13 @@ SE2030 Software Engineering group project. MediSys is a Java web app where custo
 medicines online. Prescription-only medicines are checked by a pharmacist before they can be
 paid for, and every order is tracked until the rider delivers it.
 
-**Live system:** <https://medisys.vercel.app> *(the address is set when the Vercel project is
-created; see [DEPLOYMENT.md](DEPLOYMENT.md))*
+**Live system:** <https://medisys.onrender.com> *(the Render address; see [DEPLOYMENT.md](DEPLOYMENT.md))*
 
 | Document | For |
 |----------|-----|
 | [VIVA-GUIDE.md](VIVA-GUIDE.md) | **Every member.** Each module's Create / Read / Update / Delete (file, method, URL), the validation, the design patterns, and **which files you own** |
 | [SETUP.md](SETUP.md) | Running the project on your own laptop |
-| [DEPLOYMENT.md](DEPLOYMENT.md) | How the live system is hosted (Supabase, Cloudinary, Render, Vercel) |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | How the live system is hosted (Supabase, Cloudinary, Render) |
 
 ## The six major functions
 
@@ -36,7 +35,7 @@ customers, notifications. Package `com.medisys.user`.
 | Web | Jakarta Servlets + JSP on Apache Tomcat 11 (MVC, no frameworks) |
 | Database | PostgreSQL on **Supabase**, plain JDBC + connection pool |
 | Files and images | **Cloudinary**: private prescriptions / profile photos, public product photos on its CDN |
-| Hosting | **Render** (Docker) runs Tomcat; **Vercel** gives the `*.vercel.app` address |
+| Hosting | **Render** (Docker) runs Tomcat |
 | Build | Maven (`pom.xml`) |
 | UI | JSP + one CSS file (`css/style.css`) + plain JavaScript, responsive down to phones |
 
@@ -60,7 +59,7 @@ src/main/webapp/
 database/
     schema.sql        all tables, one section per module
     sample-data.sql   demo data, one section per module
-Dockerfile  render.yaml  vercel/                                   live hosting
+Dockerfile  render.yaml                                           live hosting
 ```
 
 ## Demo logins

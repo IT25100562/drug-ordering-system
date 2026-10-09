@@ -69,7 +69,6 @@ Say at least **Singleton + DAO + Strategy** in the viva and open the files while
 | The database (all tables) | **Supabase** (PostgreSQL) | `common/DBConnection.java`, settings `DB_URL`, `DB_USER`, `DB_PASSWORD` |
 | Uploaded files: prescriptions, profile photos (private), product photos (public CDN) | **Cloudinary** | `common/CloudinaryStorage.java`, setting `CLOUDINARY_URL` |
 | The Java app (Tomcat) | **Render** (Docker) | `Dockerfile`, `render.yaml` |
-| The `*.vercel.app` address | **Vercel** (forwards every request to Render) | `vercel/vercel.json` |
 
 Settings are read by `common/AppConfig.java`: environment variables on the server,
 `db.properties` / `app.properties` on a laptop (both git-ignored, never pushed).
@@ -442,11 +441,10 @@ up to 2 MB, real type checked.
 everything in `common/` (`AppConfig`, `DBConnection`, `AuthFilter`, `Validator`, `FileStorage`,
 `StorageStrategy`, `CloudinaryStorage`, `LocalStorage`, `HomeServlet`, `SessionUtil`, `TextUtil`,
 `JsonUtil`, `PasswordUtil`, `ValidationException`, `AppStartupListener`), `views/common/*`,
-`css/style.css`, `js/app.js`, `database/*.sql`, `Dockerfile`, `render.yaml`, `vercel/`.
+`css/style.css`, `js/app.js`, `database/*.sql`, `Dockerfile`, `render.yaml`.
 
 **Technologies:** Java 17+, Jakarta Servlets + JSP on Tomcat 11, PostgreSQL (Supabase) with
-plain JDBC, Cloudinary (file storage + image CDN), Maven, Docker (Render), Vercel (the public
-address), HTML + one CSS file + plain JavaScript. No frameworks (no Spring, no Hibernate).
+plain JDBC, Cloudinary (file storage + image CDN), Maven, Docker (Render), HTML + one CSS file + plain JavaScript. No frameworks (no Spring, no Hibernate).
 
 **Security: "how do you protect against...?"**
 

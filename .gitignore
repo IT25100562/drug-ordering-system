@@ -11,8 +11,8 @@ target/
 .vscode/
 out/
 
-# Vercel CLI link
-.vercel/
+# Supabase CLI cache (created by `supabase link`)
+supabase/.temp/
 
 # Local database login (copy db.properties.example to create it)
 src/main/resources/db.properties

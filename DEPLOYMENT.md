@@ -1,15 +1,14 @@
 # How the live system is hosted
 
 ```
- Browser ──> https://<name>.vercel.app ──(Vercel forwards)──> Render: Docker + Tomcat 11 + our WAR
-                                                                 │                    │
-                                                    JDBC (SSL)   ▼                    ▼  HTTPS API
-                                                   Supabase PostgreSQL         Cloudinary (files + image CDN)
+ Browser ──> https://medisys.onrender.com ──> Render: Docker + Tomcat 11 + our WAR
+                                                    │                    │
+                                       JDBC (SSL)   ▼                    ▼  HTTPS API
+                                      Supabase PostgreSQL         Cloudinary (files + image CDN)
 ```
 
-Vercel cannot run Java, so the Java app runs on **Render** and Vercel only forwards
-requests to it. That gives the site a `vercel.app` address while staying a Java web app,
-as the SE2030 spec requires. All four services have free plans.
+The Java app runs on **Render**, the data in **Supabase** and the files in **Cloudinary**.
+All three services have free plans.
 
 ## 1. Supabase (database)
 
@@ -50,22 +49,13 @@ files; product photos are public and are served from Cloudinary's CDN.
 
 3. Wait for the first build (about 5 minutes). The log ends with
    `[MediSys] Database connected` and `File storage: Cloudinary (...)`.
-   Note the address, e.g. `https://medisys.onrender.com`.
+   Note the address, e.g. `https://medisys.onrender.com`, and put it at the top of `README.md`.
 
 Every push to `main` redeploys automatically.
 
 **Keep it awake:** the free plan sleeps after 15 idle minutes. In GitHub → Settings →
 Secrets and variables → Actions → **Variables**, add `APP_URL` = the Render address. The
 workflow `.github/workflows/keep-alive.yml` then opens the site every 10 minutes.
-
-## 4. Vercel (the public address)
-
-1. If the Render address is not `https://medisys.onrender.com`, change it in `vercel/vercel.json`
-   and push.
-2. <https://vercel.com> → sign in with GitHub → **Add New → Project** → this repo →
-   **Root Directory: `vercel`** → Deploy.
-3. Project → Settings → Domains: rename it to the address you want, e.g. `medisys-lk.vercel.app`.
-   Put that address at the top of `README.md`.
 
 ## Checking the live site
 

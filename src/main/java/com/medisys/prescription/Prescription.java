@@ -87,11 +87,6 @@ public class Prescription {
         return status == PrescriptionStatus.PENDING;
     }
 
-    /** Approved, not paid yet and not expired: the customer can pay. */
-    public boolean isPayable() {
-        return status == PrescriptionStatus.APPROVED && !isPaid() && !isExpired();
-    }
-
     public boolean needsCorrection() {
         return status == PrescriptionStatus.CORRECTION_REQUESTED;
     }
@@ -130,10 +125,6 @@ public class Prescription {
 
     public boolean isPdf() {
         return "application/pdf".equals(contentType);
-    }
-
-    public boolean isImage() {
-        return contentType != null && contentType.startsWith("image/");
     }
 
     /** e.g. "245 KB" or "1.3 MB". */
