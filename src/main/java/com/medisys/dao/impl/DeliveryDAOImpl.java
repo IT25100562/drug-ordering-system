@@ -62,6 +62,38 @@ public class DeliveryDAOImpl implements DeliveryDAO {
     }
 
     @Override
+    public void create(Delivery delivery) throws SQLException {
+        String sql = "INSERT INTO deliveries (order_id, staff_id, status, estimated_date) "
+                   + "VALUES (?, ?, ?, ?)";
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, delivery.getOrderId());
+            if (delivery.getStaffId() != null) {
+                ps.setInt(2, delivery.getStaffId());
+            } else {
+                ps.setNull(2, java.sql.Types.INTEGER);
+            }
+            ps.setString(3, delivery.getStatus() != null ? delivery.getStatus().name() : "PENDING");
+            if (delivery.getEstimatedDate() != null) {
+                ps.setDate(4, java.sql.Date.valueOf(delivery.getEstimatedDate()));
+            } else {
+                ps.setNull(4, java.sql.Types.DATE);
+            }
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public boolean delete(int id) throws SQLException {
+        String sql = "UPDATE deliveries SET is_active = 0, updated_at = SYSDATETIME() WHERE id = ?";
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setInt(1, id);
+            return ps.executeUpdate() == 1;
+        }
+    }
+
+    @Override
     public void cancelForOrder(Connection con, int orderId, String reason, Integer changedBy) throws SQLException {
         String sql = "UPDATE deliveries SET status = 'CANCELLED', updated_at = SYSDATETIME() "
                    + "WHERE order_id = ? AND status = 'PENDING'";
@@ -111,7 +143,7 @@ public class DeliveryDAOImpl implements DeliveryDAO {
 
     private Delivery findOne(String where, int value) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection()) {
-            List<Delivery> list = query(con, SELECT_DELIVERY + where, value);
+            List<Delivery> list = query(con, SELECT_DELIVERY + where + " AND d.is_active = 1", value);
             if (list.isEmpty()) {
                 return null;
             }
@@ -123,7 +155,7 @@ public class DeliveryDAOImpl implements DeliveryDAO {
 
     @Override
     public List<Delivery> findForStaff(Integer staffId, String filter) throws SQLException {
-        StringBuilder sql = new StringBuilder(SELECT_DELIVERY).append("WHERE 1 = 1 ");
+        StringBuilder sql = new StringBuilder(SELECT_DELIVERY).append("WHERE d.is_active = 1 ");
         List<Object> params = new ArrayList<>();
 
         if (staffId != null) {
@@ -163,7 +195,8 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         int all = 0;
 
         String sql = "SELECT status, CASE WHEN staff_id IS NULL THEN 1 ELSE 0 END AS no_rider, COUNT(*) AS n "
-                   + "FROM deliveries " + (staffId == null ? "" : "WHERE staff_id = ? ")
+                   + "FROM deliveries WHERE is_active = 1 "
+                   + (staffId == null ? "" : "AND staff_id = ? ")
                    + "GROUP BY status, CASE WHEN staff_id IS NULL THEN 1 ELSE 0 END";
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -299,6 +332,17 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         }
     }
 
+    @Override
+    public void updateDeliveryOtp(int deliveryId, String hashedOtp) throws SQLException {
+        String sql = "UPDATE deliveries SET delivery_otp = ? WHERE id = ?";
+        try (Connection con = DBConnection.getInstance().getConnection();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, hashedOtp);
+            ps.setInt(2, deliveryId);
+            ps.executeUpdate();
+        }
+    }
+
     /** Moves the order one step and adds its history row (module 02's tables). */
     private boolean moveOrder(Connection con, int orderId, OrderStatus from, OrderStatus to, String note,
                               int changedBy) throws SQLException {
@@ -370,6 +414,7 @@ public class DeliveryDAOImpl implements DeliveryDAO {
         d.setDeliveredAt(toTime(rs.getTimestamp("delivered_at")));
         d.setCreatedAt(toTime(rs.getTimestamp("created_at")));
         d.setUpdatedAt(toTime(rs.getTimestamp("updated_at")));
+        d.setDeliveryOtp(rs.getString("delivery_otp"));
         d.setStaffName(rs.getString("staff_name"));
         d.setStaffPhone(rs.getString("staff_phone"));
         d.setCustomerId(rs.getInt("customer_id"));

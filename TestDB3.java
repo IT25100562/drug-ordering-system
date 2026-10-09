@@ -1,0 +1,1 @@
+import java.sql.*; public class TestDB3 { public static void main(String[] args) { try { Connection conn = DriverManager.getConnection("jdbc:sqlserver://localhost;instanceName=MSSQLLocalDB;integratedSecurity=true;databaseName=MediSysDB;encrypt=false;trustServerCertificate=true"); System.out.println("SUCCESS!"); } catch (Exception e) { e.printStackTrace(); } } }

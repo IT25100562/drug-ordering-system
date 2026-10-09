@@ -7,6 +7,13 @@ import com.medisys.util.TextUtil;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import com.medisys.dao.UserDAO;
+import com.medisys.dao.impl.UserDAOImpl;
+import com.medisys.model.User;
+import com.medisys.util.MailSenderUtil;
 
 /**
  * Other modules call this to send a message to a user.
@@ -25,6 +32,8 @@ public class NotificationService {
     private static final int MESSAGE_MAX = 500;
 
     private final NotificationDAO notificationDAO = new NotificationDAOImpl();
+    private final UserDAO userDAO = new UserDAOImpl();
+    private static final ExecutorService executorService = Executors.newCachedThreadPool();
 
     /**
      * Sends a message to a user.
@@ -38,6 +47,23 @@ public class NotificationService {
         String text = message.length() > MESSAGE_MAX ? message.substring(0, MESSAGE_MAX - 3) + "..." : message;
         try {
             notificationDAO.create(userId, text, link);
+            
+            // Asynchronously send the actual email
+            executorService.submit(() -> {
+                try {
+                    User user = userDAO.findById(userId);
+                    if (user != null && user.getEmail() != null) {
+                        String emailBody = message;
+                        if (link != null && !link.isEmpty()) {
+                            emailBody += "\n\nLink: " + link;
+                        }
+                        MailSenderUtil.sendEmail(user.getEmail(), "MediSys Notification", emailBody);
+                    }
+                } catch (SQLException e) {
+                    System.out.println("[MediSys] Could not send email to user " + userId + ": " + e.getMessage());
+                }
+            });
+            
         } catch (SQLException e) {
             System.out.println("[MediSys] Could not save a notification for user " + userId + ": " + e.getMessage());
         }

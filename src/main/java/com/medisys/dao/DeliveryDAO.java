@@ -29,6 +29,12 @@ public interface DeliveryDAO {
      */
     void createForOrder(Connection con, int orderId) throws SQLException;
 
+    /** Admin manually creates a new delivery. */
+    void create(Delivery delivery) throws SQLException;
+
+    /** Admin soft-deletes a delivery (sets is_active = 0). */
+    boolean delete(int id) throws SQLException;
+
     /**
      * Cancels the delivery of a cancelled order (only while it is still
      * PENDING). Uses the caller's connection, like createForOrder.
@@ -73,4 +79,7 @@ public interface DeliveryDAO {
      */
     boolean updateStatus(Delivery delivery, DeliveryStatus from, DeliveryStatus to, int changedBy, String note)
             throws SQLException;
+
+    /** Updates the hashed OTP for a delivery. */
+    void updateDeliveryOtp(int deliveryId, String hashedOtp) throws SQLException;
 }

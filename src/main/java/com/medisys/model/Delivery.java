@@ -24,6 +24,7 @@ public class Delivery {
     private LocalDateTime deliveredAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private String deliveryOtp;
 
     // From the joined tables
     private String staffName;
@@ -146,6 +147,14 @@ public class Delivery {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getDeliveryOtp() {
+        return deliveryOtp;
+    }
+
+    public void setDeliveryOtp(String deliveryOtp) {
+        this.deliveryOtp = deliveryOtp;
     }
 
     public String getStaffName() {

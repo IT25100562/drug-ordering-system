@@ -1,0 +1,6 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="medisys">
+    <output-path>$PROJECT_DIR$/out/artifacts/medisys</output-path>
+    <root id="root" />
+  </artifact>
+</component>

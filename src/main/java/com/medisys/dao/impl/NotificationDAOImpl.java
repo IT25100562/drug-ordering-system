@@ -35,7 +35,7 @@ public class NotificationDAOImpl implements NotificationDAO {
     @Override
     public List<Notification> findByUser(int userId, int limit) throws SQLException {
         String sql = "SELECT TOP (?) id, user_id, message, link, is_read, created_at FROM notifications "
-                   + "WHERE user_id = ? ORDER BY created_at DESC, id DESC";
+                   + "WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC, id DESC";
         List<Notification> list = new ArrayList<>();
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(sql)) {
@@ -62,7 +62,7 @@ public class NotificationDAOImpl implements NotificationDAO {
     public int countUnread(int userId) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0")) {
+                     "SELECT COUNT(*) FROM notifications WHERE user_id = ? AND is_read = 0 AND is_active = 1")) {
             ps.setInt(1, userId);
             try (ResultSet rs = ps.executeQuery()) {
                 rs.next();
@@ -75,7 +75,7 @@ public class NotificationDAOImpl implements NotificationDAO {
     public void markAllRead(int userId) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0")) {
+                     "UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0 AND is_active = 1")) {
             ps.setInt(1, userId);
             ps.executeUpdate();
         }
@@ -86,7 +86,7 @@ public class NotificationDAOImpl implements NotificationDAO {
         // "AND user_id = ?" makes sure nobody can delete someone else's notification.
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "DELETE FROM notifications WHERE id = ? AND user_id = ?")) {
+                     "UPDATE notifications SET is_active = 0 WHERE id = ? AND user_id = ?")) {
             ps.setInt(1, id);
             ps.setInt(2, userId);
             return ps.executeUpdate() == 1;
@@ -97,7 +97,7 @@ public class NotificationDAOImpl implements NotificationDAO {
     public int deleteRead(int userId) throws SQLException {
         try (Connection con = DBConnection.getInstance().getConnection();
              PreparedStatement ps = con.prepareStatement(
-                     "DELETE FROM notifications WHERE user_id = ? AND is_read = 1")) {
+                     "UPDATE notifications SET is_active = 0 WHERE user_id = ? AND is_read = 1")) {
             ps.setInt(1, userId);
             return ps.executeUpdate();
         }

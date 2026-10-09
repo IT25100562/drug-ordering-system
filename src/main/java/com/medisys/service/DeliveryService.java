@@ -176,9 +176,59 @@ public class DeliveryService {
             throw new ValidationException(ref + " was just changed by someone else. Please check it again.");
         }
 
-        notificationService.notify(delivery.getCustomerId(), customerMessage(delivery, next, note),
+        String message = customerMessage(delivery, next, note);
+        if (next == DeliveryStatus.DISPATCHED) {
+            String plainOtp = generateOtp();
+            String hashedOtp = hashString(plainOtp);
+            deliveryDAO.updateDeliveryOtp(delivery.getId(), hashedOtp);
+            message += "\nYour secure delivery OTP is: " + plainOtp + ". Please provide this to the rider.";
+        }
+
+        notificationService.notify(delivery.getCustomerId(), message,
                 "/deliveries/track?orderId=" + delivery.getOrderId());
         return ref + " is now \"" + next.getLabel() + "\". The customer has been notified.";
+    }
+
+    public String confirmDeliveryWithOtp(User user, int deliveryId, String providedOtp)
+            throws SQLException, ValidationException {
+        Delivery delivery = getForStaff(user, deliveryId);
+        if (delivery == null) {
+            throw new ValidationException("That delivery was not found.");
+        }
+        if (delivery.getStatus() != DeliveryStatus.OUT_FOR_DELIVERY && delivery.getStatus() != DeliveryStatus.DISPATCHED) {
+            throw new ValidationException("Delivery must be OUT_FOR_DELIVERY to be confirmed.");
+        }
+        if (providedOtp == null || providedOtp.trim().isEmpty()) {
+            throw new ValidationException("OTP is required.");
+        }
+        String hashedProvidedOtp = hashString(providedOtp.trim());
+        if (delivery.getDeliveryOtp() == null || !delivery.getDeliveryOtp().equals(hashedProvidedOtp)) {
+            throw new ValidationException("Invalid OTP provided.");
+        }
+        
+        return updateStatus(user, deliveryId, delivery.getStatus().name(), DeliveryStatus.DELIVERED.name(), "OTP Verified successfully.");
+    }
+
+    private String generateOtp() {
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        int otp = 100000 + random.nextInt(900000);
+        return String.valueOf(otp);
+    }
+
+    private String hashString(String input) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Error hashing string", e);
+        }
     }
 
     /** What the customer is told when their delivery reaches a status. */
