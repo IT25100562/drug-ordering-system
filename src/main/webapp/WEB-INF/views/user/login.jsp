@@ -57,16 +57,33 @@
     <%-- Demo accounts for testing and the presentation (see database/sample-data.sql). --%>
     <div class="card demo-accounts">
         <h2>Demo accounts</h2>
+        <p class="meta">Click a role to fill in the log-in form.</p>
         <table>
             <tr><th>Role</th><th>Email</th><th>Password</th></tr>
-            <tr><td>Customer</td><td>nimal@example.com</td><td>Customer@123</td></tr>
-            <tr><td>Customer</td><td>kasuni@example.com</td><td>Customer@123</td></tr>
-            <tr><td>Customer (flagged)</td><td>tharindu@example.com</td><td>Customer@123</td></tr>
-            <tr><td>Admin</td><td>admin@medisys.lk</td><td>Admin@123</td></tr>
-            <tr><td>Pharmacist</td><td>pharmacist@medisys.lk</td><td>Pharma@123</td></tr>
-            <tr><td>Delivery</td><td>delivery@medisys.lk</td><td>Delivery@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="nimal@example.com" data-demo-password="Customer@123">Customer</button></td><td>nimal@example.com</td><td>Customer@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="kasuni@example.com" data-demo-password="Customer@123">Customer</button></td><td>kasuni@example.com</td><td>Customer@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="tharindu@example.com" data-demo-password="Customer@123">Customer (flagged)</button></td><td>tharindu@example.com</td><td>Customer@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="admin@medisys.lk" data-demo-password="Admin@123">Admin</button></td><td>admin@medisys.lk</td><td>Admin@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="pharmacist@medisys.lk" data-demo-password="Pharma@123">Pharmacist</button></td><td>pharmacist@medisys.lk</td><td>Pharma@123</td></tr>
+            <tr><td><button type="button" class="btn plain small" data-demo-email="delivery@medisys.lk" data-demo-password="Delivery@123">Delivery</button></td><td>delivery@medisys.lk</td><td>Delivery@123</td></tr>
         </table>
     </div>
 </div>
+
+<script>
+    // Demo account buttons copy that account's email and password into the form.
+    (function () {
+        var email = document.getElementById("email");
+        var password = document.getElementById("password");
+        var submit = document.querySelector('.auth-card button[type="submit"]');
+        document.querySelectorAll("[data-demo-email]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                email.value = button.getAttribute("data-demo-email");
+                password.value = button.getAttribute("data-demo-password");
+                submit.focus();     // so pressing Enter logs straight in
+            });
+        });
+    })();
+</script>
 
 <%@ include file="../common/footer.jspf" %>
